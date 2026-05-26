@@ -1,0 +1,107 @@
+{
+  "name": "@accesly/core",
+  "version": "0.1.0",
+  "description": "Accesly SDK core — framework-agnostic non-custodial wallet primitives for Stellar (MPC Shamir + WebAuthn + Cognito + Soroban).",
+  "license": "MIT",
+  "author": "Accesly Core <acceslyoficial@gmail.com>",
+  "homepage": "https://github.com/daniellagart4-sys/SDKAccesly#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/daniellagart4-sys/SDKAccesly.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/daniellagart4-sys/SDKAccesly/issues"
+  },
+  "keywords": [
+    "stellar",
+    "soroban",
+    "wallet",
+    "non-custodial",
+    "mpc",
+    "shamir",
+    "webauthn",
+    "passkey",
+    "accesly"
+  ],
+  "sideEffects": false,
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./crypto": {
+      "types": "./dist/crypto/index.d.ts",
+      "import": "./dist/crypto/index.js",
+      "require": "./dist/crypto/index.cjs"
+    },
+    "./mpc": {
+      "types": "./dist/mpc/index.d.ts",
+      "import": "./dist/mpc/index.js",
+      "require": "./dist/mpc/index.cjs"
+    },
+    "./auth": {
+      "types": "./dist/auth/index.d.ts",
+      "import": "./dist/auth/index.js",
+      "require": "./dist/auth/index.cjs"
+    },
+    "./api": {
+      "types": "./dist/api/index.d.ts",
+      "import": "./dist/api/index.js",
+      "require": "./dist/api/index.cjs"
+    },
+    "./webauthn": {
+      "types": "./dist/webauthn/index.d.ts",
+      "import": "./dist/webauthn/index.js",
+      "require": "./dist/webauthn/index.cjs"
+    },
+    "./stellar": {
+      "types": "./dist/stellar/index.d.ts",
+      "import": "./dist/stellar/index.js",
+      "require": "./dist/stellar/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@noble/ciphers": "^1.1.3",
+    "@noble/curves": "^1.7.0",
+    "@noble/hashes": "^1.6.1",
+    "@stellar/stellar-sdk": "^13.0.0",
+    "amazon-cognito-identity-js": "^6.3.12"
+  },
+  "peerDependenciesMeta": {
+    "fake-indexeddb": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "fake-indexeddb": "^6.0.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

@@ -1,0 +1,42 @@
+name: Smoke test (dev)
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: 'API base URL (defaults to dev)'
+        required: false
+        default: 'https://3fki7eiio5.execute-api.us-east-1.amazonaws.com/dev'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: E2E smoke against dev backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run smoke test
+        env:
+          ACCESLY_API_URL: ${{ inputs.api_url }}
+          # Hitos 3-6 will use these:
+          COGNITO_TEST_USER: ${{ secrets.COGNITO_TEST_USER }}
+          COGNITO_TEST_PASSWORD: ${{ secrets.COGNITO_TEST_PASSWORD }}
+        run: pnpm smoke-test:dev
