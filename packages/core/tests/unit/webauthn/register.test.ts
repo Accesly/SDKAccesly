@@ -96,7 +96,7 @@ describe('webauthn/register', () => {
 
   it('throws when SPKI does not contain an uncompressed EC point', async () => {
     const bad = new Uint8Array(91);
-    bad[91 - 65] = 0x03; // compressed, not uncompressed
+    bad[91 - 65] = 0x03; // not 0x04, so normalize falls through to error
     const credentialsCreate = vi.fn().mockResolvedValue({
       rawId: new Uint8Array(8).buffer,
       response: { getPublicKey: () => bad.buffer },
@@ -110,6 +110,6 @@ describe('webauthn/register', () => {
         userName: 'a@a.a',
         credentialsCreate: credentialsCreate as unknown as typeof navigator.credentials.create,
       }),
-    ).rejects.toThrow(/uncompressed/);
+    ).rejects.toThrow(/could not extract secp256r1 pubkey/);
   });
 });

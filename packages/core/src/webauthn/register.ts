@@ -160,17 +160,67 @@ function extractSecp256r1Pubkey(attestation: AuthenticatorAttestationResponse): 
     );
   }
   const der = new Uint8Array(spki);
-  if (der.length < 65) {
-    throw new Error(`registerPasskey: SPKI too short (${der.length} bytes)`);
-  }
-  // The uncompressed ECPoint is always the last 65 bytes of the SPKI for an
-  // ES256 key. The leading bytes are the AlgorithmIdentifier wrapper.
-  const ecPoint = der.subarray(der.length - 65);
-  const prefix = ecPoint[0] ?? 0;
-  if (prefix !== 0x04) {
+  // Delegate to the normalizer — handles standard 91-byte ES256 SPKI plus
+  // a few alternative shapes some authenticators have been observed to
+  // return (raw uncompressed point, raw X||Y without prefix, etc).
+  try {
+    return normalizeSecp256r1Pubkey(der);
+  } catch (err) {
+    const hexPreview = Array.from(der.slice(0, Math.min(8, der.length)))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
     throw new Error(
-      `registerPasskey: expected uncompressed EC point (0x04 prefix), got 0x${prefix.toString(16)}`,
+      `registerPasskey: could not extract secp256r1 pubkey from SPKI ` +
+        `(length=${der.length}, first8=0x${hexPreview}). ` +
+        `Underlying: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
-  return new Uint8Array(ecPoint);
+}
+
+/**
+ * Coerces any reasonable secp256r1 public-key representation into the
+ * canonical 65-byte uncompressed form (`0x04 || X(32) || Y(32)`) that the
+ * Accesly backend expects on `POST /wallets`.
+ *
+ * Accepted inputs:
+ *  - 65 bytes starting with `0x04` → returned as-is (copied).
+ *  - 64 bytes (raw `X || Y` without the SEC1 uncompressed prefix) → prepends
+ *    `0x04`. Some libraries strip the prefix when serialising EC points.
+ *  - 91 bytes (standard P-256 SPKI from WebAuthn `getPublicKey()`) → extracts
+ *    the trailing 65-byte uncompressed point.
+ *
+ * Rejected inputs:
+ *  - 33 bytes (compressed `0x02|0x03 || X`) → throws; caller must decompress
+ *    first (we don't pull a curve impl just for this).
+ *  - Anything else → throws with the observed length.
+ *
+ * This helper exists to be defensive at the React-hook wire-serialisation
+ * step so that wallets don't fail to create due to a small format mismatch
+ * between the SDK's `registerPasskey` output and the backend validator.
+ */
+export function normalizeSecp256r1Pubkey(input: Uint8Array): Uint8Array {
+  if (input.length === 65 && input[0] === 0x04) {
+    return new Uint8Array(input);
+  }
+  if (input.length === 64) {
+    const out = new Uint8Array(65);
+    out[0] = 0x04;
+    out.set(input, 1);
+    return out;
+  }
+  if (input.length === 91 && input[26] === 0x04) {
+    // P-256 SubjectPublicKeyInfo — the uncompressed point sits at offset 26.
+    return new Uint8Array(input.subarray(26));
+  }
+  if (input.length === 33 && (input[0] === 0x02 || input[0] === 0x03)) {
+    throw new Error(
+      'normalizeSecp256r1Pubkey: compressed EC point received (prefix ' +
+        `0x${input[0].toString(16)}). Decompress to uncompressed form before passing in.`,
+    );
+  }
+  throw new RangeError(
+    `normalizeSecp256r1Pubkey: unrecognised format ` +
+      `(length=${input.length}, prefix=0x${(input[0] ?? 0).toString(16)}). ` +
+      `Expected 65 bytes with 0x04 prefix, 64 bytes raw X||Y, or 91-byte P-256 SPKI.`,
+  );
 }

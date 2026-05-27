@@ -14,6 +14,7 @@ import { useContext, useMemo } from 'react';
 import {
   buildPaymentTransaction,
   createWallet as coreCreateWallet,
+  normalizeSecp256r1Pubkey,
   reconstructFromPlainAndEncrypted,
   signTransaction as coreSignTransaction,
   type AuthStatus,
@@ -218,6 +219,10 @@ export function useAccesly(): AcceslyHook {
   const wallet = useMemo<WalletNamespace>(
     () => ({
       async createWallet(input) {
+        // Defense in depth: coerce the passkey pubkey to the canonical
+        // 65-byte 0x04-prefixed form. The backend validator rejects anything
+        // else with "secp256r1Pubkey must be hex 65 bytes (uncompressed)".
+        const secp256r1Canonical = normalizeSecp256r1Pubkey(input.secp256r1Pubkey);
         const created = coreCreateWallet({
           emailBytes: new TextEncoder().encode(input.email),
           emailSalt: input.emailSalt,
@@ -227,7 +232,7 @@ export function useAccesly(): AcceslyHook {
           appId: ctx.appId,
           pubkeyEd25519: hexFromBytes(created.publicKey),
           emailCommitment: hexFromBytes(created.emailCommitment),
-          secp256r1Pubkey: hexFromBytes(input.secp256r1Pubkey),
+          secp256r1Pubkey: hexFromBytes(secp256r1Canonical),
           fragmentF2: encodeFragmentToWire(created.encryptedFragments[1]),
           fragmentF3: encodeFragmentToWire(created.encryptedFragments[2]),
         });

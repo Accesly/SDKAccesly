@@ -1,17 +1,17 @@
 {
   "name": "@accesly/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Accesly SDK core — framework-agnostic non-custodial wallet primitives for Stellar (MPC Shamir + WebAuthn + Cognito + Soroban).",
   "license": "MIT",
   "author": "Accesly Core <acceslyoficial@gmail.com>",
-  "homepage": "https://github.com/daniellagart4-sys/SDKAccesly#readme",
+  "homepage": "https://github.com/Accesly/SDKAccesly#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/daniellagart4-sys/SDKAccesly.git",
+    "url": "https://github.com/Accesly/SDKAccesly.git",
     "directory": "packages/core"
   },
   "bugs": {
-    "url": "https://github.com/daniellagart4-sys/SDKAccesly/issues"
+    "url": "https://github.com/Accesly/SDKAccesly/issues"
   },
   "keywords": [
     "stellar",

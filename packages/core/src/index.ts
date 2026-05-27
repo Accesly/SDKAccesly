@@ -80,6 +80,7 @@ export {
 export {
   IndexedDbDeviceStore,
   InMemoryDeviceStore,
+  normalizeSecp256r1Pubkey,
   registerPasskey,
   unlockPasskey,
   type CredentialRecord,

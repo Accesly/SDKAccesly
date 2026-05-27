@@ -1,5 +1,26 @@
 # @accesly/core
 
+## 0.1.1
+
+### Patch Changes
+
+- Hardens `secp256r1Pubkey` handling on wallet creation so the backend never
+  rejects with `"secp256r1Pubkey must be hex 65 bytes (uncompressed)"`:
+  - **`@accesly/core`**: exports new helper `normalizeSecp256r1Pubkey(input)`
+    that coerces any of the common P-256 pubkey shapes (65-byte uncompressed,
+    64-byte raw `X||Y`, 91-byte SPKI) into the canonical 65-byte `0x04 || X || Y`
+    form. Throws with a precise message on compressed or unknown formats.
+  - **`@accesly/core/webauthn`**: `registerPasskey` now uses the normalizer
+    internally and surfaces SPKI length + first bytes on extraction failure for
+    easier diagnosis.
+  - **`@accesly/react`**: `useAccesly().wallet.createWallet(...)` now applies
+    `normalizeSecp256r1Pubkey` before hex-encoding the pubkey, so an input that
+    happens to lack the `0x04` prefix (or comes wrapped in an SPKI) still ends
+    up as the 130-char hex the backend expects.
+
+  No API breakage. Apps that already pass the canonical 65-byte buffer keep
+  working unchanged.
+
 ## 0.1.0
 
 ### Minor Changes
