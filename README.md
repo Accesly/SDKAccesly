@@ -2,8 +2,8 @@
 
 Wallets [Stellar](https://stellar.org) **no-custodiales** para apps web. Auth biométrica con passkey, recovery por email, fee abstraction, yield de CETES — todo desde un hook de React, sin que la llave del usuario toque tu backend.
 
-[![npm @accesly/core](https://img.shields.io/npm/v/@accesly/core?label=%40accesly%2Fcore)](https://www.npmjs.com/package/@accesly/core)
-[![npm @accesly/react](https://img.shields.io/npm/v/@accesly/react?label=%40accesly%2Freact)](https://www.npmjs.com/package/@accesly/react)
+[![npm @accesly/core](https://img.shields.io/npm/v/@accesly/core?label=@accesly/core)](https://www.npmjs.com/package/@accesly/core)
+[![npm @accesly/react](https://img.shields.io/npm/v/@accesly/react?label=@accesly/react)](https://www.npmjs.com/package/@accesly/react)
 [![license MIT](https://img.shields.io/npm/l/@accesly/core)](./LICENSE)
 
 ---
