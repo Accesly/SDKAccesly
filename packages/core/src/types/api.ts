@@ -50,6 +50,18 @@ export interface CreateWalletResponse {
   readonly txHash: string | null;
 }
 
+/**
+ * Response of `GET /wallets` — returns the user's already-deployed Smart
+ * Account metadata, keyed by the Cognito JWT. The backend resolves to 404
+ * with `{ error: 'no wallet registered for this user' }` if the user has not
+ * yet completed `POST /wallets`.
+ */
+export interface GetWalletResponse {
+  readonly walletAddress: string;
+  readonly appId: string;
+  readonly createdAt: string;
+}
+
 export interface GetFragment2Request {
   /** Base64 32-byte client X25519 ephemeral public key. */
   readonly clientEphemeralPubkey: Base64String;

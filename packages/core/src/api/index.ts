@@ -34,6 +34,7 @@ export type {
   EncryptedFragmentWire,
   GetFragment2Request,
   GetFragment2Response,
+  GetWalletResponse,
   HealthResponse,
   HexString,
   KycStartResponse,

@@ -1,5 +1,47 @@
 # @accesly/react
 
+## 0.2.0
+
+### Minor Changes
+
+- Adds the `GET /wallets` idempotent recovery path and crash-safe wallet
+  creation. Two related changes:
+
+  **`@accesly/core` / `@accesly/api`:**
+  - New endpoint wrapper `AccesslyEndpoints.getWallet(): Promise<GetWalletResponse | null>` —
+    hits the new backend `GET /wallets`, returns the user's already-deployed
+    Smart Account metadata, or `null` if the user has no wallet yet.
+  - New type `GetWalletResponse = { walletAddress, appId, createdAt }`.
+
+  **`@accesly/react` / `useAccesly().wallet`:**
+  - New `wallet.ensureWallet(input)` — the recommended entry-point at the top
+    of every authenticated session. Calls `GET /wallets` first; if a wallet
+    already exists, returns it (no keypair regen, no extra cost); otherwise
+    falls through to the full create flow. Returns `{ walletAddress,
+createdNow, publicKey? }`.
+  - New `wallet.fetchRemote()` — raw read of the backend metadata.
+  - `wallet.createWallet(input)` now accepts optional `credentialId` and
+    `prfSalt`. When both are provided, the SDK persists a
+    `CredentialRecord` (with the encrypted F1 + passkey metadata) to the
+    configured `DeviceStore` **before** the network call. If the POST then
+    fails (timeout, network drop, tab close), the encrypted F1 + passkey
+    metadata survive locally and the wallet is recoverable via
+    `wallet.ensureWallet` on the next session.
+  - New `wallet.getPendingWallets()` — lists `CredentialRecord`s whose
+    `walletAddress` is still `null` (POST never confirmed). Diagnostic aid.
+  - New `wallet.clearStoredCredential(username)` — removes a stored credential
+    after reconciliation.
+
+  Non-breaking: existing `wallet.createWallet({ email, emailSalt,
+encryptionKeys, secp256r1Pubkey })` calls keep working, just without the
+  crash-safety net. Apps that pass `credentialId` + `prfSalt` get the safety
+  automatically.
+
+### Patch Changes
+
+- Updated dependencies
+  - @accesly/core@0.2.0
+
 ## 0.1.1
 
 ### Patch Changes

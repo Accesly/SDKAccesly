@@ -61,6 +61,21 @@ export interface CreateWalletInput {
   readonly emailSalt: Uint8Array;
   readonly encryptionKeys: readonly [Uint8Array, Uint8Array, Uint8Array];
   readonly secp256r1Pubkey: Uint8Array;
+  /**
+   * Optional. When provided together with `prfSalt`, the SDK persists a
+   * `CredentialRecord` to the configured `DeviceStore` BEFORE calling
+   * `POST /wallets`. That way, if the network request fails (timeout, tab
+   * close, etc.) the encrypted F1 shard + passkey metadata survive locally
+   * and the wallet can be recovered via `wallet.ensureWallet` on the next
+   * session (the backend dedupes by Cognito user → returns the same
+   * walletAddress).
+   *
+   * Pass it. Omitting it means an orphaned wallet on POST failure is
+   * unrecoverable without a server-side query.
+   */
+  readonly credentialId?: Uint8Array;
+  /** Optional. See `credentialId`. */
+  readonly prfSalt?: Uint8Array;
 }
 
 export interface CreatedWalletInfo {
@@ -68,20 +83,61 @@ export interface CreatedWalletInfo {
   readonly publicKey: Uint8Array;
 }
 
+export interface EnsureWalletResult {
+  readonly walletAddress: string;
+  /** True if this call created the wallet; false if it was already on-chain. */
+  readonly createdNow: boolean;
+  /** Present only when `createdNow === true` (the keypair we just generated). */
+  readonly publicKey?: Uint8Array;
+}
+
+export interface RemoteWalletInfo {
+  readonly walletAddress: string;
+  readonly appId: string;
+  readonly createdAt: string;
+}
+
 export interface WalletNamespace {
   /**
    * End-to-end wallet creation:
    *  1. Generate keypair + Shamir split + encrypt fragments (client-side).
-   *  2. Compute email commitment.
+   *  2. If `credentialId` + `prfSalt` were provided, persist a pending
+   *     `CredentialRecord` to the `DeviceStore` BEFORE the network call —
+   *     this is the crash-safety net that keeps the encrypted F1 + passkey
+   *     metadata even if the POST never receives a response.
    *  3. POST /wallets with hex pubkeys + base64 fragments.
-   *  4. Returns the deployed Smart Account address.
+   *  4. On success, update the stored record with the confirmed
+   *     `walletAddress` and return the deployed Smart Account address.
    *
    * The caller is responsible for the encryption-key derivation (typically
-   * via WebAuthn PRF). Hito 6 wires a helper for the WebAuthn-managed case.
+   * via WebAuthn PRF).
    */
   createWallet(input: CreateWalletInput): Promise<CreatedWalletInfo>;
+  /**
+   * Idempotent wallet bootstrap: GET /wallets first (cheap metadata read).
+   * - If the backend already has a wallet for this Cognito user → returns
+   *   `{ createdNow: false }` and skips the keypair generation entirely.
+   * - If 404 → falls through to `createWallet(input)` and returns
+   *   `{ createdNow: true }`.
+   *
+   * Recommended entry-point at the top of every authenticated session.
+   */
+  ensureWallet(input: CreateWalletInput): Promise<EnsureWalletResult>;
+  /**
+   * Reads the user's wallet metadata from the backend. Returns null if the
+   * user has not yet created a wallet.
+   */
+  fetchRemote(): Promise<RemoteWalletInfo | null>;
   /** Returns the locally-stored credential record, if any. */
   getStoredCredential(username: string): Promise<CredentialRecord | null>;
+  /**
+   * Lists `CredentialRecord`s that were saved before the POST but whose
+   * `walletAddress` is still `null` — i.e. the network call did not confirm
+   * deployment. Diagnostic + recovery aid.
+   */
+  getPendingWallets(): Promise<readonly CredentialRecord[]>;
+  /** Removes a stored credential. Useful after a failed pending wallet is reconciled. */
+  clearStoredCredential(username: string): Promise<void>;
 }
 
 export interface SignPaymentInput {
@@ -228,6 +284,25 @@ export function useAccesly(): AcceslyHook {
           emailSalt: input.emailSalt,
           encryptionKeys: input.encryptionKeys,
         });
+
+        // Crash-safety: persist the encrypted F1 + passkey metadata BEFORE
+        // hitting the backend so a network failure does not orphan the
+        // wallet. Only possible when the caller passed credentialId + prfSalt
+        // — otherwise the DeviceStore can't store a complete record.
+        const canPersist = Boolean(input.credentialId && input.prfSalt);
+        if (canPersist) {
+          await ctx.deviceStore.saveCredential({
+            username: input.email,
+            credentialId: input.credentialId!,
+            secp256r1Pubkey: secp256r1Canonical,
+            fragmentF1Encrypted: created.encryptedFragments[0],
+            prfSalt: input.prfSalt!,
+            fallbackKeyMaterial: new Uint8Array(0),
+            walletAddress: null, // pending
+            createdAt: Date.now(),
+          });
+        }
+
         const res = await ctx.endpoints.createWallet({
           appId: ctx.appId,
           pubkeyEd25519: hexFromBytes(created.publicKey),
@@ -236,13 +311,50 @@ export function useAccesly(): AcceslyHook {
           fragmentF2: encodeFragmentToWire(created.encryptedFragments[1]),
           fragmentF3: encodeFragmentToWire(created.encryptedFragments[2]),
         });
+
+        // Confirm the pending record with the deployed walletAddress.
+        if (canPersist) {
+          const existing = await ctx.deviceStore.loadCredential(input.email);
+          if (existing) {
+            await ctx.deviceStore.saveCredential({
+              ...existing,
+              walletAddress: res.walletAddress,
+            });
+          }
+        }
+
         return {
           walletAddress: res.walletAddress,
           publicKey: created.publicKey,
         };
       },
+      async ensureWallet(input) {
+        // 1. Cheap idempotent metadata read. Backend dedupes by Cognito user.
+        const remote = await ctx.endpoints.getWallet();
+        if (remote) {
+          return { walletAddress: remote.walletAddress, createdNow: false };
+        }
+        // 2. No wallet yet → run the full createWallet flow.
+        const created = await this.createWallet(input);
+        return {
+          walletAddress: created.walletAddress,
+          publicKey: created.publicKey,
+          createdNow: true,
+        };
+      },
+      async fetchRemote() {
+        const remote = await ctx.endpoints.getWallet();
+        return remote;
+      },
       getStoredCredential(username) {
         return ctx.deviceStore.loadCredential(username);
+      },
+      async getPendingWallets() {
+        const all = await ctx.deviceStore.listCredentials();
+        return all.filter((c) => c.walletAddress === null);
+      },
+      clearStoredCredential(username) {
+        return ctx.deviceStore.deleteCredential(username);
       },
     }),
     [ctx, hexFromBytes],
