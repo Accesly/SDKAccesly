@@ -55,4 +55,26 @@ export interface CredentialRecord {
   readonly walletAddress: string | null;
   /** ms-epoch creation timestamp. */
   readonly createdAt: number;
+  /* ------------------------------------------------------------------ */
+  /* Optional fields added in v0.3.0 — backwards compatible. Populated by */
+  /* `wallet.createWallet` when `credentialId` + `prfSalt` are provided so */
+  /* a ghost-wallet deploy can be retried via `wallet.retryDeploy`.       */
+  /* ------------------------------------------------------------------ */
+  /** 32-byte ed25519 public key of the wallet owner. Needed for retry POST. */
+  readonly publicKey?: Uint8Array;
+  /** 32-byte `SHA-256(email || salt)` commitment. Needed for retry POST. */
+  readonly emailCommitment?: Uint8Array;
+  /** Encrypted F2 fragment — kept locally only to enable idempotent retry. */
+  readonly fragmentF2Encrypted?: EncryptedEnvelope;
+  /** Encrypted F3 fragment — kept locally only to enable idempotent retry. */
+  readonly fragmentF3Encrypted?: EncryptedEnvelope;
+  /**
+   * Last-known on-chain confirmation status from the backend:
+   *  - `true`  → backend confirmed the contract is live on Soroban
+   *  - `false` → backend has the record but Soroban RPC says no contract yet
+   *              (ghost wallet — retry the deploy with `wallet.retryDeploy`)
+   *  - `null`  → backend could not reach Soroban RPC; treat as unknown
+   *  - omitted → never queried after the initial POST
+   */
+  readonly onChain?: boolean | null;
 }

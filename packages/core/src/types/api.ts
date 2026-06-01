@@ -55,11 +55,18 @@ export interface CreateWalletResponse {
  * Account metadata, keyed by the Cognito JWT. The backend resolves to 404
  * with `{ error: 'no wallet registered for this user' }` if the user has not
  * yet completed `POST /wallets`.
+ *
+ * `onChain` is the live Soroban RPC status check the backend performs:
+ *  - `true`  → contract is deployed and reachable
+ *  - `false` → record exists but Soroban has no contract at that address
+ *              (ghost wallet — POST landed but deploy did not)
+ *  - `null`  → backend could not reach Soroban RPC; treat as unknown
  */
 export interface GetWalletResponse {
   readonly walletAddress: string;
   readonly appId: string;
   readonly createdAt: string;
+  readonly onChain: boolean | null;
 }
 
 export interface GetFragment2Request {

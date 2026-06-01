@@ -37,10 +37,12 @@ export {
   type EnsureWalletResult,
   type KycNamespace,
   type RemoteWalletInfo,
+  type RetryDeployResult,
   type SessionNamespace,
   type SettingsNamespace,
   type SignPaymentInput,
   type TxNamespace,
   type WalletNamespace,
+  type WalletStatus,
   type YieldNamespace,
 } from './hooks/useAccesly.js';

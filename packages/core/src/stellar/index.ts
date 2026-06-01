@@ -20,6 +20,11 @@ export {
 } from './signer.js';
 
 export {
+  computeSmartAccountAddress,
+  type ComputeSmartAccountAddressParams,
+} from './contractAddress.js';
+
+export {
   getBalances,
   getRecentOperations,
   type BalanceEntry,

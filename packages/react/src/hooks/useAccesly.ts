@@ -13,6 +13,7 @@
 import { useContext, useMemo } from 'react';
 import {
   buildPaymentTransaction,
+  computeSmartAccountAddress,
   createWallet as coreCreateWallet,
   normalizeSecp256r1Pubkey,
   reconstructFromPlainAndEncrypted,
@@ -22,6 +23,7 @@ import {
   type EncryptedEnvelope,
 } from '@accesly/core';
 import { AcceslyContext, type AcceslyContextValue } from '../context.js';
+import { ENVIRONMENT_DEFAULTS } from '../config.js';
 
 export interface AuthNamespace {
   readonly status: AuthStatus;
@@ -83,11 +85,28 @@ export interface CreatedWalletInfo {
   readonly publicKey: Uint8Array;
 }
 
+export type WalletStatus =
+  /** Backend confirmed the contract is live on Soroban. Ready to use. */
+  | 'on-chain'
+  /**
+   * Wallet record exists (locally and/or on backend) but the contract has NOT
+   * been observed on Soroban yet. Either deploy is still in flight, or
+   * landed in a ghost state. Re-run `wallet.ensureWallet` later (or call
+   * `wallet.retryDeploy(username)`).
+   */
+  | 'pending-deploy'
+  /**
+   * Backend has the record but its Soroban RPC check did not respond — the
+   * SDK treats the address as usable but flags the uncertainty.
+   */
+  | 'unknown';
+
 export interface EnsureWalletResult {
   readonly walletAddress: string;
-  /** True if this call created the wallet; false if it was already on-chain. */
+  readonly status: WalletStatus;
+  /** True if this call generated a new keypair (first-time deploy path). */
   readonly createdNow: boolean;
-  /** Present only when `createdNow === true` (the keypair we just generated). */
+  /** Present only when `createdNow === true`. */
   readonly publicKey?: Uint8Array;
 }
 
@@ -95,45 +114,80 @@ export interface RemoteWalletInfo {
   readonly walletAddress: string;
   readonly appId: string;
   readonly createdAt: string;
+  readonly onChain: boolean | null;
+}
+
+export interface RetryDeployResult {
+  readonly walletAddress: string;
+  readonly status: WalletStatus;
 }
 
 export interface WalletNamespace {
   /**
    * End-to-end wallet creation:
    *  1. Generate keypair + Shamir split + encrypt fragments (client-side).
-   *  2. If `credentialId` + `prfSalt` were provided, persist a pending
-   *     `CredentialRecord` to the `DeviceStore` BEFORE the network call —
-   *     this is the crash-safety net that keeps the encrypted F1 + passkey
-   *     metadata even if the POST never receives a response.
-   *  3. POST /wallets with hex pubkeys + base64 fragments.
-   *  4. On success, update the stored record with the confirmed
-   *     `walletAddress` and return the deployed Smart Account address.
+   *  2. Compute the Smart Account address client-side from the ed25519
+   *     pubkey + the env-configured deployer (deterministic — matches what
+   *     the backend will deploy).
+   *  3. If `credentialId` + `prfSalt` were provided, persist a full
+   *     `CredentialRecord` (with all 3 encrypted fragments + computed
+   *     walletAddress + `onChain: null`) to the `DeviceStore` BEFORE the
+   *     network call — crash-safety + retry capability in one step.
+   *  4. POST /wallets with hex pubkeys + base64 fragments.
+   *  5. On success, mark the record `onChain: true` (cleared by the next
+   *     `ensureWallet` call which queries Soroban via the backend).
    *
    * The caller is responsible for the encryption-key derivation (typically
    * via WebAuthn PRF).
    */
   createWallet(input: CreateWalletInput): Promise<CreatedWalletInfo>;
   /**
-   * Idempotent wallet bootstrap: GET /wallets first (cheap metadata read).
-   * - If the backend already has a wallet for this Cognito user → returns
-   *   `{ createdNow: false }` and skips the keypair generation entirely.
-   * - If 404 → falls through to `createWallet(input)` and returns
-   *   `{ createdNow: true }`.
+   * Idempotent wallet bootstrap. The recommended entry-point at the top of
+   * every authenticated session:
    *
-   * Recommended entry-point at the top of every authenticated session.
+   *  - `GET /wallets` → if `onChain === true`, returns `{ status: 'on-chain' }`
+   *    and skips keypair generation entirely.
+   *  - `GET /wallets` → if `onChain === false`, calls `retryDeploy` to
+   *    re-submit the existing record (idempotent on the backend) and
+   *    returns `{ status: 'pending-deploy' }` if the retry didn't surface
+   *    success yet.
+   *  - `GET /wallets` → if `onChain === null` (Soroban RPC unreachable),
+   *    returns `{ status: 'unknown' }` — the address is usable but the
+   *    SDK couldn't confirm on-chain presence.
+   *  - `GET /wallets` → 404 → runs the full `createWallet` flow and returns
+   *    `{ status: 'pending-deploy', createdNow: true }`. Subsequent calls
+   *    will upgrade to `'on-chain'` once the backend's Soroban check passes.
    */
   ensureWallet(input: CreateWalletInput): Promise<EnsureWalletResult>;
+  /**
+   * Re-submits `POST /wallets` for an existing local `CredentialRecord`. Used
+   * to recover from ghost wallets (record exists but deploy did not land).
+   * Requires the record to have been persisted with `fragmentF2Encrypted`,
+   * `fragmentF3Encrypted`, `publicKey`, and `emailCommitment` (which
+   * `createWallet` does automatically when `credentialId` + `prfSalt` are
+   * provided).
+   *
+   * Backend dedupes by ownerPubkey — the returned address is guaranteed to
+   * equal the one originally stored.
+   */
+  retryDeploy(username: string): Promise<RetryDeployResult>;
   /**
    * Reads the user's wallet metadata from the backend. Returns null if the
    * user has not yet created a wallet.
    */
   fetchRemote(): Promise<RemoteWalletInfo | null>;
+  /**
+   * Computes the deterministic Smart Account address that the backend will
+   * (or did) deploy for the given ed25519 owner pubkey. Same algorithm
+   * Stellar Core uses — pure client-side, no network call. Useful to show
+   * the address to the user instantly before any POST.
+   */
+  computeAddress(ownerPubkey: Uint8Array): Promise<string>;
   /** Returns the locally-stored credential record, if any. */
   getStoredCredential(username: string): Promise<CredentialRecord | null>;
   /**
-   * Lists `CredentialRecord`s that were saved before the POST but whose
-   * `walletAddress` is still `null` — i.e. the network call did not confirm
-   * deployment. Diagnostic + recovery aid.
+   * Lists `CredentialRecord`s whose `walletAddress` is still `null` OR whose
+   * `onChain` flag is `false`. Diagnostic + recovery aid.
    */
   getPendingWallets(): Promise<readonly CredentialRecord[]>;
   /** Removes a stored credential. Useful after a failed pending wallet is reconciled. */
@@ -272,8 +326,51 @@ export function useAccesly(): AcceslyHook {
 
   const { hexToBytes, hexFromBytes } = useMemo(() => coderHelpers(), []);
 
-  const wallet = useMemo<WalletNamespace>(
-    () => ({
+  const stellarConfig = ENVIRONMENT_DEFAULTS[ctx.env].stellar;
+
+  const wallet = useMemo<WalletNamespace>(() => {
+    // Capture the narrowed non-null context once, so the inner closures
+    // don't trip TS's narrowing-through-function-declaration limitation.
+    const c = ctx;
+
+    /**
+     * Sends the POST /wallets request given a fully-assembled record. Used
+     * by both the first-time create flow and `retryDeploy`. Returns the
+     * backend-confirmed walletAddress.
+     */
+    const postWallet = async (params: {
+      pubkeyEd25519: Uint8Array;
+      emailCommitment: Uint8Array;
+      secp256r1Pubkey: Uint8Array;
+      fragmentF2: EncryptedEnvelope;
+      fragmentF3: EncryptedEnvelope;
+    }): Promise<string> => {
+      const res = await c.endpoints.createWallet({
+        appId: c.appId,
+        pubkeyEd25519: hexFromBytes(params.pubkeyEd25519),
+        emailCommitment: hexFromBytes(params.emailCommitment),
+        secp256r1Pubkey: hexFromBytes(params.secp256r1Pubkey),
+        fragmentF2: encodeFragmentToWire(params.fragmentF2),
+        fragmentF3: encodeFragmentToWire(params.fragmentF3),
+      });
+      return res.walletAddress;
+    };
+
+    const statusFromOnChain = (onChain: boolean | null): WalletStatus => {
+      if (onChain === true) return 'on-chain';
+      if (onChain === false) return 'pending-deploy';
+      return 'unknown';
+    };
+
+    return {
+      async computeAddress(ownerPubkey) {
+        return computeSmartAccountAddress({
+          ownerPubkey,
+          deployerAddress: stellarConfig.deployerAddress,
+          networkPassphrase: stellarConfig.networkPassphrase,
+        });
+      },
+
       async createWallet(input) {
         // Defense in depth: coerce the passkey pubkey to the canonical
         // 65-byte 0x04-prefixed form. The backend validator rejects anything
@@ -285,10 +382,19 @@ export function useAccesly(): AcceslyHook {
           encryptionKeys: input.encryptionKeys,
         });
 
-        // Crash-safety: persist the encrypted F1 + passkey metadata BEFORE
-        // hitting the backend so a network failure does not orphan the
-        // wallet. Only possible when the caller passed credentialId + prfSalt
-        // — otherwise the DeviceStore can't store a complete record.
+        // Pre-compute the deterministic walletAddress. Same algorithm Stellar
+        // Core / the backend will use — we can show it to the user before
+        // any network round-trip and reconcile later.
+        const predictedAddress = await computeSmartAccountAddress({
+          ownerPubkey: created.publicKey,
+          deployerAddress: stellarConfig.deployerAddress,
+          networkPassphrase: stellarConfig.networkPassphrase,
+        });
+
+        // Crash-safety + retry capability: persist the full record BEFORE
+        // hitting the backend. Includes all 3 encrypted fragments + pubkey
+        // + emailCommitment so `wallet.retryDeploy(username)` can re-POST
+        // without regenerating the keypair.
         const canPersist = Boolean(input.credentialId && input.prfSalt);
         if (canPersist) {
           await ctx.deviceStore.saveCredential({
@@ -296,52 +402,150 @@ export function useAccesly(): AcceslyHook {
             credentialId: input.credentialId!,
             secp256r1Pubkey: secp256r1Canonical,
             fragmentF1Encrypted: created.encryptedFragments[0],
+            fragmentF2Encrypted: created.encryptedFragments[1],
+            fragmentF3Encrypted: created.encryptedFragments[2],
+            publicKey: created.publicKey,
+            emailCommitment: created.emailCommitment,
             prfSalt: input.prfSalt!,
             fallbackKeyMaterial: new Uint8Array(0),
-            walletAddress: null, // pending
+            walletAddress: predictedAddress,
+            onChain: null,
             createdAt: Date.now(),
           });
         }
 
-        const res = await ctx.endpoints.createWallet({
-          appId: ctx.appId,
-          pubkeyEd25519: hexFromBytes(created.publicKey),
-          emailCommitment: hexFromBytes(created.emailCommitment),
-          secp256r1Pubkey: hexFromBytes(secp256r1Canonical),
-          fragmentF2: encodeFragmentToWire(created.encryptedFragments[1]),
-          fragmentF3: encodeFragmentToWire(created.encryptedFragments[2]),
+        const confirmedAddress = await postWallet({
+          pubkeyEd25519: created.publicKey,
+          emailCommitment: created.emailCommitment,
+          secp256r1Pubkey: secp256r1Canonical,
+          fragmentF2: created.encryptedFragments[1],
+          fragmentF3: created.encryptedFragments[2],
         });
 
-        // Confirm the pending record with the deployed walletAddress.
+        // Sanity check — predicted vs confirmed should always match. If not,
+        // either the deployer address in env is wrong or the algorithm
+        // drifted; either way the app should know about it.
+        if (confirmedAddress !== predictedAddress) {
+          console.warn('[accesly] computed walletAddress does not match backend response', {
+            predicted: predictedAddress,
+            confirmed: confirmedAddress,
+          });
+        }
+
         if (canPersist) {
           const existing = await ctx.deviceStore.loadCredential(input.email);
           if (existing) {
             await ctx.deviceStore.saveCredential({
               ...existing,
-              walletAddress: res.walletAddress,
+              walletAddress: confirmedAddress,
+              onChain: existing.onChain ?? null, // unchanged until ensureWallet polls
             });
           }
         }
 
         return {
-          walletAddress: res.walletAddress,
+          walletAddress: confirmedAddress,
           publicKey: created.publicKey,
         };
       },
+
       async ensureWallet(input) {
-        // 1. Cheap idempotent metadata read. Backend dedupes by Cognito user.
+        // 1. Cheap idempotent metadata read.
         const remote = await ctx.endpoints.getWallet();
+
         if (remote) {
-          return { walletAddress: remote.walletAddress, createdNow: false };
+          // Update the local record's onChain mirror if we have one.
+          const local = await ctx.deviceStore.loadCredential(input.email);
+          if (local) {
+            await ctx.deviceStore.saveCredential({
+              ...local,
+              walletAddress: remote.walletAddress,
+              onChain: remote.onChain,
+            });
+          }
+
+          if (
+            remote.onChain === false &&
+            local &&
+            local.fragmentF2Encrypted &&
+            local.fragmentF3Encrypted
+          ) {
+            // Ghost wallet — backend has the record but Soroban shows no
+            // contract. Try a retry; if it still doesn't surface as on-chain
+            // (constructor too big, RPC slow), surface pending-deploy.
+            try {
+              const retried = await this.retryDeploy(input.email);
+              return {
+                walletAddress: retried.walletAddress,
+                status: retried.status,
+                createdNow: false,
+              };
+            } catch {
+              return {
+                walletAddress: remote.walletAddress,
+                status: 'pending-deploy',
+                createdNow: false,
+              };
+            }
+          }
+
+          return {
+            walletAddress: remote.walletAddress,
+            status: statusFromOnChain(remote.onChain),
+            createdNow: false,
+          };
         }
-        // 2. No wallet yet → run the full createWallet flow.
+
+        // 2. No wallet at the backend — first-time flow.
         const created = await this.createWallet(input);
         return {
           walletAddress: created.walletAddress,
           publicKey: created.publicKey,
+          // POST succeeded but the next on-chain check needs another GET to
+          // confirm; surface as pending-deploy until then.
+          status: 'pending-deploy',
           createdNow: true,
         };
       },
+
+      async retryDeploy(username) {
+        const record = await ctx.deviceStore.loadCredential(username);
+        if (!record) {
+          throw new Error(
+            `wallet.retryDeploy: no local CredentialRecord for "${username}". ` +
+              'Call wallet.createWallet first (with credentialId + prfSalt).',
+          );
+        }
+        if (
+          !record.publicKey ||
+          !record.emailCommitment ||
+          !record.fragmentF2Encrypted ||
+          !record.fragmentF3Encrypted
+        ) {
+          throw new Error(
+            `wallet.retryDeploy: stored CredentialRecord for "${username}" is missing ` +
+              'publicKey / emailCommitment / encrypted F2 / F3. ' +
+              'Re-create the wallet from scratch.',
+          );
+        }
+        const confirmed = await postWallet({
+          pubkeyEd25519: record.publicKey,
+          emailCommitment: record.emailCommitment,
+          secp256r1Pubkey: record.secp256r1Pubkey,
+          fragmentF2: record.fragmentF2Encrypted,
+          fragmentF3: record.fragmentF3Encrypted,
+        });
+        // Re-query the backend to learn the up-to-date onChain status.
+        const remote = await ctx.endpoints.getWallet();
+        const onChain = remote?.onChain ?? null;
+        await ctx.deviceStore.saveCredential({
+          ...record,
+          walletAddress: confirmed,
+          onChain,
+        });
+        return { walletAddress: confirmed, status: statusFromOnChain(onChain) };
+      },
+
       async fetchRemote() {
         const remote = await ctx.endpoints.getWallet();
         return remote;
@@ -351,14 +555,13 @@ export function useAccesly(): AcceslyHook {
       },
       async getPendingWallets() {
         const all = await ctx.deviceStore.listCredentials();
-        return all.filter((c) => c.walletAddress === null);
+        return all.filter((c) => c.walletAddress === null || c.onChain === false);
       },
       clearStoredCredential(username) {
         return ctx.deviceStore.deleteCredential(username);
       },
-    }),
-    [ctx, hexFromBytes],
-  );
+    };
+  }, [ctx, hexFromBytes, stellarConfig]);
 
   const tx = useMemo<TxNamespace>(
     () => ({

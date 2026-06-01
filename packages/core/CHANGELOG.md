@@ -1,5 +1,51 @@
 # @accesly/core
 
+## 0.3.0
+
+### Minor Changes
+
+- Adds support for the backend's new `onChain` field on `GET /wallets`,
+  deterministic client-side wallet address computation, and ghost-wallet
+  retry. Designed for the post-Soroban-v26 reality where the constructor
+  may exceed resource caps and the deploy can land in a record-without-
+  contract state.
+
+  **`@accesly/core`**
+  - New `computeSmartAccountAddress({ ownerPubkey, deployerAddress,
+networkPassphrase })` in `@accesly/core/stellar` — derives the
+    Soroban contract address client-side via the same Stellar Core
+    algorithm the backend Lambda uses. Lazy-imports `@stellar/stellar-sdk`.
+  - `GetWalletResponse` now includes `onChain: boolean | null`.
+  - `CredentialRecord` gains optional `publicKey`, `emailCommitment`,
+    `fragmentF2Encrypted`, `fragmentF3Encrypted`, `onChain` — all needed
+    for `wallet.retryDeploy` to re-submit without regenerating the keypair.
+    Existing records keep working unchanged.
+
+  **`@accesly/react`**
+  - `wallet.computeAddress(ownerPubkey)` — pure client-side address
+    derivation using the env-configured deployer. Show the user the
+    address before any network call.
+  - `wallet.createWallet` now pre-computes the deterministic address and
+    persists a complete `CredentialRecord` (all 3 encrypted fragments +
+    pubkey + emailCommitment + initial `onChain: null`) BEFORE the POST.
+    Eliminates ghost wallets that lose recoverable state on POST failure.
+  - `wallet.ensureWallet` returns `{ walletAddress, status, createdNow,
+publicKey? }` where `status: 'on-chain' | 'pending-deploy' | 'unknown'`
+    reflects the backend's Soroban check. Ghost wallets auto-trigger a
+    `retryDeploy` attempt.
+  - New `wallet.retryDeploy(username)` re-submits POST `/wallets` with the
+    saved encrypted fragments. Backend dedupes by ownerPubkey → guaranteed
+    same address.
+  - `ENVIRONMENT_DEFAULTS.stellar.deployerAddress` added (dev:
+    `GDRHSVLY3VCEHCHCSR5MZR2ALYLCERDDFT3ULCUIELGFVYHTZFCMNU4E`).
+
+  Non-breaking: existing apps keep working. The new `status` field on
+  `EnsureWalletResult` is additive; the new optional fields on
+  `CreateWalletInput`/`CredentialRecord` enable the safety net when used.
+
+  Tests: 200/200 passing (195 core + 5 react), +9 new (contract address
+  derivation, `onChain` field decoding).
+
 ## 0.2.0
 
 ### Minor Changes

@@ -9,12 +9,13 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe('api/endpoints.getWallet', () => {
-  it('returns the wallet metadata on 200', async () => {
+  it('returns the wallet metadata on 200 including onChain', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(
       jsonResponse({
         walletAddress: 'CABC1234567890',
         appId: 'my-app',
         createdAt: '2026-05-26T20:00:00Z',
+        onChain: true,
       }),
     );
     const ep = new AccesslyEndpoints(
@@ -25,9 +26,42 @@ describe('api/endpoints.getWallet', () => {
       walletAddress: 'CABC1234567890',
       appId: 'my-app',
       createdAt: '2026-05-26T20:00:00Z',
+      onChain: true,
     });
     expect(fetchImpl.mock.calls[0]![0]).toBe('https://api.example.com/wallets');
     expect((fetchImpl.mock.calls[0]![1] as RequestInit).method).toBe('GET');
+  });
+
+  it('exposes onChain=false (ghost wallet) verbatim', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      jsonResponse({
+        walletAddress: 'CGHOST...',
+        appId: 'my-app',
+        createdAt: '2026-05-26T20:00:00Z',
+        onChain: false,
+      }),
+    );
+    const ep = new AccesslyEndpoints(
+      new AccesslyApiClient({ baseUrl: 'https://api.example.com', fetchImpl }),
+    );
+    const wallet = await ep.getWallet();
+    expect(wallet?.onChain).toBe(false);
+  });
+
+  it('exposes onChain=null (RPC unreachable) verbatim', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      jsonResponse({
+        walletAddress: 'CUNKNOWN...',
+        appId: 'my-app',
+        createdAt: '2026-05-26T20:00:00Z',
+        onChain: null,
+      }),
+    );
+    const ep = new AccesslyEndpoints(
+      new AccesslyApiClient({ baseUrl: 'https://api.example.com', fetchImpl }),
+    );
+    const wallet = await ep.getWallet();
+    expect(wallet?.onChain).toBeNull();
   });
 
   it('returns null on 404', async () => {
