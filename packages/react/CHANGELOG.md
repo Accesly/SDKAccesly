@@ -1,5 +1,39 @@
 # @accesly/react
 
+## 0.4.0
+
+### Minor Changes
+
+- `wallet.createWallet` (and therefore `wallet.ensureWallet`) no longer throws
+  when the backend's `POST /wallets` is rejected by Soroban with a known
+  deploy-pending error (`txSorobanInvalid`, `scecExceededLimit`, etc.) —
+  typical after Soroban protocol v26 lowered the per-tx resource caps and
+  the Smart Account constructor temporarily exceeds them.
+
+  Instead the call resolves with:
+
+  ```ts
+  {
+    walletAddress: predictedAddress,   // client-side-derived, same as backend
+    publicKey,
+    status: 'pending-deploy',
+    pendingReason: 'soroban submit failed: ... txSorobanInvalid',
+  }
+  ```
+
+  The shards remain persisted in the `DeviceStore` (crash-safety from
+  `0.3.0+`), so `wallet.retryDeploy(username)` will land the same wallet
+  address once the contracts team slims the constructor. Genuine 5xx
+  failures (network, KMS, database, etc.) still throw `ServerError`.
+
+  `CreatedWalletInfo` gains required `status: WalletStatus` and optional
+  `pendingReason: string`. Adds the helper `isSorobanDeployPendingError(err)`
+  exported from `@accesly/react` for apps that want to detect this case in
+  their own catch blocks.
+
+  Bump is `minor` (not patch) because of the additive shape change on
+  `CreatedWalletInfo`.
+
 ## 0.3.2
 
 ### Patch Changes

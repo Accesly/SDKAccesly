@@ -11,6 +11,7 @@
  * we trust the caller to destructure correctly.
  */
 
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 type StellarSdkModule = typeof import('@stellar/stellar-sdk');
 
 export async function loadStellarSdk(): Promise<StellarSdkModule> {

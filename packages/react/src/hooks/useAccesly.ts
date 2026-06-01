@@ -83,7 +83,21 @@ export interface CreateWalletInput {
 export interface CreatedWalletInfo {
   readonly walletAddress: string;
   readonly publicKey: Uint8Array;
+  /**
+   * `'on-chain'` if the backend confirmed deploy; `'pending-deploy'` if the
+   * backend submitted to Soroban but the contract did not land (typically
+   * because the Smart Account constructor exceeds Soroban v26 resource caps
+   * — Phase 1 territory). When pending, the `walletAddress` is the
+   * client-side-predicted address: same address that will be live once the
+   * deploy succeeds (idempotent on the backend).
+   */
+  readonly status: WalletStatus;
+  /** When `status === 'pending-deploy'`, the backend's reason if available. */
+  readonly pendingReason?: string;
 }
+
+import { isSorobanDeployPendingError } from './sorobanDeployStatus.js';
+export { isSorobanDeployPendingError } from './sorobanDeployStatus.js';
 
 export type WalletStatus =
   /** Backend confirmed the contract is live on Soroban. Ready to use. */
@@ -414,13 +428,36 @@ export function useAccesly(): AcceslyHook {
           });
         }
 
-        const confirmedAddress = await postWallet({
-          pubkeyEd25519: created.publicKey,
-          emailCommitment: created.emailCommitment,
-          secp256r1Pubkey: secp256r1Canonical,
-          fragmentF2: created.encryptedFragments[1],
-          fragmentF3: created.encryptedFragments[2],
-        });
+        let confirmedAddress: string;
+        let deployStatus: WalletStatus = 'unknown';
+        let pendingReason: string | undefined;
+
+        try {
+          confirmedAddress = await postWallet({
+            pubkeyEd25519: created.publicKey,
+            emailCommitment: created.emailCommitment,
+            secp256r1Pubkey: secp256r1Canonical,
+            fragmentF2: created.encryptedFragments[1],
+            fragmentF3: created.encryptedFragments[2],
+          });
+          // POST succeeded — leave status as 'unknown'; the next
+          // ensureWallet GET will upgrade it to 'on-chain' once Soroban
+          // confirms the deploy.
+        } catch (err) {
+          if (!isSorobanDeployPendingError(err)) throw err;
+          // Soroban rejected the deploy (constructor too big, footprint
+          // exceeded, etc). Treat as deferrable — the local record is
+          // already persisted with the predicted address; the backend also
+          // has the record by design. `wallet.retryDeploy` will land it
+          // later once the contracts team slims the constructor.
+          confirmedAddress = predictedAddress;
+          deployStatus = 'pending-deploy';
+          pendingReason = err instanceof Error ? err.message : String(err);
+          console.warn(
+            '[accesly] wallet deploy is pending — predicted address persisted, retry once Phase 1 destrabes the constructor',
+            pendingReason,
+          );
+        }
 
         // Sanity check — predicted vs confirmed should always match. If not,
         // either the deployer address in env is wrong or the algorithm
@@ -438,7 +475,7 @@ export function useAccesly(): AcceslyHook {
             await ctx.deviceStore.saveCredential({
               ...existing,
               walletAddress: confirmedAddress,
-              onChain: existing.onChain ?? null, // unchanged until ensureWallet polls
+              onChain: deployStatus === 'pending-deploy' ? false : (existing.onChain ?? null),
             });
           }
         }
@@ -446,6 +483,8 @@ export function useAccesly(): AcceslyHook {
         return {
           walletAddress: confirmedAddress,
           publicKey: created.publicKey,
+          status: deployStatus,
+          ...(pendingReason !== undefined ? { pendingReason } : {}),
         };
       },
 
@@ -501,9 +540,10 @@ export function useAccesly(): AcceslyHook {
         return {
           walletAddress: created.walletAddress,
           publicKey: created.publicKey,
-          // POST succeeded but the next on-chain check needs another GET to
-          // confirm; surface as pending-deploy until then.
-          status: 'pending-deploy',
+          // Use whatever status createWallet inferred. POST OK ⇒ 'unknown'
+          // (the next GET will upgrade to 'on-chain'); Soroban rejected the
+          // deploy ⇒ 'pending-deploy' with the predicted address.
+          status: created.status,
           createdNow: true,
         };
       },
