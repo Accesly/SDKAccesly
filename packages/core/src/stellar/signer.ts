@@ -17,6 +17,7 @@
 
 import { publicKeyFromSeed, ED25519_SEED_LENGTH } from '../crypto/keypair.js';
 import { withZeroizeAsync } from '../crypto/zeroize.js';
+import { loadStellarSdk } from './loadSdk.js';
 
 export interface SignTransactionParams {
   /** Base64-encoded transaction envelope XDR returned by the builder. */
@@ -68,7 +69,7 @@ export async function signTransaction(
   }
 
   return withZeroizeAsync([params.ed25519Seed], async () => {
-    const sdk = await import('@stellar/stellar-sdk');
+    const sdk = await loadStellarSdk();
     const { Keypair, TransactionBuilder } = sdk;
 
     // `Buffer.from(uint8array)` shares the underlying ArrayBuffer in Node and

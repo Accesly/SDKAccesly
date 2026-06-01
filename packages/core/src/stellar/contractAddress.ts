@@ -30,6 +30,7 @@
  */
 
 import { sha256 } from '@noble/hashes/sha2';
+import { loadStellarSdk } from './loadSdk.js';
 
 export interface ComputeSmartAccountAddressParams {
   /** 32-byte ed25519 public key of the wallet owner (used as the salt seed). */
@@ -67,7 +68,7 @@ export async function computeSmartAccountAddress(
     throw new RangeError('computeSmartAccountAddress: networkPassphrase is required');
   }
 
-  const sdk = await import('@stellar/stellar-sdk');
+  const sdk = await loadStellarSdk();
   const { StrKey, xdr, Address } = sdk;
 
   // SHA-256 from @noble/hashes — stable across browsers and runtimes, and

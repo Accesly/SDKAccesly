@@ -5,6 +5,8 @@
  * (without sending tx) don't pay the ~200 KB bundle cost.
  */
 
+import { loadStellarSdk } from './loadSdk.js';
+
 export interface StellarNetworkParams {
   /** Network passphrase. Use `'Test SDF Network ; September 2015'` for testnet. */
   readonly networkPassphrase: string;
@@ -31,7 +33,7 @@ export interface BuildPaymentParams {
  * source account's sequence number is fetched fresh from Horizon.
  */
 export async function buildPaymentTransaction(params: BuildPaymentParams): Promise<string> {
-  const sdk = await import('@stellar/stellar-sdk');
+  const sdk = await loadStellarSdk();
   const { Asset, BASE_FEE, Horizon, Memo, Operation, TransactionBuilder } = sdk;
 
   const server = new Horizon.Server(params.network.horizonUrl);
@@ -79,7 +81,7 @@ export interface BuildContractInvokeParams {
 export async function buildContractInvokeTransaction(
   params: BuildContractInvokeParams,
 ): Promise<string> {
-  const sdk = await import('@stellar/stellar-sdk');
+  const sdk = await loadStellarSdk();
   const { BASE_FEE, Contract, Horizon, TransactionBuilder } = sdk;
 
   const server = new Horizon.Server(params.network.horizonUrl);

@@ -5,6 +5,8 @@
  * key material; they're listed under `stellar/` for ergonomic grouping only.
  */
 
+import { loadStellarSdk } from './loadSdk.js';
+
 export interface BalanceEntry {
   /** `XLM` for native, otherwise `{code, issuer}` for issued assets. */
   readonly asset: 'XLM' | { readonly code: string; readonly issuer: string };
@@ -31,7 +33,7 @@ export async function getBalances(
   horizonUrl: string,
   accountAddress: string,
 ): Promise<readonly BalanceEntry[]> {
-  const sdk = await import('@stellar/stellar-sdk');
+  const sdk = await loadStellarSdk();
   const server = new sdk.Horizon.Server(horizonUrl);
   try {
     const account = await server.loadAccount(accountAddress);
@@ -78,7 +80,7 @@ export async function getRecentOperations(
   if (limit < 1 || limit > 200) {
     throw new RangeError(`getRecentOperations: limit must be 1..200, got ${limit}`);
   }
-  const sdk = await import('@stellar/stellar-sdk');
+  const sdk = await loadStellarSdk();
   const server = new sdk.Horizon.Server(horizonUrl);
   try {
     const page = await server

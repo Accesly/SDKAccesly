@@ -1,5 +1,27 @@
 # @accesly/react
 
+## 0.3.2
+
+### Patch Changes
+
+- Fix `Cannot read properties of undefined (reading 'HashIdPreimage')`
+  (and any other access to `xdr`, `Keypair`, `Horizon`, etc.) when the
+  consumer's bundler (Vite, esbuild via UMD entry, Webpack with
+  `esModuleInterop: false`) wraps `@stellar/stellar-sdk`'s exports under a
+  `.default` property.
+
+  Native Node 22 ESM does not wrap, which is why a working test suite can
+  ship a build that explodes in the browser. The SDK now defensively
+  unwraps `.default` before destructuring, transparently to consumers.
+
+  Applied to all 4 stellar/\* helpers: `contractAddress`, `builder`,
+  `signer`, `horizon`.
+
+  No API change.
+
+- Updated dependencies
+  - @accesly/core@0.3.2
+
 ## 0.3.1
 
 ### Patch Changes
