@@ -77,4 +77,11 @@ export interface CredentialRecord {
    *  - omitted → never queried after the initial POST
    */
   readonly onChain?: boolean | null;
+  /**
+   * Testnet only — `true` once the SDK has successfully triggered Stellar's
+   * friendbot to fund the Smart Account with native XLM. Idempotency flag
+   * so we don't repeatedly hit friendbot on every login. Always `undefined`
+   * on mainnet (friendbot doesn't exist there; users fund via onramps).
+   */
+  readonly testnetFunded?: boolean;
 }

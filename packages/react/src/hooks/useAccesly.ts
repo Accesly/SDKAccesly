@@ -206,6 +206,41 @@ export interface WalletNamespace {
   getPendingWallets(): Promise<readonly CredentialRecord[]>;
   /** Removes a stored credential. Useful after a failed pending wallet is reconciled. */
   clearStoredCredential(username: string): Promise<void>;
+  /**
+   * Testnet only — fondea el Smart Account con XLM via Stellar friendbot.
+   *
+   * Friendbot acepta directamente direcciones de contrato Soroban (`C…`):
+   * internamente arma una tx `invokeContract(XLM_SAC.transfer, ...)` desde
+   * la cuenta de la SDF y la submitea. Resultado: ~10,000 XLM testnet al
+   * Smart Account, sin necesidad de un G-account intermediario.
+   *
+   * Idempotente: el primer call exitoso marca `testnetFunded: true` en el
+   * `CredentialRecord` local; subsiguientes calls devuelven `alreadyFunded:
+   * true` sin hacer otro round-trip a friendbot.
+   *
+   * En `env: 'mainnet'` la función es un no-op (no existe friendbot en
+   * mainnet) y devuelve `{ funded: false, alreadyFunded: false, reason:
+   * 'mainnet-not-supported' }`. La UI tiene que mostrar opciones de onramp
+   * real (Etherfuse, MoonPay, transferencia externa).
+   *
+   * `ensureWallet` lo llama automáticamente fire-and-forget cuando el
+   * status final es `'on-chain'` — el caller solo necesita llamarlo
+   * explícitamente si quiere mostrar feedback en la UI durante el funding.
+   */
+  fundTestnet(walletAddress: string): Promise<FundTestnetResult>;
+}
+
+export interface FundTestnetResult {
+  /** `true` si esta llamada disparó friendbot y fondeó la wallet ahora. */
+  readonly funded: boolean;
+  /**
+   * `true` si la wallet ya había sido fondeada antes (flag local o response
+   * de friendbot indicando que la cuenta ya existe). Igualmente válido —
+   * la UI puede mostrar "ya tienes XLM" sin pedir acción del user.
+   */
+  readonly alreadyFunded: boolean;
+  /** Texto explicativo para no-op cases (mainnet, missing record, etc.). */
+  readonly reason?: 'mainnet-not-supported' | 'friendbot-error' | 'already-funded' | 'funded-now';
 }
 
 export interface SignPaymentInput {
@@ -376,6 +411,72 @@ export function useAccesly(): AcceslyHook {
       return 'unknown';
     };
 
+    /**
+     * Testnet auto-funding implementation. Hits Stellar friendbot with the
+     * Smart Account contract address — la SDF lo soporta directamente post
+     * Soroban (internamente arma una invokeContract XLM_SAC.transfer desde
+     * la cuenta de friendbot al contrato). Resultado: ~10,000 XLM testnet
+     * acreditados al Smart Account.
+     *
+     * No-op si `env !== 'testnet'`. Idempotente via flag local — solo hace
+     * el round-trip a friendbot la primera vez.
+     */
+    // Detect testnet via the network passphrase rather than `env` — `env` is
+    // a deploy stage (`dev` | `staging` | `prod`), not a chain selector.
+    // Pre-mainnet, both `dev` and `staging` point to Stellar testnet; only
+    // `prod` flips to the public mainnet passphrase.
+    const TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
+    const isTestnet = stellarConfig.networkPassphrase === TESTNET_PASSPHRASE;
+
+    const fundTestnetIfNeeded = async (
+      walletAddress: string,
+      username: string | null,
+    ): Promise<FundTestnetResult> => {
+      if (!isTestnet) {
+        return { funded: false, alreadyFunded: false, reason: 'mainnet-not-supported' };
+      }
+
+      // Check local idempotency flag
+      const existing = username ? await c.deviceStore.loadCredential(username) : null;
+      if (existing?.testnetFunded) {
+        return { funded: false, alreadyFunded: true, reason: 'already-funded' };
+      }
+
+      const url = `https://friendbot.stellar.org?addr=${encodeURIComponent(walletAddress)}`;
+      let funded = false;
+      let alreadyFunded = false;
+      try {
+        const res = await fetch(url);
+        if (res.ok) {
+          funded = true;
+        } else if (res.status === 400) {
+          // Friendbot 400 typically means "account/contract already funded"
+          // (e.g. createAccountAlreadyExist or similar). Treat as success
+          // for idempotency purposes.
+          alreadyFunded = true;
+        } else {
+          return { funded: false, alreadyFunded: false, reason: 'friendbot-error' };
+        }
+      } catch {
+        return { funded: false, alreadyFunded: false, reason: 'friendbot-error' };
+      }
+
+      // Persist the flag so we don't hit friendbot again on subsequent
+      // ensureWallet calls. If there's no existing credential record
+      // (different device, fresh browser), nothing to update — the next
+      // session might try again, which is OK (friendbot will 400 with
+      // "already funded" and we treat that as success).
+      if (existing) {
+        await c.deviceStore.saveCredential({ ...existing, testnetFunded: true });
+      }
+
+      return {
+        funded,
+        alreadyFunded,
+        reason: funded ? 'funded-now' : 'already-funded',
+      };
+    };
+
     return {
       async computeAddress(ownerPubkey) {
         return computeSmartAccountAddress({
@@ -489,6 +590,18 @@ export function useAccesly(): AcceslyHook {
       },
 
       async ensureWallet(input) {
+        // Fire-and-forget auto-fund cuando el deploy ya confirmó on-chain
+        // (friendbot rechaza contratos que no existen aún). Helper local
+        // para evitar repetir el check ante cada return.
+        const maybeAutoFund = (result: EnsureWalletResult): EnsureWalletResult => {
+          if (isTestnet && result.status === 'on-chain') {
+            fundTestnetIfNeeded(result.walletAddress, input.email).catch(() => {
+              /* friendbot a veces falla, no es crítico para el flow */
+            });
+          }
+          return result;
+        };
+
         // 1. Cheap idempotent metadata read.
         const remote = await ctx.endpoints.getWallet();
 
@@ -514,30 +627,30 @@ export function useAccesly(): AcceslyHook {
             // (constructor too big, RPC slow), surface pending-deploy.
             try {
               const retried = await this.retryDeploy(input.email);
-              return {
+              return maybeAutoFund({
                 walletAddress: retried.walletAddress,
                 status: retried.status,
                 createdNow: false,
-              };
+              });
             } catch {
-              return {
+              return maybeAutoFund({
                 walletAddress: remote.walletAddress,
                 status: 'pending-deploy',
                 createdNow: false,
-              };
+              });
             }
           }
 
-          return {
+          return maybeAutoFund({
             walletAddress: remote.walletAddress,
             status: statusFromOnChain(remote.onChain),
             createdNow: false,
-          };
+          });
         }
 
         // 2. No wallet at the backend — first-time flow.
         const created = await this.createWallet(input);
-        return {
+        return maybeAutoFund({
           walletAddress: created.walletAddress,
           publicKey: created.publicKey,
           // Use whatever status createWallet inferred. POST OK ⇒ 'unknown'
@@ -545,7 +658,7 @@ export function useAccesly(): AcceslyHook {
           // deploy ⇒ 'pending-deploy' with the predicted address.
           status: created.status,
           createdNow: true,
-        };
+        });
       },
 
       async retryDeploy(username) {
@@ -599,6 +712,10 @@ export function useAccesly(): AcceslyHook {
       },
       clearStoredCredential(username) {
         return ctx.deviceStore.deleteCredential(username);
+      },
+      fundTestnet(walletAddress) {
+        // Username viene del context — coincide con el primary key del DeviceStore.
+        return fundTestnetIfNeeded(walletAddress, c.username);
       },
     };
   }, [ctx, hexFromBytes, stellarConfig]);

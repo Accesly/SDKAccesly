@@ -1,5 +1,18 @@
 # @accesly/react
 
+## 0.5.0
+
+### Minor Changes
+
+- feat(wallet): testnet auto-funding via Stellar friendbot
+  - `@accesly/core`: añade campo opcional `testnetFunded?: boolean` en `CredentialRecord` como flag de idempotencia para no spamear friendbot en cada login.
+  - `@accesly/react`: nuevo método `wallet.fundTestnet(walletAddress)` que dispara `https://friendbot.stellar.org?addr=<C…>` (la SDF soporta contratos Soroban directamente post protocolo 23). `ensureWallet` lo invoca fire-and-forget cuando el deploy ya está `on-chain`, así la UI no tiene que orquestar el funding manualmente. En `prod` (mainnet) es no-op y devuelve `reason: 'mainnet-not-supported'`.
+
+### Patch Changes
+
+- Updated dependencies
+  - @accesly/core@0.5.0
+
 ## 0.4.0
 
 ### Minor Changes
