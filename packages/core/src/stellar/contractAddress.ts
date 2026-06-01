@@ -24,8 +24,12 @@
  * locally / on backend but deploy never landed on chain).
  *
  * `@stellar/stellar-sdk` is lazy-imported so apps that never call this
- * helper don't pay the bundle cost.
+ * helper don't pay the bundle cost. SHA-256 comes from `@noble/hashes`
+ * (already a dep) instead of `stellar-sdk.hash` — the latter was renamed
+ * away from the top-level namespace in stellar-sdk v15+.
  */
+
+import { sha256 } from '@noble/hashes/sha2';
 
 export interface ComputeSmartAccountAddressParams {
   /** 32-byte ed25519 public key of the wallet owner (used as the salt seed). */
@@ -64,23 +68,29 @@ export async function computeSmartAccountAddress(
   }
 
   const sdk = await import('@stellar/stellar-sdk');
-  const { hash, StrKey, xdr, Address } = sdk;
+  const { StrKey, xdr, Address } = sdk;
 
-  const salt = hash(Buffer.from(params.ownerPubkey));
-  const networkId = hash(Buffer.from(params.networkPassphrase, 'utf8'));
+  // SHA-256 from @noble/hashes — stable across browsers and runtimes, and
+  // avoids stellar-sdk's `hash()` which was removed from the top-level
+  // namespace in v15+.
+  const salt = sha256(params.ownerPubkey);
+  const networkId = sha256(new TextEncoder().encode(params.networkPassphrase));
 
+  // The xdr constructors are TypeScript-typed as `Buffer` but accept any
+  // Uint8Array at runtime (the XDR encoder just iterates bytes). The casts
+  // here are types-only.
   const preimage = xdr.HashIdPreimage.envelopeTypeContractId(
     new xdr.HashIdPreimageContractId({
-      networkId,
+      networkId: networkId as unknown as Buffer,
       contractIdPreimage: xdr.ContractIdPreimage.contractIdPreimageFromAddress(
         new xdr.ContractIdPreimageFromAddress({
           address: Address.fromString(params.deployerAddress).toScAddress(),
-          salt,
+          salt: salt as unknown as Buffer,
         }),
       ),
     }),
   );
 
-  const contractIdHash = hash(preimage.toXDR());
-  return StrKey.encodeContract(contractIdHash);
+  const contractIdHash = sha256(preimage.toXDR());
+  return StrKey.encodeContract(contractIdHash as unknown as Buffer);
 }

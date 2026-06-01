@@ -1,5 +1,21 @@
 # @accesly/core
 
+## 0.3.1
+
+### Patch Changes
+
+- Fix `computeSmartAccountAddress` (and therefore `wallet.computeAddress` and
+  `wallet.createWallet`) on apps that have `@stellar/stellar-sdk` v15+
+  installed — which is required for Soroban protocol 26 support.
+
+  Bug: `0.3.0` called `hash(...)` from `@stellar/stellar-sdk`'s top-level
+  namespace. That symbol was removed/relocated in v15, so consumers got
+  `TypeError: hash is not a function` the moment they tried to create a
+  wallet.
+
+  Fix: replace the call with `sha256` from `@noble/hashes` — same SHA-256,
+  already a transitive dep, version-stable. No API change for SDK consumers.
+
 ## 0.3.0
 
 ### Minor Changes
