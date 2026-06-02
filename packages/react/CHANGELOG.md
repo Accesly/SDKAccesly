@@ -1,5 +1,22 @@
 # @accesly/react
 
+## 0.5.1
+
+### Patch Changes
+
+- fix(wallet): retry friendbot mientras el contrato aparece on-chain post-deploy
+
+  `ensureWallet` ahora dispara el auto-fund también con `status: 'unknown'`
+  (el estado natural justo después de `POST /wallets` OK, antes de que el GET
+  de confirmación marque `on-chain`). Friendbot necesita el Smart Account
+  vivo en Soroban para invocar `XLM_SAC.transfer`, así que `fundTestnetIfNeeded`
+  hace hasta 6 reintentos × 5s (~30s ventana) en ese path para esperar la
+  race POST → ledger close.
+
+  Adicionalmente discrimina mejor las 400 de friendbot: "ya fondeada"
+  (idempotencia OK) vs "contrato no existe aún" (reintentar). La llamada
+  manual a `wallet.fundTestnet()` mantiene 0 reintentos — mismo comportamiento.
+
 ## 0.5.0
 
 ### Minor Changes

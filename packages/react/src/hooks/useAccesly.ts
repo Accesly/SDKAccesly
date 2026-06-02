@@ -431,6 +431,7 @@ export function useAccesly(): AcceslyHook {
     const fundTestnetIfNeeded = async (
       walletAddress: string,
       username: string | null,
+      opts?: { readonly retries?: number; readonly retryDelayMs?: number },
     ): Promise<FundTestnetResult> => {
       if (!isTestnet) {
         return { funded: false, alreadyFunded: false, reason: 'mainnet-not-supported' };
@@ -442,23 +443,54 @@ export function useAccesly(): AcceslyHook {
         return { funded: false, alreadyFunded: true, reason: 'already-funded' };
       }
 
+      // Retries: caller path (auto-fund post-create) pasa varios porque hay
+      // una race entre POST /wallets OK y el contrato apareciendo on-chain
+      // — friendbot necesita el C-address vivo para invocar XLM_SAC.transfer.
+      // Manual button: 0 retries (mismo comportamiento de antes).
+      const retries = opts?.retries ?? 0;
+      const retryDelayMs = opts?.retryDelayMs ?? 5000;
+
       const url = `https://friendbot.stellar.org?addr=${encodeURIComponent(walletAddress)}`;
       let funded = false;
       let alreadyFunded = false;
-      try {
-        const res = await fetch(url);
-        if (res.ok) {
-          funded = true;
-        } else if (res.status === 400) {
-          // Friendbot 400 typically means "account/contract already funded"
-          // (e.g. createAccountAlreadyExist or similar). Treat as success
-          // for idempotency purposes.
-          alreadyFunded = true;
-        } else {
+
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+          const res = await fetch(url);
+          if (res.ok) {
+            funded = true;
+            break;
+          }
+          if (res.status === 400) {
+            // Friendbot 400 puede ser "ya fondeada" (éxito idempotente) o
+            // "contrato no existe aún" (retry). El body trae el detalle.
+            const body = await res.text().catch(() => '');
+            const alreadyExists =
+              /already|exist|funded/i.test(body) && !/destination|account.*not/i.test(body);
+            if (alreadyExists) {
+              alreadyFunded = true;
+              break;
+            }
+            // Contract probably not yet on-chain — retry if possible.
+            if (attempt < retries) {
+              await new Promise((r) => setTimeout(r, retryDelayMs));
+              continue;
+            }
+            return { funded: false, alreadyFunded: false, reason: 'friendbot-error' };
+          }
+          // Other status — retry if possible.
+          if (attempt < retries) {
+            await new Promise((r) => setTimeout(r, retryDelayMs));
+            continue;
+          }
+          return { funded: false, alreadyFunded: false, reason: 'friendbot-error' };
+        } catch {
+          if (attempt < retries) {
+            await new Promise((r) => setTimeout(r, retryDelayMs));
+            continue;
+          }
           return { funded: false, alreadyFunded: false, reason: 'friendbot-error' };
         }
-      } catch {
-        return { funded: false, alreadyFunded: false, reason: 'friendbot-error' };
       }
 
       // Persist the flag so we don't hit friendbot again on subsequent
@@ -590,12 +622,17 @@ export function useAccesly(): AcceslyHook {
       },
 
       async ensureWallet(input) {
-        // Fire-and-forget auto-fund cuando el deploy ya confirmó on-chain
-        // (friendbot rechaza contratos que no existen aún). Helper local
-        // para evitar repetir el check ante cada return.
+        // Fire-and-forget auto-fund. Disparamos también con status='unknown'
+        // (que es lo que regresa createWallet tras un POST exitoso, antes de
+        // que el GET de confirmación marque on-chain). Friendbot necesita el
+        // contrato vivo en Soroban para invocar XLM_SAC.transfer, así que
+        // pasamos `retries` para esperar la race POST→on-chain (~5–10s).
         const maybeAutoFund = (result: EnsureWalletResult): EnsureWalletResult => {
-          if (isTestnet && result.status === 'on-chain') {
-            fundTestnetIfNeeded(result.walletAddress, input.email).catch(() => {
+          if (isTestnet && (result.status === 'on-chain' || result.status === 'unknown')) {
+            fundTestnetIfNeeded(result.walletAddress, input.email, {
+              retries: 6,
+              retryDelayMs: 5000,
+            }).catch(() => {
               /* friendbot a veces falla, no es crítico para el flow */
             });
           }
