@@ -20,6 +20,13 @@ export interface EnvironmentDefaults {
      * exactly what the backend will (or did) deploy.
      */
     readonly deployerAddress: string;
+    /**
+     * Address del contrato `ed25519-verifier` desplegado en la red. Necesario
+     * cuando el SDK construye la entrada `Signer::External(verifier, pubkey)`
+     * dentro del `AuthPayload` que firma — el Smart Account compara con la
+     * misma address que tiene almacenada en su context rule.
+     */
+    readonly ed25519VerifierAddress: string;
   };
 }
 
@@ -37,6 +44,8 @@ export const ENVIRONMENT_DEFAULTS: Record<Environment, EnvironmentDefaults> = {
       sorobanRpcUrl: 'https://soroban-testnet.stellar.org',
       // OZ Relayer channels-fund — see CloudServices-accesly/docs/Deployed_Resources_dev.md
       deployerAddress: 'GDRHSVLY3VCEHCHCSR5MZR2ALYLCERDDFT3ULCUIELGFVYHTZFCMNU4E',
+      // accesly-contracts Phase 1 deploy on Stellar testnet.
+      ed25519VerifierAddress: 'CALVIIGIOMODZMWTMKZLSD4PZFFEPWQBSYERHUFM6MH5FLWKCHW4E4G5',
     },
   },
   staging: {
@@ -51,6 +60,7 @@ export const ENVIRONMENT_DEFAULTS: Record<Environment, EnvironmentDefaults> = {
       horizonUrl: 'https://horizon-testnet.stellar.org',
       sorobanRpcUrl: 'https://soroban-testnet.stellar.org',
       deployerAddress: 'GDRHSVLY3VCEHCHCSR5MZR2ALYLCERDDFT3ULCUIELGFVYHTZFCMNU4E',
+      ed25519VerifierAddress: 'CALVIIGIOMODZMWTMKZLSD4PZFFEPWQBSYERHUFM6MH5FLWKCHW4E4G5',
     },
   },
   prod: {
@@ -65,6 +75,7 @@ export const ENVIRONMENT_DEFAULTS: Record<Environment, EnvironmentDefaults> = {
       horizonUrl: 'https://horizon.stellar.org',
       sorobanRpcUrl: 'https://soroban-rpc.mainnet.stellar.org',
       deployerAddress: 'TBD-prod',
+      ed25519VerifierAddress: 'TBD-prod',
     },
   },
 };

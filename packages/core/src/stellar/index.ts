@@ -30,3 +30,9 @@ export {
   type BalanceEntry,
   type OperationEntry,
 } from './horizon.js';
+
+export {
+  signSorobanAuthEntry,
+  type SignSorobanAuthEntryParams,
+  type SignSorobanAuthEntryResult,
+} from './sorobanAuth.js';

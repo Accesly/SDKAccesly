@@ -16,6 +16,10 @@ import type {
   KycStartResponse,
   OrderRequest,
   OrderResponse,
+  SimulateTxRequest,
+  SimulateTxResponse,
+  SubmitTxRequest,
+  SubmitTxResponse,
 } from '../types/api.js';
 import { NotFoundError } from './errors.js';
 import type { AccesslyApiClient, Json } from './client.js';
@@ -52,6 +56,26 @@ export class AccesslyEndpoints {
   /** Cognito-auth. Returns F2 re-encrypted with a per-request session key. */
   getFragment2(req: GetFragment2Request): Promise<GetFragment2Response> {
     return this.client.post<GetFragment2Response>('/fragments/2', req as unknown as Json);
+  }
+
+  /**
+   * Cognito-auth. Simula `XLM_SAC.transfer(from=smartAccount, to, amount)` y
+   * devuelve los datos para que el SDK firme la auth entry client-side. NO
+   * mueve fondos — solo prepara el material para `submitTx`.
+   */
+  simulateTx(req: SimulateTxRequest): Promise<SimulateTxResponse> {
+    return this.client.post<SimulateTxResponse>('/tx/simulate', req as unknown as Json);
+  }
+
+  /**
+   * Cognito-auth. Recibe la `SorobanAuthorizationEntry` firmada por el SDK +
+   * el envelope que `simulateTx` devolvió. El backend re-simula con la firma
+   * real, KMS-firma el envelope con `channels-fund` (developer-pays) y envía
+   * a Soroban RPC. Devuelve el `txHash` para que la UI pueda mostrar el
+   * resultado / link a explorer.
+   */
+  submitTx(req: SubmitTxRequest): Promise<SubmitTxResponse> {
+    return this.client.post<SubmitTxResponse>('/tx/submit', req as unknown as Json);
   }
 
   /** Cognito-auth. Starts a KYC verification with Etherfuse. */

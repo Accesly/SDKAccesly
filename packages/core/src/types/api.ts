@@ -85,6 +85,68 @@ export interface GetFragment2Response {
   readonly serverEphemeralPubkey: Base64String;
 }
 
+/**
+ * `POST /tx/simulate` — fase 1 de mandar XLM desde un Smart Account de Accesly.
+ *
+ * El backend construye la invocación `XLM_SAC.transfer(from=smartAccount, to,
+ * amount)`, simula contra Soroban RPC, y devuelve al SDK todo lo necesario
+ * para firmar client-side la `SorobanAuthorizationEntry` del Smart Account.
+ *
+ * Premisa no-custodial: el backend NO firma como el Smart Account. La sig
+ * ed25519 sobre el `auth_digest` la produce el SDK con la llave reconstruida
+ * de F1+F2+F3.
+ */
+export interface SimulateTxRequest {
+  /** Base-10 string del monto en unidades base (XLM = stroops, 1 XLM = 1e7). */
+  readonly amountStroops: string;
+  /** G… o C… — el SAC `transfer` acepta ambos como destino. */
+  readonly destinationAddress: string;
+}
+
+export interface SimulateTxResponse {
+  /** Envelope con sorobanData + auth entry placeholder (signature = ScVoid). */
+  readonly unsignedXdr: Base64String;
+  /**
+   * Hash de 32 bytes (base64) que Soroban host pasaría a `__check_auth` como
+   * `signature_payload`. OZ Smart Account modifica ese digest así:
+   *   `auth_digest = sha256(signature_payload || context_rule_ids.to_xdr())`
+   * y el SDK firma `auth_digest`, no este valor crudo.
+   */
+  readonly signaturePayloadHashBase64: Base64String;
+  /** Nonce asignado por la simulación. Reusable en la auth entry firmada. */
+  readonly nonce: string;
+  /** Ledger # de expiración de la firma. */
+  readonly signatureExpirationLedger: number;
+  /**
+   * IDs de context rule del Smart Account, alineados por índice con los
+   * auth_contexts del runtime. Para una transfer simple longitud = 1
+   * (la regla `biometric-tx` para `CallContract(XLM_SAC)`).
+   */
+  readonly contextRuleIds: readonly number[];
+  /** XDR base64 de la SorobanAuthorizationEntry placeholder (sin firma). */
+  readonly placeholderAuthEntryXdr: Base64String;
+  /** Estimado de resource fee en stroops — informativo para UI. */
+  readonly resourceFeeStroops: string;
+}
+
+/**
+ * `POST /tx/submit` — fase 2 de mandar XLM. Recibe la auth entry firmada por
+ * el SDK + el envelope que `/tx/simulate` devolvió. El backend reemplaza la
+ * auth placeholder, re-simula con la firma real para calcular bien los
+ * resources (la primera simulación subestima porque no ejecuta __check_auth),
+ * KMS-firma el envelope con `channels-fund` y manda a Soroban RPC.
+ */
+export interface SubmitTxRequest {
+  readonly unsignedXdr: Base64String;
+  readonly signedAuthEntryXdr: Base64String;
+}
+
+export interface SubmitTxResponse {
+  readonly txHash: string;
+  /** Soroban submit status: PENDING / TRY_AGAIN_LATER / ERROR / DUPLICATE. */
+  readonly status: string;
+}
+
 export interface KycStartResponse {
   readonly customerId: string;
   readonly status: 'pending' | 'approved' | 'rejected';

@@ -12,12 +12,14 @@
 
 import { useContext, useMemo } from 'react';
 import {
-  buildPaymentTransaction,
   computeSmartAccountAddress,
   createWallet as coreCreateWallet,
+  generateX25519Keypair,
   normalizeSecp256r1Pubkey,
   reconstructFromPlainAndEncrypted,
+  signSorobanAuthEntry,
   signTransaction as coreSignTransaction,
+  unwrapSessionFragment2,
   type AuthStatus,
   type CredentialRecord,
   type EncryptedEnvelope,
@@ -243,29 +245,76 @@ export interface FundTestnetResult {
   readonly reason?: 'mainnet-not-supported' | 'friendbot-error' | 'already-funded' | 'funded-now';
 }
 
-export interface SignPaymentInput {
-  readonly sourceAddress: string;
+/**
+ * Input para `tx.send(...)` — manda XLM desde el Smart Account del usuario a
+ * cualquier address Stellar (G… clásico o C… contrato).
+ *
+ * El SDK orquesta todo el flujo: simulate → ECDH F2 → reconstruct seed →
+ * sign auth entry → submit. El caller solo entrega los inputs sensibles que
+ * vienen de su flow de unlock (WebAuthn PRF + derivación de F2 key).
+ */
+export interface SendXlmInput {
+  /** Destinatario. G… (clásico) o C… (contrato). */
   readonly destinationAddress: string;
-  readonly asset: 'XLM' | { readonly code: string; readonly issuer: string };
-  readonly amount: string;
-  /** F1 (encoded share including index byte) AS PLAINTEXT — typically unlocked via WebAuthn PRF. */
+  /** Monto en STROOPS (1 XLM = 10_000_000 stroops). Base-10 string para evitar precisión. */
+  readonly amountStroops: string;
+  /**
+   * F1 (Shamir share encoded incluyendo el byte de índice) ya en plano —
+   * típicamente desencriptado client-side via WebAuthn PRF antes de llamar.
+   * El SDK lo zero-iza tras combinar con F2.
+   */
   readonly fragmentF1Plain: Uint8Array;
-  /** F2 envelope returned by the backend `/fragments/2` endpoint (already re-keyed). */
-  readonly fragmentF2Envelope: EncryptedEnvelope;
-  /** Symmetric key for the F2 envelope (derived from ECDH + HKDF). */
+  /**
+   * Llave AES-256 con la que el SDK desencripta el F2 envelope que vino
+   * del backend. La derivación de esta llave es responsabilidad del caller
+   * (usualmente PBKDF2 sobre material derivado de credenciales del user).
+   * Se zero-iza al terminar.
+   */
   readonly fragmentF2Key: Uint8Array;
-  readonly expectedPublicKey?: Uint8Array;
-  readonly memo?: string;
+  /**
+   * Pubkey ed25519 (32 bytes) del owner del Smart Account. Se usa para:
+   *   1) Sanity-check de que la seed reconstruida deriva esta pubkey.
+   *   2) Empaquetarla dentro del `Signer::External(verifier, pubkey)` del
+   *      AuthPayload.
+   */
+  readonly ownerPubkey: Uint8Array;
+}
+
+export interface SendXlmResult {
+  readonly txHash: string;
+  readonly status: string;
+  readonly explorerUrl: string;
 }
 
 export interface TxNamespace {
   /**
-   * Builds + signs + returns the signed XDR. Does NOT submit — that's the
-   * Relayer's job (Hito 6 will wire a `submit` helper that posts to the
-   * Relayer via the backend).
+   * End-to-end XLM transfer desde el Smart Account del user.
+   *
+   * Flujo interno (no-custodial):
+   *   1) `POST /tx/simulate` con `{ amountStroops, destinationAddress }`.
+   *   2) Genera X25519 keypair efímero + `POST /fragments/2` con la pubkey.
+   *      Backend devuelve F2 wrapped en una capa session-key. El SDK la
+   *      descifra con ECDH + HKDF — la session key NO persiste en disco.
+   *   3) Desencripta el F2 envelope interno con `fragmentF2Key` → F2 plain.
+   *   4) Combina F1 + F2 vía Shamir → ed25519 seed (32 bytes).
+   *   5) Computa `auth_digest = sha256(signature_payload || rule_ids_xdr)`
+   *      y lo firma con la seed → 64-byte ed25519 sig.
+   *   6) Empaqueta el `AuthPayload {signers, context_rule_ids}` ScVal,
+   *      reemplaza `credentials.address.signature` en la placeholder entry.
+   *   7) `POST /tx/submit` con `{ unsignedXdr, signedAuthEntryXdr }`.
+   *   8) Devuelve `{ txHash, status, explorerUrl }`.
+   *
+   * Toda llave plana sale de scope tras la firma. Lanza si:
+   *   - El backend rechaza simulate/submit.
+   *   - La reconstrucción Shamir falla (fragmentos no compatibles).
+   *   - La pubkey derivada de la seed no matchea `ownerPubkey`.
    */
-  signPayment(input: SignPaymentInput): Promise<{ signedXdr: string; publicKey: Uint8Array }>;
-  /** Sign an arbitrary already-built XDR with a reconstructed seed. */
+  send(input: SendXlmInput): Promise<SendXlmResult>;
+
+  /**
+   * Bajo nivel: firma un envelope Stellar ya construido con una seed ed25519
+   * dada. Útil para flows custom que arman la tx fuera del SDK.
+   */
   signRawXdr(input: {
     transactionXdr: string;
     ed25519Seed: Uint8Array;
@@ -759,39 +808,80 @@ export function useAccesly(): AcceslyHook {
 
   const tx = useMemo<TxNamespace>(
     () => ({
-      async signPayment(input) {
-        // Reconstruct seed locally: combine plain F1 + decrypted F2.
+      async send(input) {
+        const networkPassphrase = stellarConfig.networkPassphrase;
+        const verifierAddress = stellarConfig.ed25519VerifierAddress;
+        const explorerBase =
+          networkPassphrase === 'Public Global Stellar Network ; September 2015'
+            ? 'https://stellar.expert/explorer/public/tx/'
+            : 'https://stellar.expert/explorer/testnet/tx/';
+
+        // 1. Backend simulate → returns the placeholder envelope + payload to sign.
+        const sim = await ctx.endpoints.simulateTx({
+          amountStroops: input.amountStroops,
+          destinationAddress: input.destinationAddress,
+        });
+
+        // 2. ECDH key exchange → backend re-wraps F2 with a per-request key.
+        const ephemeral = generateX25519Keypair();
+        const ephemeralPubBase64 = base64FromBytes(ephemeral.publicKey);
+
+        const wrappedF2 = await ctx.endpoints.getFragment2({
+          clientEphemeralPubkey: ephemeralPubBase64,
+        });
+
+        // 3. Undo the session layer → recovers the original EncryptedFragment JSON.
+        const sessionPlaintext = unwrapSessionFragment2(wrappedF2, ephemeral.privateKey).plaintext;
+        const fragmentF2Wire = JSON.parse(new TextDecoder().decode(sessionPlaintext)) as {
+          ciphertext: string;
+          nonce: string;
+          algo: string;
+        };
+
+        const fragmentF2Envelope: EncryptedEnvelope = {
+          nonce: base64ToBytes(fragmentF2Wire.nonce),
+          ciphertext: base64ToBytes(fragmentF2Wire.ciphertext),
+        };
+
+        // 4. Reconstruct ed25519 seed by combining F1 (plain) + F2 (decrypted with F2 key).
         const reconstructed = reconstructFromPlainAndEncrypted({
           fragmentF1Plain: input.fragmentF1Plain,
-          fragmentF2: { envelope: input.fragmentF2Envelope, key: input.fragmentF2Key },
+          fragmentF2: { envelope: fragmentF2Envelope, key: input.fragmentF2Key },
         });
-        const networkPassphrase = passphraseForEnv(ctx.env);
-        const horizonUrl = horizonForEnv(ctx.env);
-        const xdr = await buildPaymentTransaction({
-          network: { networkPassphrase, horizonUrl },
-          sourceAddress: input.sourceAddress,
-          destinationAddress: input.destinationAddress,
-          asset: input.asset,
-          amount: input.amount,
-          ...(input.memo ? { memo: input.memo } : {}),
-        });
-        return coreSignTransaction({
-          transactionXdr: xdr,
+
+        // 5. Sign the Soroban auth entry with the reconstructed seed. The helper
+        //    zero-izes the seed even on throw.
+        const { signedAuthEntryXdr } = await signSorobanAuthEntry({
+          signaturePayloadHashBase64: sim.signaturePayloadHashBase64,
+          contextRuleIds: [...sim.contextRuleIds],
+          placeholderAuthEntryXdr: sim.placeholderAuthEntryXdr,
           ed25519Seed: reconstructed.privateSeed,
-          networkPassphrase,
-          ...(input.expectedPublicKey ? { expectedPublicKey: input.expectedPublicKey } : {}),
+          ed25519VerifierAddress: verifierAddress,
+          ownerPubkey: input.ownerPubkey,
         });
+
+        // 6. Backend submit → wraps in fee-bump with channels-fund and submits.
+        const submit = await ctx.endpoints.submitTx({
+          unsignedXdr: sim.unsignedXdr,
+          signedAuthEntryXdr,
+        });
+
+        return {
+          txHash: submit.txHash,
+          status: submit.status,
+          explorerUrl: `${explorerBase}${submit.txHash}`,
+        };
       },
       async signRawXdr(input) {
         return coreSignTransaction({
           transactionXdr: input.transactionXdr,
           ed25519Seed: input.ed25519Seed,
-          networkPassphrase: passphraseForEnv(ctx.env),
+          networkPassphrase: stellarConfig.networkPassphrase,
           ...(input.expectedPublicKey ? { expectedPublicKey: input.expectedPublicKey } : {}),
         });
       },
     }),
-    [ctx],
+    [ctx, stellarConfig],
   );
 
   const kyc = useMemo<KycNamespace>(
@@ -901,12 +991,10 @@ function base64FromBytes(bytes: Uint8Array): string {
   return globalThis.btoa(bin);
 }
 
-function passphraseForEnv(env: 'dev' | 'staging' | 'prod'): string {
-  if (env === 'prod') return 'Public Global Stellar Network ; September 2015';
-  return 'Test SDF Network ; September 2015';
-}
-
-function horizonForEnv(env: 'dev' | 'staging' | 'prod'): string {
-  if (env === 'prod') return 'https://horizon.stellar.org';
-  return 'https://horizon-testnet.stellar.org';
+function base64ToBytes(s: string): Uint8Array {
+  if (typeof Buffer !== 'undefined') return new Uint8Array(Buffer.from(s, 'base64'));
+  const bin = globalThis.atob(s);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i += 1) arr[i] = bin.charCodeAt(i);
+  return arr;
 }

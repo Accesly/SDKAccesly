@@ -50,4 +50,10 @@ export {
 
 export { withZeroize, withZeroizeAsync, zeroize } from './zeroize.js';
 
+export {
+  unwrapSessionFragment2,
+  type SessionFragment2Response,
+  type UnwrappedFragment2,
+} from './sessionFragment.js';
+
 export { __setRandomSourceForTests, getRandomBytes } from './random.js';

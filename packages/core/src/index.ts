@@ -39,13 +39,20 @@ export {
 } from './mpc/index.js';
 
 export {
+  decryptAesGcm,
+  encryptAesGcm,
   generateKeypair,
+  generateX25519Keypair,
   signEd25519,
+  unwrapSessionFragment2,
   verifyEd25519,
   withZeroize,
   zeroize,
   type Ed25519Keypair,
   type EncryptedEnvelope,
+  type SessionFragment2Response,
+  type UnwrappedFragment2,
+  type X25519Keypair,
 } from './crypto/index.js';
 
 export {
@@ -98,12 +105,15 @@ export {
   computeSmartAccountAddress,
   getBalances,
   getRecentOperations,
+  signSorobanAuthEntry,
   signTransaction,
   type BalanceEntry,
   type BuildContractInvokeParams,
   type BuildPaymentParams,
   type ComputeSmartAccountAddressParams,
   type OperationEntry,
+  type SignSorobanAuthEntryParams,
+  type SignSorobanAuthEntryResult,
   type SignTransactionParams,
   type SignTransactionResult,
   type StellarNetworkParams,

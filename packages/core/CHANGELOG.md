@@ -1,5 +1,22 @@
 # @accesly/core
 
+## 0.6.0
+
+### Minor Changes
+
+- feat(tx): mandar XLM end-to-end desde un Smart Account de Accesly
+
+  **`@accesly/core`**
+  - Nuevo `stellar/sorobanAuth.ts` con `signSorobanAuthEntry({...})` que firma la `SorobanAuthorizationEntry` del Smart Account: calcula `auth_digest = sha256(signature_payload || context_rule_ids.to_xdr())`, ed25519-firma con la seed reconstruida vía Shamir y empaqueta el `AuthPayload { signers, context_rule_ids }` reemplazando la signature placeholder. Match exacto con `OZ SmartAccount::do_check_auth` v0.7.1.
+  - Nuevo `crypto/sessionFragment.ts` con `unwrapSessionFragment2(response, ephemeralPrivKey)` para deshacer la capa session-key (X25519 ECDH + HKDF-SHA256 → AES-256-GCM) que el backend pone alrededor de F2 en `POST /fragments/2`. Zero-iza shared, sessionKey y la privKey efímera al terminar.
+  - `AccesslyEndpoints` gana `simulateTx({ amountStroops, destinationAddress })` y `submitTx({ unsignedXdr, signedAuthEntryXdr })` con sus tipos `SimulateTxRequest/Response`, `SubmitTxRequest/Response`.
+  - Re-exports nuevos en el root: `signSorobanAuthEntry`, `unwrapSessionFragment2`, `generateX25519Keypair`, `decryptAesGcm`, `encryptAesGcm` y sus tipos.
+
+  **`@accesly/react` — BREAKING**
+  - `tx.signPayment(...)` reemplazado por `tx.send(input: SendXlmInput): Promise<SendXlmResult>` que orquesta el flujo completo no-custodial: simulate → ECDH F2 → reconstruct seed → sign Soroban auth entry → submit. Devuelve `{ txHash, status, explorerUrl }`.
+  - Removido `SignPaymentInput` del export. Nuevo `SendXlmInput` / `SendXlmResult`.
+  - `EnvironmentDefaults.stellar` ahora requiere `ed25519VerifierAddress` (testnet: `CALVIIGIOMODZMWTMKZLSD4PZFFEPWQBSYERHUFM6MH5FLWKCHW4E4G5`). Es la address del contrato verifier que el Smart Account compara dentro de `Signer::External(verifier, pubkey)`.
+
 ## 0.5.0
 
 ### Minor Changes
