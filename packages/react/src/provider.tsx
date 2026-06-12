@@ -27,7 +27,11 @@ import {
   type TelemetrySink,
 } from '@accesly/core';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AcceslyContext, type AcceslyContextValue } from './context.js';
+import {
+  AcceslyContext,
+  type AcceslyContextValue,
+  type ZkEmailProverHandle,
+} from './context.js';
 import { ENVIRONMENT_DEFAULTS } from './config.js';
 
 export interface AcceslyProviderProps {
@@ -46,6 +50,12 @@ export interface AcceslyProviderProps {
   };
   /** Optional telemetry sink — surfaces every API request/response/retry. */
   readonly telemetry?: TelemetrySink;
+  /**
+   * Optional ZK email prover for SEP-30 recovery. Pass an instance from
+   * `@accesly/zkemail` (`createZkEmailProver({ artifactsBaseUrl })`). When
+   * omitted, `auth.recover()` throws `RecoveryNotAvailableError`.
+   */
+  readonly zkEmailProver?: ZkEmailProverHandle;
 }
 
 export function AcceslyProvider(props: AcceslyProviderProps): JSX.Element {
@@ -120,8 +130,19 @@ export function AcceslyProvider(props: AcceslyProviderProps): JSX.Element {
       status,
       username,
       refreshStatus,
+      ...(props.zkEmailProver ? { zkEmailProver: props.zkEmailProver } : {}),
     }),
-    [props.appId, props.env, apiUrl, cognitoConfig, instances, status, username, refreshStatus],
+    [
+      props.appId,
+      props.env,
+      apiUrl,
+      cognitoConfig,
+      instances,
+      status,
+      username,
+      refreshStatus,
+      props.zkEmailProver,
+    ],
   );
 
   return <AcceslyContext.Provider value={value}>{props.children}</AcceslyContext.Provider>;

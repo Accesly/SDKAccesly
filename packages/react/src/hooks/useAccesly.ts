@@ -27,6 +27,53 @@ import {
 import { AcceslyContext, type AcceslyContextValue } from '../context.js';
 import { ENVIRONMENT_DEFAULTS } from '../config.js';
 
+/**
+ * Structural type of `@accesly/zkemail`'s `ZkEmailProver`. Defined here so
+ * `@accesly/react` does not take a hard runtime dep on `@accesly/zkemail`.
+ * Consumers who use recovery wire in a real prover via `<AcceslyProvider>`.
+ */
+export interface ZkEmailProverLike {
+  prove(args: {
+    readonly eml: string;
+    readonly recovery: {
+      readonly recipientEmail: string;
+      readonly walletAddress: string;
+      readonly newPasskeyPubkey: Uint8Array;
+      readonly domainSalt: Uint8Array;
+    };
+    readonly rsaModulus: bigint;
+  }): Promise<{
+    readonly bundle: {
+      readonly proof: { readonly a: Uint8Array; readonly b: Uint8Array; readonly c: Uint8Array };
+      readonly publicSignals: readonly Uint8Array[];
+    };
+    readonly elapsedMs: number;
+  }>;
+}
+
+/** Input to `auth.recover()` once a `ZkEmailProver` is configured. */
+export interface RecoverInput {
+  /** Raw .eml as downloaded by the user from Gmail's "Show original". */
+  readonly eml: string;
+  /** Lowercase, trimmed recipient address that received the DKIM-signed message. */
+  readonly recipientEmail: string;
+  /** Wallet address being recovered (G... strkey). */
+  readonly walletAddress: string;
+  /** New passkey public key (secp256r1, 64 bytes) that will replace the lost one. */
+  readonly newPasskeyPubkey: Uint8Array;
+  /** Domain salt from the deployed Smart Account, per D1.4. 32 bytes. */
+  readonly domainSalt: Uint8Array;
+  /** RSA-2048 modulus of the DKIM key that signed the .eml. */
+  readonly rsaModulus: bigint;
+}
+
+/** Output of a successful recovery proof build. The backend Lambda (Phase 6) submits this. */
+export interface RecoverResult {
+  readonly proof: { readonly a: Uint8Array; readonly b: Uint8Array; readonly c: Uint8Array };
+  readonly publicSignals: readonly Uint8Array[];
+  readonly elapsedMs: number;
+}
+
 export interface AuthNamespace {
   readonly status: AuthStatus;
   readonly username: string | null;
@@ -36,25 +83,27 @@ export interface AuthNamespace {
   signIn(email: string, password: string): Promise<void>;
   signOut(): Promise<void>;
   /**
-   * SEP-30 account recovery via ZK email proof. NOT AVAILABLE yet — throws
-   * `RecoveryNotAvailableError`. Requires Track C (groth16 zkEmail circuit)
-   * and backend `sep30Handler` Lambda to be deployed first. Tracked in
-   * `CloudServices-accesly/docs/Pendientes_dev.md`.
+   * SEP-30 account recovery via ZK email proof. Generates a Groth16 proof
+   * client-side that the deployed Soroban verifier accepts. Throws
+   * `RecoveryNotAvailableError` if no `zkEmailProver` was configured on
+   * the `<AcceslyProvider>`.
+   *
+   * The returned `RecoverResult` is ready for the Phase 6 `sep30Handler`
+   * Lambda, which submits the rotation tx to Soroban on the user's behalf.
    */
-  recover(email: string): Promise<never>;
+  recover(input: RecoverInput): Promise<RecoverResult>;
 }
 
 /**
- * Thrown by `auth.recover()` until the ZK email circuit (Track C) and the
- * backend `sep30Handler` Lambda ship. The SDK exposes the API now so consumer
- * code doesn't need to be restructured when recovery activates.
+ * Thrown by `auth.recover()` when the app did not configure a `zkEmailProver`
+ * on the `<AcceslyProvider>`. To enable recovery, install `@accesly/zkemail`
+ * and pass `<AcceslyProvider zkEmailProver={prover}>`.
  */
 export class RecoveryNotAvailableError extends Error {
   constructor() {
     super(
-      'recover() is not available in this SDK release. It requires the ZK email ' +
-        'circuit (Track C) and the backend sep30Handler — neither is deployed yet. ' +
-        'Track status in CloudServices-accesly/docs/Pendientes_dev.md.',
+      'recover() is not available because no zkEmailProver was configured. ' +
+        'Install @accesly/zkemail and pass an instance to <AcceslyProvider zkEmailProver={...}>.',
     );
     this.name = 'RecoveryNotAvailableError';
   }
@@ -415,8 +464,25 @@ export function useAccesly(): AcceslyHook {
         await ctx.tokenManager.signOut();
         await ctx.refreshStatus();
       },
-      async recover(_email) {
-        throw new RecoveryNotAvailableError();
+      async recover(input) {
+        if (!ctx.zkEmailProver) {
+          throw new RecoveryNotAvailableError();
+        }
+        const { bundle, elapsedMs } = await ctx.zkEmailProver.prove({
+          eml: input.eml,
+          rsaModulus: input.rsaModulus,
+          recovery: {
+            recipientEmail: input.recipientEmail,
+            walletAddress: input.walletAddress,
+            newPasskeyPubkey: input.newPasskeyPubkey,
+            domainSalt: input.domainSalt,
+          },
+        });
+        return {
+          proof: bundle.proof,
+          publicSignals: bundle.publicSignals,
+          elapsedMs,
+        };
       },
     }),
     [ctx],
