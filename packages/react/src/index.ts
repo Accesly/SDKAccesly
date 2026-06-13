@@ -42,6 +42,7 @@ export {
   type KycNamespace,
   type RecoverInput,
   type RecoverResult,
+  type RecoveryNamespace,
   type RemoteWalletInfo,
   type ZkEmailProverLike,
   type RetryDeployResult,

@@ -21,8 +21,13 @@ import {
   signTransaction as coreSignTransaction,
   unwrapSessionFragment2,
   type AuthStatus,
+  type ConfigureRecoveryRequest,
   type CredentialRecord,
   type EncryptedEnvelope,
+  type RecoveryConfigResponse,
+  type RecoveryDeleteResponse,
+  type RecoverySignRequest,
+  type RecoverySignResponse,
 } from '@accesly/core';
 import { AcceslyContext, type AcceslyContextValue } from '../context.js';
 import { ENVIRONMENT_DEFAULTS } from '../config.js';
@@ -422,11 +427,43 @@ export class NotImplementedYetError extends Error {
   }
 }
 
+/**
+ * Backend-side SEP-30 recovery namespace. Wraps the public `/sep30/accounts/*`
+ * endpoints exposed by the Phase 6 `sep30Handler` Lambda. These are SEP-30
+ * standard — interoperable with Freighter/Lobstr/etc. — and stateful from the
+ * backend's perspective (persists identities + signers in DynamoDB).
+ *
+ * The cryptographic proof generation that authorizes the actual rotation
+ * lives in `auth.recover()` (when a `ZkEmailProver` is wired).
+ */
+export interface RecoveryNamespace {
+  /** Persist or replace the recovery config for `walletAddress`. */
+  configure(
+    walletAddress: string,
+    input: ConfigureRecoveryRequest,
+  ): Promise<RecoveryConfigResponse>;
+  /** Read the current recovery config, or `null` if none is registered. */
+  get(walletAddress: string): Promise<RecoveryConfigResponse | null>;
+  /**
+   * Ask the backend to authorize a recovery transaction. In `mock` mode it
+   * authorizes when the identity matches a registered one. In `real` mode it
+   * polls the on-chain `zk-email-verifier` event before authorizing.
+   */
+  requestSignature(
+    walletAddress: string,
+    signingAddress: string,
+    input: RecoverySignRequest,
+  ): Promise<RecoverySignResponse>;
+  /** Remove the recovery config. Returns `null` if it did not exist. */
+  remove(walletAddress: string): Promise<RecoveryDeleteResponse | null>;
+}
+
 export interface AcceslyHook {
   readonly auth: AuthNamespace;
   readonly wallet: WalletNamespace;
   readonly tx: TxNamespace;
   readonly kyc: KycNamespace;
+  readonly recovery: RecoveryNamespace;
   readonly session: SessionNamespace;
   readonly settings: SettingsNamespace;
   readonly yieldOps: YieldNamespace;
@@ -962,6 +999,28 @@ export function useAccesly(): AcceslyHook {
     [ctx],
   );
 
+  const recovery = useMemo<RecoveryNamespace>(
+    () => ({
+      configure(walletAddress, input) {
+        return ctx.endpoints.configureRecovery(walletAddress, input);
+      },
+      get(walletAddress) {
+        return ctx.endpoints.getRecoveryConfig(walletAddress);
+      },
+      requestSignature(walletAddress, signingAddress, input) {
+        return ctx.endpoints.requestRecoverySignature(
+          walletAddress,
+          signingAddress,
+          input,
+        );
+      },
+      remove(walletAddress) {
+        return ctx.endpoints.deleteRecoveryConfig(walletAddress);
+      },
+    }),
+    [ctx],
+  );
+
   const session = useMemo<SessionNamespace>(
     () => ({
       async create() {
@@ -1009,7 +1068,7 @@ export function useAccesly(): AcceslyHook {
 
   // hexToBytes is reserved for future helpers.
   void hexToBytes;
-  return { auth, wallet, tx, kyc, session, settings, yieldOps, _internal: ctx };
+  return { auth, wallet, tx, kyc, recovery, session, settings, yieldOps, _internal: ctx };
 }
 
 /* --------------------------------- helpers --------------------------------- */

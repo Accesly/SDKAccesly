@@ -82,6 +82,15 @@ export {
   type IdTokenProvider,
   type TelemetryEvent,
   type TelemetrySink,
+  type ConfigureRecoveryRequest,
+  type RecoveryAuthenticationMethod,
+  type RecoveryConfigResponse,
+  type RecoveryDeleteResponse,
+  type RecoveryIdentity,
+  type RecoverySignerPublic,
+  type RecoverySignerRequest,
+  type RecoverySignRequest,
+  type RecoverySignResponse,
 } from './api/index.js';
 
 export {

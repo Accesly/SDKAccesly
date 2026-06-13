@@ -7,6 +7,7 @@
  */
 
 import type {
+  ConfigureRecoveryRequest,
   CreateWalletRequest,
   CreateWalletResponse,
   GetFragment2Request,
@@ -16,6 +17,10 @@ import type {
   KycStartResponse,
   OrderRequest,
   OrderResponse,
+  RecoveryConfigResponse,
+  RecoveryDeleteResponse,
+  RecoverySignRequest,
+  RecoverySignResponse,
   SimulateTxRequest,
   SimulateTxResponse,
   SubmitTxRequest,
@@ -96,5 +101,61 @@ export class AccesslyEndpoints {
   /** Cognito-auth. Quote or submit a USDC→MXN offramp order. */
   offramp(req: OrderRequest): Promise<OrderResponse> {
     return this.client.post<OrderResponse>('/offramp', req as unknown as Json);
+  }
+
+  /* ── SEP-30 recovery (Phase 6) — endpoints públicos (no Cognito) ──────── */
+
+  /** Public. Configure recovery identities + signers for `address`. */
+  configureRecovery(
+    address: string,
+    req: ConfigureRecoveryRequest,
+  ): Promise<RecoveryConfigResponse> {
+    return this.client.post<RecoveryConfigResponse>(
+      `/sep30/accounts/${encodeURIComponent(address)}`,
+      req as unknown as Json,
+    );
+  }
+
+  /** Public. Returns the recovery config for `address`, or `null` if none. */
+  async getRecoveryConfig(address: string): Promise<RecoveryConfigResponse | null> {
+    try {
+      return await this.client.get<RecoveryConfigResponse>(
+        `/sep30/accounts/${encodeURIComponent(address)}`,
+      );
+    } catch (err) {
+      if (err instanceof NotFoundError) return null;
+      throw err;
+    }
+  }
+
+  /**
+   * Public. Asks the backend to authorize a recovery transaction. In mock
+   * mode it returns `authorized: true` if the identity matches a registered
+   * one. In real mode it polls the `zk-email-verifier` on-chain event before
+   * authorizing.
+   */
+  requestRecoverySignature(
+    address: string,
+    signingAddress: string,
+    req: RecoverySignRequest,
+  ): Promise<RecoverySignResponse> {
+    return this.client.put<RecoverySignResponse>(
+      `/sep30/accounts/${encodeURIComponent(address)}/sign/${encodeURIComponent(signingAddress)}`,
+      req as unknown as Json,
+    );
+  }
+
+  /** Public. Removes the recovery config for `address`. Returns `null` on 404. */
+  async deleteRecoveryConfig(
+    address: string,
+  ): Promise<RecoveryDeleteResponse | null> {
+    try {
+      return await this.client.delete<RecoveryDeleteResponse>(
+        `/sep30/accounts/${encodeURIComponent(address)}`,
+      );
+    } catch (err) {
+      if (err instanceof NotFoundError) return null;
+      throw err;
+    }
   }
 }

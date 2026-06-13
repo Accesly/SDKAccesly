@@ -29,6 +29,7 @@ export {
 
 export type {
   Base64String,
+  ConfigureRecoveryRequest,
   CreateWalletRequest,
   CreateWalletResponse,
   EncryptedFragmentWire,
@@ -41,4 +42,12 @@ export type {
   OrderAction,
   OrderRequest,
   OrderResponse,
+  RecoveryAuthenticationMethod,
+  RecoveryConfigResponse,
+  RecoveryDeleteResponse,
+  RecoveryIdentity,
+  RecoverySignerPublic,
+  RecoverySignerRequest,
+  RecoverySignRequest,
+  RecoverySignResponse,
 } from '../types/api.js';
