@@ -37,9 +37,7 @@ export function formatForSoroban(
     );
   }
   if (publicSignals.length !== NUM_PUBLIC_SIGNALS) {
-    throw new Error(
-      `expected ${NUM_PUBLIC_SIGNALS} public signals, got ${publicSignals.length}`,
-    );
+    throw new Error(`expected ${NUM_PUBLIC_SIGNALS} public signals, got ${publicSignals.length}`);
   }
 
   const a = g1ToUncompressed(proof.pi_a, 'pi_a');
@@ -70,10 +68,7 @@ function g1ToUncompressed(point: readonly string[], label: string): Uint8Array {
   return out;
 }
 
-function g2ToUncompressed(
-  point: readonly (readonly string[])[],
-  label: string,
-): Uint8Array {
+function g2ToUncompressed(point: readonly (readonly string[])[], label: string): Uint8Array {
   if (point.length !== 3 || point.some((p) => p.length !== 2)) {
     throw new Error(`${label}: expected [[c0,c1],[c0,c1],[c0,c1]]`);
   }

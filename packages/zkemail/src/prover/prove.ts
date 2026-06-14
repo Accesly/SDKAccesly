@@ -62,7 +62,11 @@ export function createZkEmailProver(config: ZkEmailProverConfig) {
       let proof: unknown;
       let publicSignals: unknown;
       try {
-        const result = await snarkjs.groth16.fullProve(inputs as unknown as Record<string, unknown>, wasm, zkey);
+        const result = await snarkjs.groth16.fullProve(
+          inputs as unknown as Record<string, unknown>,
+          wasm,
+          zkey,
+        );
         proof = result.proof;
         publicSignals = result.publicSignals;
       } catch (cause) {

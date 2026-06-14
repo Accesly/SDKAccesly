@@ -27,11 +27,7 @@ import {
   type TelemetrySink,
 } from '@accesly/core';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import {
-  AcceslyContext,
-  type AcceslyContextValue,
-  type ZkEmailProverHandle,
-} from './context.js';
+import { AcceslyContext, type AcceslyContextValue, type ZkEmailProverHandle } from './context.js';
 import { ENVIRONMENT_DEFAULTS } from './config.js';
 
 export interface AcceslyProviderProps {

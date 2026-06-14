@@ -59,7 +59,9 @@ describe('loadArtifacts', () => {
   });
 
   it('throws ArtifactLoadError on non-2xx', async () => {
-    const fetchSpy = vi.fn(async () => new Response('not found', { status: 404, statusText: 'Not Found' }));
+    const fetchSpy = vi.fn(
+      async () => new Response('not found', { status: 404, statusText: 'Not Found' }),
+    );
     await expect(
       loadArtifacts({
         artifactsBaseUrl: 'https://x.test',

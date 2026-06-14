@@ -24,11 +24,7 @@
 export const REACT_ADAPTER_VERSION = '0.0.0';
 
 export { AcceslyProvider, type AcceslyProviderProps } from './provider.js';
-export {
-  AcceslyContext,
-  type AcceslyContextValue,
-  type ZkEmailProverHandle,
-} from './context.js';
+export { AcceslyContext, type AcceslyContextValue, type ZkEmailProverHandle } from './context.js';
 export { ENVIRONMENT_DEFAULTS, type EnvironmentDefaults } from './config.js';
 export {
   NotImplementedYetError,

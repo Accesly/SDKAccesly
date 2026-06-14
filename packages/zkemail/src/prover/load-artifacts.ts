@@ -49,10 +49,7 @@ export async function loadArtifacts(config: ZkEmailProverConfig): Promise<Circui
   return { wasm, zkey };
 }
 
-async function fetchArtifact(
-  config: ZkEmailProverConfig,
-  path: string,
-): Promise<Uint8Array> {
+async function fetchArtifact(config: ZkEmailProverConfig, path: string): Promise<Uint8Array> {
   const url = buildArtifactUrl(config, path);
   const fetchFn = config.fetch ?? globalThis.fetch;
   if (typeof fetchFn !== 'function') {

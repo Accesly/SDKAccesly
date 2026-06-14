@@ -77,9 +77,7 @@ export function buildCircuitInputs(args: BuildInputsArgs): CircuitInputs {
   }
   const walletAddressBytes = strkeyToRawBytes(recovery.walletAddress);
   if (walletAddressBytes.length !== 32) {
-    throw new Error(
-      `walletAddress decoded to ${walletAddressBytes.length} bytes, expected 32`,
-    );
+    throw new Error(`walletAddress decoded to ${walletAddressBytes.length} bytes, expected 32`);
   }
 
   // 5. Locate header value ranges inside the signed bytes for the circuit's

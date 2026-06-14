@@ -18,7 +18,7 @@
 export function sha256Pad(message: Uint8Array): Uint8Array {
   const msgBitLen = BigInt(message.length) * 8n;
   const currentLen = message.length + 1; // +1 for 0x80
-  const zerosNeeded = ((56 - (currentLen % 64)) + 64) % 64;
+  const zerosNeeded = (56 - (currentLen % 64) + 64) % 64;
   const totalLen = message.length + 1 + zerosNeeded + 8;
 
   const out = new Uint8Array(totalLen);
@@ -29,9 +29,7 @@ export function sha256Pad(message: Uint8Array): Uint8Array {
   view.setBigUint64(0, msgBitLen, false /* big-endian */);
 
   if (out.length % 64 !== 0) {
-    throw new Error(
-      `sha256Pad: result length ${out.length} not multiple of 64`,
-    );
+    throw new Error(`sha256Pad: result length ${out.length} not multiple of 64`);
   }
   return out;
 }

@@ -1008,11 +1008,7 @@ export function useAccesly(): AcceslyHook {
         return ctx.endpoints.getRecoveryConfig(walletAddress);
       },
       requestSignature(walletAddress, signingAddress, input) {
-        return ctx.endpoints.requestRecoverySignature(
-          walletAddress,
-          signingAddress,
-          input,
-        );
+        return ctx.endpoints.requestRecoverySignature(walletAddress, signingAddress, input);
       },
       remove(walletAddress) {
         return ctx.endpoints.deleteRecoveryConfig(walletAddress);

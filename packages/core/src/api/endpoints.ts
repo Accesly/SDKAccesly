@@ -146,9 +146,7 @@ export class AccesslyEndpoints {
   }
 
   /** Public. Removes the recovery config for `address`. Returns `null` on 404. */
-  async deleteRecoveryConfig(
-    address: string,
-  ): Promise<RecoveryDeleteResponse | null> {
+  async deleteRecoveryConfig(address: string): Promise<RecoveryDeleteResponse | null> {
     try {
       return await this.client.delete<RecoveryDeleteResponse>(
         `/sep30/accounts/${encodeURIComponent(address)}`,

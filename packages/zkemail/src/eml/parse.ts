@@ -98,7 +98,10 @@ function parseDkimTags(rawValue: string): DkimTags {
   // Tags: key=value; key=value; ... (RFC 6376 §3.2)
   // base64 values may contain '/', '+', '=' — split on semicolons not
   // preceded by an escape (none in DKIM, simple split is fine).
-  const parts = rawValue.split(/\s*;\s*/).map((p) => p.trim()).filter(Boolean);
+  const parts = rawValue
+    .split(/\s*;\s*/)
+    .map((p) => p.trim())
+    .filter(Boolean);
   const map = new Map<string, string>();
   for (const part of parts) {
     const eq = part.indexOf('=');
@@ -128,7 +131,11 @@ function parseDkimTags(rawValue: string): DkimTags {
         `Gmail uses relaxed/relaxed by default — this email may be from a non-supported provider.`,
     );
   }
-  const h = map.get('h')!.split(/\s*:\s*/).map((s) => s.toLowerCase()).filter(Boolean);
+  const h = map
+    .get('h')!
+    .split(/\s*:\s*/)
+    .map((s) => s.toLowerCase())
+    .filter(Boolean);
   const b = base64ToBytes(map.get('b')!.replace(/\s+/g, ''));
   return {
     v,

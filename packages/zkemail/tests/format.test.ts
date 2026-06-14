@@ -6,7 +6,11 @@ const ZERO_PROOF: SnarkjsProof = {
   protocol: 'groth16',
   curve: 'bls12381',
   pi_a: ['0', '0', '1'],
-  pi_b: [['0', '0'], ['0', '0'], ['1', '0']],
+  pi_b: [
+    ['0', '0'],
+    ['0', '0'],
+    ['1', '0'],
+  ],
   pi_c: ['0', '0', '1'],
 };
 const ZERO_SIGNALS = new Array(14).fill('0');
