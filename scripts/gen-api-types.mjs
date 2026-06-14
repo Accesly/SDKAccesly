@@ -22,20 +22,20 @@
 import { execSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const ROOT = resolve(process.cwd());
 const OUT_PATH = resolve(ROOT, 'packages/core/src/types/api.generated.ts');
 
-const DEFAULT_URL =
+export const DEFAULT_URL =
   'https://raw.githubusercontent.com/daniellagart4-sys/CloudServices-accesly/main/docs/openapi.yaml';
 
-function parseArgs() {
-  const args = process.argv.slice(2);
+export function parseArgs(argv = process.argv.slice(2)) {
   const out = { input: undefined, check: false };
-  for (let i = 0; i < args.length; i += 1) {
-    const a = args[i];
-    if (a === '--input' && args[i + 1]) {
-      out.input = args[i + 1];
+  for (let i = 0; i < argv.length; i += 1) {
+    const a = argv[i];
+    if (a === '--input' && argv[i + 1]) {
+      out.input = argv[i + 1];
       i += 1;
     } else if (a === '--check') {
       out.check = true;
@@ -44,24 +44,38 @@ function parseArgs() {
   return out;
 }
 
-async function resolveSpec(input) {
+/**
+ * Resolves which OpenAPI spec to feed `openapi-typescript`. Order:
+ *   1. `input` arg (CLI `--input <path|url>`)
+ *   2. `ACCESLY_OPENAPI_PATH` env var (file)
+ *   3. `ACCESLY_OPENAPI_URL` env var (url)
+ *   4. Default GitHub URL
+ *
+ * Tests can pass `opts` to override `cwd`, `env`, and the `existsSync`
+ * dependency so resolution can be exercised without touching the real
+ * filesystem.
+ */
+export async function resolveSpec(input, opts = {}) {
+  const cwd = opts.cwd ?? ROOT;
+  const env = opts.env ?? process.env;
+  const fsExists = opts.existsSync ?? existsSync;
   if (input) {
     if (input.startsWith('http://') || input.startsWith('https://')) {
       return { kind: 'url', value: input };
     }
-    const abs = resolve(ROOT, input);
-    if (!existsSync(abs)) {
+    const abs = resolve(cwd, input);
+    if (!fsExists(abs)) {
       throw new Error(`spec file not found: ${abs}`);
     }
     return { kind: 'file', value: abs };
   }
-  if (process.env['ACCESLY_OPENAPI_PATH']) {
-    const abs = resolve(ROOT, process.env['ACCESLY_OPENAPI_PATH']);
-    if (!existsSync(abs)) throw new Error(`spec file not found: ${abs}`);
+  if (env['ACCESLY_OPENAPI_PATH']) {
+    const abs = resolve(cwd, env['ACCESLY_OPENAPI_PATH']);
+    if (!fsExists(abs)) throw new Error(`spec file not found: ${abs}`);
     return { kind: 'file', value: abs };
   }
-  if (process.env['ACCESLY_OPENAPI_URL']) {
-    return { kind: 'url', value: process.env['ACCESLY_OPENAPI_URL'] };
+  if (env['ACCESLY_OPENAPI_URL']) {
+    return { kind: 'url', value: env['ACCESLY_OPENAPI_URL'] };
   }
   return { kind: 'url', value: DEFAULT_URL };
 }
@@ -135,7 +149,11 @@ async function main() {
   if (check) checkClean();
 }
 
-main().catch((err) => {
-  console.error('[gen-api-types] error:', err.message);
-  process.exit(1);
-});
+// CLI entry guard: only run main() when invoked as a script, not on import.
+const isCliEntry = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isCliEntry) {
+  main().catch((err) => {
+    console.error('[gen-api-types] error:', err.message);
+    process.exit(1);
+  });
+}

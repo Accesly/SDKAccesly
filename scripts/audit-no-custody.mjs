@@ -22,6 +22,7 @@
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = resolve(process.cwd());
 
@@ -29,7 +30,7 @@ const ROOT = resolve(process.cwd());
  * Always-block: these patterns MUST NOT appear anywhere in package source.
  * Each entry: { id, pattern, why }.
  */
-const ALWAYS_BLOCK = [
+export const ALWAYS_BLOCK = [
   {
     id: 'localStorage-secret',
     pattern: /localStorage\.setItem\s*\([^)]*(secret|seed|privateKey|private_key|privKey)/i,
@@ -64,7 +65,7 @@ const ALWAYS_BLOCK = [
  *
  * Paths are relative to repo root, forward-slash, exact match.
  */
-const ALLOWLIST = {
+export const ALLOWLIST = {
   'Keypair.fromSecret': new Set([
     // Stellar Keypair.fromSecret is forbidden — we never reconstruct a Stellar
     // Keypair from a secret string. Signing is done with raw seeds via @noble.
@@ -128,9 +129,9 @@ function collectFiles() {
   return files;
 }
 
-function checkAlwaysBlock(relPath, source) {
+export function checkAlwaysBlock(relPath, source, rules = ALWAYS_BLOCK) {
   const violations = [];
-  for (const rule of ALWAYS_BLOCK) {
+  for (const rule of rules) {
     const lines = source.split('\n');
     lines.forEach((line, idx) => {
       // Strip trivial comment lines so commentary explaining the rule
@@ -153,9 +154,9 @@ function checkAlwaysBlock(relPath, source) {
   return violations;
 }
 
-function checkAllowlist(relPath, source) {
+export function checkAllowlist(relPath, source, allowlist = ALLOWLIST) {
   const violations = [];
-  for (const [needle, allowed] of Object.entries(ALLOWLIST)) {
+  for (const [needle, allowed] of Object.entries(allowlist)) {
     if (allowed.has(relPath)) continue;
     const lines = source.split('\n');
     lines.forEach((line, idx) => {
@@ -208,9 +209,17 @@ function main() {
   process.exit(1);
 }
 
-try {
-  main();
-} catch (err) {
-  console.error('[audit-no-custody] internal error:', err);
-  process.exit(2);
+// CLI entry guard: only run main() when invoked as a script, not on import.
+const isCliEntry = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isCliEntry) {
+  try {
+    main();
+  } catch (err) {
+    console.error('[audit-no-custody] internal error:', err);
+    process.exit(2);
+  }
 }
+
+// Re-export resolved path of this module — useful for tests that want
+// to construct fixtures relative to the script's location.
+export const __scriptPath = fileURLToPath(import.meta.url);
