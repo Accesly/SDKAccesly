@@ -127,3 +127,12 @@ export {
   type SignTransactionResult,
   type StellarNetworkParams,
 } from './stellar/index.js';
+
+export {
+  recoverWallet,
+  type RecoverWalletInput,
+  type RecoverWalletResult,
+  type RecoverStep,
+  type RecoverProgressCallback,
+  type ZkEmailProverHandle as ZkEmailProverHandleForRecovery,
+} from './recovery/index.js';

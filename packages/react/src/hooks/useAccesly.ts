@@ -17,6 +17,7 @@ import {
   generateX25519Keypair,
   normalizeSecp256r1Pubkey,
   reconstructFromPlainAndEncrypted,
+  recoverWallet as coreRecoverWallet,
   signSorobanAuthEntry,
   signTransaction as coreSignTransaction,
   unwrapSessionFragment2,
@@ -28,6 +29,9 @@ import {
   type RecoveryDeleteResponse,
   type RecoverySignRequest,
   type RecoverySignResponse,
+  type RecoverWalletInput,
+  type RecoverWalletResult,
+  type RecoverProgressCallback,
 } from '@accesly/core';
 import { AcceslyContext, type AcceslyContextValue } from '../context.js';
 import { ENVIRONMENT_DEFAULTS } from '../config.js';
@@ -456,6 +460,25 @@ export interface RecoveryNamespace {
   ): Promise<RecoverySignResponse>;
   /** Remove the recovery config. Returns `null` if it did not exist. */
   remove(walletAddress: string): Promise<RecoveryDeleteResponse | null>;
+  /**
+   * Real recovery (flow B). Drives the full pipeline:
+   *  1. Generates a NEW master key + Shamir split.
+   *  2. Runs the ZK email prover against the user's .eml + new passkey.
+   *  3. Queries the SA's context rules and builds a multi-op envelope
+   *     that rotates owner_ed25519 (in admin-cfg + every biometric-tx)
+   *     and secp256r1 (in sep10-auth) — all atomic.
+   *  4. POSTs to `/sep30/accounts/{address}/recover`.
+   *  5. Returns the new ed25519 owner pubkey + encrypted F1 for the
+   *     caller to persist locally.
+   *
+   * The user must NOT be signed-in (this is a public, recovery-mode flow).
+   * Pass a `ZkEmailProverHandle` from `@accesly/zkemail` configured against
+   * the live CDN of artifacts.
+   */
+  run(
+    input: Omit<RecoverWalletInput, 'networkPassphrase' | 'sorobanRpcUrl'>,
+    onProgress?: RecoverProgressCallback,
+  ): Promise<RecoverWalletResult>;
 }
 
 export interface AcceslyHook {
@@ -1013,8 +1036,19 @@ export function useAccesly(): AcceslyHook {
       remove(walletAddress) {
         return ctx.endpoints.deleteRecoveryConfig(walletAddress);
       },
+      run(input, onProgress) {
+        return coreRecoverWallet(
+          {
+            ...input,
+            networkPassphrase: stellarConfig.networkPassphrase,
+            sorobanRpcUrl: stellarConfig.sorobanRpcUrl,
+          },
+          ctx.endpoints,
+          onProgress,
+        );
+      },
     }),
-    [ctx],
+    [ctx, stellarConfig],
   );
 
   const session = useMemo<SessionNamespace>(

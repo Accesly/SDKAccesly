@@ -156,4 +156,31 @@ export class AccesslyEndpoints {
       throw err;
     }
   }
+
+  /**
+   * Public. Executes the real recovery (flow B). Submits the SDK-built
+   * envelope to Soroban (KMS-fee-bumped by the backend channels-fund) and,
+   * on success, persists the new F2/F3 ciphertexts + new passkey under
+   * the same userId. The backend reads the on-chain verify() result —
+   * a failed proof returns 422 here.
+   */
+  recoverWallet(
+    address: string,
+    req: {
+      readonly unsignedXdr: string;
+      readonly newSecp256r1Pubkey: string;
+      readonly newFragmentF2: import('../types/api.js').EncryptedFragmentWire;
+      readonly newFragmentF3: import('../types/api.js').EncryptedFragmentWire;
+      readonly newEmailCommitment: string;
+    },
+  ): Promise<{
+    readonly walletAddress: string;
+    readonly txHash: string;
+    readonly status: string;
+  }> {
+    return this.client.post(
+      `/sep30/accounts/${encodeURIComponent(address)}/recover`,
+      req as unknown as Json,
+    );
+  }
 }
