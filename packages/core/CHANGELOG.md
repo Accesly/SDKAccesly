@@ -1,5 +1,32 @@
 # @accesly/core
 
+## 0.7.0
+
+### Minor Changes
+
+- feat(recovery): SEP-30 recovery namespace + `auth.recover()` via ZK email proof
+
+  **`@accesly/core`**
+  - `AccesslyEndpoints` gana 4 métodos contra los endpoints `/sep30/accounts/*`:
+    `configureRecovery`, `getRecoveryConfig`, `requestRecoverySignature`,
+    `deleteRecoveryConfig`.
+  - Nuevos tipos: `RecoveryIdentity`, `RecoveryAuthMethod`, `RecoverySignerRequest`,
+    `RecoverySignerPublic`, `ConfigureRecoveryRequest`, `RecoveryConfigResponse`,
+    `RecoverySignRequest`, `RecoverySignResponse`, `RecoveryDeleteResponse`.
+  - Sin runtime nuevo — son wrappers HTTP idiomáticos sobre `AccesslyApiClient`.
+
+  **`@accesly/react`**
+  - Nueva namespace `recovery` en `useAccesly()`: `configure`, `get`,
+    `requestSignature`, `remove` — todos pegan a los endpoints SEP-30 con el
+    JWT de Cognito ya inyectado.
+  - `auth.recover(input)` ahora está disponible cuando `<AcceslyProvider>` recibe
+    un `zkEmailProver={...}` (instancia de `@accesly/zkemail`). El SDK genera la
+    proof Groth16 client-side y devuelve `{ proof, publicSignals, elapsedMs }`
+    listo para que el backend Lambda lo submita a Soroban.
+  - Si no se pasa el prover, `auth.recover()` lanza `RecoveryNotAvailableError`
+    con instrucciones de instalación. Mantiene `@accesly/react` sin hard dep
+    sobre `@accesly/zkemail`.
+
 ## 0.6.0
 
 ### Minor Changes

@@ -1,6 +1,6 @@
 {
   "name": "@accesly/zkemail",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "ZK email recovery prover for Accesly Smart Accounts. Browser client that turns a DKIM-signed .eml into a Groth16 proof verifiable on Soroban.",
   "license": "MIT",
   "author": "Accesly Core <acceslyoficial@gmail.com>",
