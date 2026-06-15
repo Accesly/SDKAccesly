@@ -39,6 +39,15 @@ export {
 export { PBKDF2_DEFAULT_ITERATIONS, hkdfSha256, pbkdf2Sha256, type Pbkdf2Options } from './kdf.js';
 
 export {
+  RECOVERY_KEY_BYTES,
+  RECOVERY_SALT_BYTES,
+  deriveRecoveryKey,
+  deriveRecoveryKeyFromPasswordString,
+  generateRecoverySalt,
+  type DeriveRecoveryKeyParams,
+} from './recoveryKey.js';
+
+export {
   X25519_PRIVATE_KEY_LENGTH,
   X25519_PUBLIC_KEY_LENGTH,
   X25519_SHARED_SECRET_LENGTH,
