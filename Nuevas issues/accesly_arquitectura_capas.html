@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accesly · Arquitectura en capas</title>
+<style>
+  :root{
+    --canvas:#0C0C0F; --surface:#15151A; --raised:#1B1B22; --border:#2A2A33;
+    --text:#FFFFFF; --muted:#9A9AA8; --faint:#6A6A78;
+    --purple:#8B5CF6; --soft:#A78BFA; --amber:#F2A33C; --teal:#3FC9D6;
+    --blue:#6AA9FF; --green:#3DD68C;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--canvas); color:var(--text); font-family:var(--sans);
+    -webkit-font-smoothing:antialiased; line-height:1.5;
+    padding:48px 32px 64px;
+  }
+  .wrap{max-width:1040px; margin:0 auto}
+
+  /* header */
+  .top{display:flex; justify-content:space-between; align-items:flex-end; gap:24px; flex-wrap:wrap; margin-bottom:40px}
+  .brand{font-weight:800; font-size:26px; letter-spacing:-.02em; color:var(--text)}
+  .brand .dot{color:var(--purple)}
+  h1{font-size:30px; line-height:1.15; letter-spacing:-.02em; margin:14px 0 8px; font-weight:750}
+  .sub{color:var(--muted); font-size:15px; max-width:560px}
+  .meta{font-family:var(--mono); font-size:11px; color:var(--faint); text-align:right; letter-spacing:.04em; line-height:1.8}
+  .meta b{color:var(--soft); font-weight:600}
+
+  /* stage: axis + stack */
+  .stage{display:grid; grid-template-columns:140px 1fr; gap:18px; align-items:stretch}
+
+  .axis{position:relative; padding-top:6px}
+  .axis-line{position:absolute; left:18px; top:14px; bottom:14px; width:2px;
+    background:linear-gradient(180deg,var(--soft),var(--teal) 55%,var(--green));
+    border-radius:2px; opacity:.55}
+  .axis-line::after{content:""; position:absolute; left:-4px; bottom:-2px; width:10px; height:10px;
+    border-right:2px solid var(--green); border-bottom:2px solid var(--green);
+    transform:rotate(45deg); opacity:.9}
+  .axis-cap{position:relative; padding-left:34px; font-family:var(--mono); font-size:10.5px;
+    letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+  .axis-cap.top{margin-bottom:0}
+  .axis-cap.top b, .axis-cap.bot b{display:block; color:var(--text); font-size:11px; letter-spacing:.04em; margin-top:2px}
+  .axis-cap.bot{position:absolute; bottom:8px; left:0}
+  .axis-node{position:absolute; left:13px; width:12px; height:12px; border-radius:50%;
+    background:var(--canvas); border:2px solid var(--soft)}
+  .axis-node.top{top:10px; border-color:var(--soft)}
+  .axis-node.bot{bottom:10px; border-color:var(--green)}
+
+  .stack{display:flex; flex-direction:column; gap:12px}
+
+  /* layer card */
+  .layer{position:relative; background:var(--surface); border:1px solid var(--border);
+    border-radius:14px; padding:16px 18px 16px 20px; overflow:hidden;
+    opacity:0; transform:translateY(8px); animation:rise .5s forwards}
+  .layer::before{content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--c)}
+  .layer .head{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:4px}
+  .ey{font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--c)}
+  .own{font-family:var(--mono); font-size:10px; letter-spacing:.04em; color:var(--muted);
+    border:1px solid var(--border); border-radius:999px; padding:3px 9px; white-space:nowrap; background:var(--raised)}
+  .own.accesly{color:var(--soft); border-color:rgba(167,139,250,.35)}
+  .name{font-size:18px; font-weight:700; letter-spacing:-.01em; margin:2px 0 3px}
+  .resp{color:var(--muted); font-size:13px; margin-bottom:12px; max-width:680px}
+  .chips{display:flex; flex-wrap:wrap; gap:7px}
+  .chip{font-family:var(--mono); font-size:11px; letter-spacing:.01em; color:#D7D7DE;
+    background:var(--raised); border:1px solid var(--border); border-radius:7px; padding:5px 9px}
+  .chip.k{color:var(--c); border-color:color-mix(in srgb,var(--c) 38%,var(--border))}
+
+  /* the signature: invisible boundary */
+  .veil{position:relative; margin:6px 0 2px; display:flex; align-items:center; gap:12px;
+    padding:0 4px; opacity:0; animation:rise .5s forwards; animation-delay:.42s}
+  .veil .ln{flex:1; height:1px; background:repeating-linear-gradient(90deg,var(--teal) 0 7px,transparent 7px 14px); opacity:.6}
+  .veil .lbl{font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--teal); display:flex; align-items:center; gap:7px; white-space:nowrap}
+  .veil .lbl svg{width:14px; height:14px; stroke:var(--teal); fill:none; stroke-width:1.7}
+  .below{position:relative}
+  .below .layer{background:linear-gradient(180deg,rgba(21,21,26,.7),rgba(21,21,26,.7)); border-style:dashed}
+
+  /* principles */
+  .rail{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:22px 0 0 158px}
+  .pr{background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:13px 14px}
+  .pr .t{font-size:13px; font-weight:650; margin-bottom:3px}
+  .pr .d{font-size:11.5px; color:var(--muted); line-height:1.45}
+  .pr .t::before{content:""; display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:7px; vertical-align:middle; background:var(--pc)}
+
+  .foot{margin:26px 0 0 158px; font-family:var(--mono); font-size:10.5px; color:var(--faint); letter-spacing:.03em}
+  .foot b{color:var(--muted); font-weight:600}
+
+  @keyframes rise{to{opacity:1; transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .layer,.veil{animation:none; opacity:1; transform:none}
+  }
+  @media (max-width:780px){
+    body{padding:32px 16px 48px}
+    .stage{grid-template-columns:1fr; gap:0}
+    .axis{display:none}
+    .rail{grid-template-columns:1fr 1fr; margin-left:0}
+    .foot{margin-left:0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div>
+      <div class="brand">accesly<span class="dot">.</span></div>
+      <h1>Arquitectura en capas</h1>
+      <div class="sub">Cobro dentro del chat con blockchain invisible. De lo que el usuario toca (arriba) a donde se liquida el valor (abajo).</div>
+    </div>
+    <div class="meta">
+      STELLAR · USDC · ETHERFUSE<br>
+      PASSKEY + MPC · GAS PATROCINADO<br>
+      <b>v1 · junio 2026</b>
+    </div>
+  </div>
+
+  <div class="stage">
+    <!-- axis -->
+    <div class="axis">
+      <div class="axis-line"></div>
+      <div class="axis-node top"></div>
+      <div class="axis-node bot"></div>
+      <div class="axis-cap top">El usuario<b>toca aquí</b></div>
+      <div class="axis-cap bot">El valor<b>se liquida aquí</b></div>
+    </div>
+
+    <!-- stack -->
+    <div class="stack">
+
+      <!-- 01 -->
+      <div class="layer" style="--c:var(--purple); animation-delay:.04s">
+        <div class="head"><span class="ey">Capa 01 · Canales</span><span class="own">Meta · Telegram · IG</span></div>
+        <div class="name">Canales de mensajería</div>
+        <div class="resp">Reciben mensajes, muestran el cobro interactivo y disparan el WebView. Una identidad por número de teléfono sirve en todas las redes.</div>
+        <div class="chips">
+          <span class="chip k">WhatsApp Cloud API / BSP</span>
+          <span class="chip">Telegram Bot API</span>
+          <span class="chip">Instagram Messaging</span>
+          <span class="chip">Webhooks entrantes</span>
+          <span class="chip">Botón URL · Flows</span>
+        </div>
+      </div>
+
+      <!-- 02 -->
+      <div class="layer" style="--c:var(--soft); animation-delay:.10s">
+        <div class="head"><span class="ey">Capa 02 · WebView</span><span class="own accesly">Accesly</span></div>
+        <div class="name">Pantalla de pago (WebView embebido)</div>
+        <div class="resp">Front web propio servido dentro del chat. La única capa donde Accesly controla el diseño al 100%: es donde vive la experiencia del demo.</div>
+        <div class="chips">
+          <span class="chip k">Front propio (HTML)</span>
+          <span class="chip k">Passkey / biometría</span>
+          <span class="chip">Confirmación de pago</span>
+          <span class="chip">Cripto invisible</span>
+        </div>
+      </div>
+
+      <!-- 03 -->
+      <div class="layer" style="--c:var(--purple); animation-delay:.16s">
+        <div class="head"><span class="ey">Capa 03 · Núcleo</span><span class="own accesly">Accesly</span></div>
+        <div class="name">Orquestación (Accesly Core)</div>
+        <div class="resp">El cerebro. Crea la intención de cobro, coordina ramp y liquidación, aplica el partner fee y notifica al canal. Nunca custodia el bruto.</div>
+        <div class="chips">
+          <span class="chip k">API Gateway</span>
+          <span class="chip k">Motor de cobros</span>
+          <span class="chip">Máquina de estados</span>
+          <span class="chip">Idempotencia</span>
+          <span class="chip">Partner fee</span>
+          <span class="chip">Ledger espejo</span>
+        </div>
+      </div>
+
+      <!-- 04 -->
+      <div class="layer" style="--c:var(--teal); animation-delay:.22s">
+        <div class="head"><span class="ey">Capa 04 · Identidad</span><span class="own accesly">Accesly</span></div>
+        <div class="name">Identidad y wallet (Account Abstraction)</div>
+        <div class="resp">Wallet no custodial creada con passkey y teléfono, sin frase semilla. El quórum de firma siempre exige al usuario. Accesly patrocina el gas.</div>
+        <div class="chips">
+          <span class="chip k">WebAuthn / Passkey</span>
+          <span class="chip k">MPC 2-de-3</span>
+          <span class="chip">KMS / HSM</span>
+          <span class="chip">Recuperación por OTP</span>
+          <span class="chip">Gas patrocinado</span>
+        </div>
+      </div>
+
+      <!-- 05 -->
+      <div class="layer" style="--c:var(--amber); animation-delay:.28s">
+        <div class="head"><span class="ey">Capa 05 · Agentes</span><span class="own accesly">Accesly</span></div>
+        <div class="name">Agentes de IA y herramientas</div>
+        <div class="resp">Atienden, cobran y ejecutan acciones. El consumo se mide contra un saldo de IA. Las herramientas se conectan vía MCP + OAuth.</div>
+        <div class="chips">
+          <span class="chip k">Orquestador de agente</span>
+          <span class="chip k">Metering / saldo IA</span>
+          <span class="chip">Tool use (function calling)</span>
+          <span class="chip">MCP</span>
+          <span class="chip">OAuth (Composio)</span>
+          <span class="chip">Calendar · Gmail · Sheets · Drive</span>
+        </div>
+      </div>
+
+      <!-- boundary -->
+      <div class="veil">
+        <span class="lbl">
+          <svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
+          De aquí hacia abajo, invisible para el usuario
+        </span>
+        <span class="ln"></span>
+      </div>
+
+      <div class="below">
+        <!-- 06 -->
+        <div class="layer" style="--c:var(--blue); animation-delay:.46s">
+          <div class="head"><span class="ey">Capa 06 · Ramp</span><span class="own">Etherfuse · regulado</span></div>
+          <div class="name">On / off-ramp regulado</div>
+          <div class="resp">Convierte fiat y USDC, es el sujeto obligado que hace KYC/KYB y mueve el dinero por SPEI. Mantiene a Accesly fuera del perímetro regulatorio.</div>
+          <div class="chips">
+            <span class="chip k">Onramp (CLABE SPEI)</span>
+            <span class="chip">Offramp</span>
+            <span class="chip">Swap</span>
+            <span class="chip">KYC / KYB</span>
+            <span class="chip">Claimable balance</span>
+          </div>
+        </div>
+
+        <!-- 07 -->
+        <div class="layer" style="--c:var(--green); animation-delay:.52s">
+          <div class="head"><span class="ey">Capa 07 · Liquidación</span><span class="own">Stellar · Circle</span></div>
+          <div class="name">Liquidación on-chain</div>
+          <div class="resp">Asienta el valor en segundos, con costo casi nulo y de forma atómica. El split del partner fee viaja en la misma transacción.</div>
+          <div class="chips">
+            <span class="chip k">USDC (Circle)</span>
+            <span class="chip">Trustlines</span>
+            <span class="chip">Sponsored reserves</span>
+            <span class="chip">Fee-bump</span>
+            <span class="chip k">Liquidación atómica</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- principles -->
+  <div class="rail">
+    <div class="pr" style="--pc:var(--soft)"><div class="t">No custodia</div><div class="d">El dinero nunca vive en una cuenta de Accesly. Fluye del cliente al negocio.</div></div>
+    <div class="pr" style="--pc:var(--teal)"><div class="t">Blockchain invisible</div><div class="d">Ni wallets, ni gas, ni tokens. El cliente paga con biometría.</div></div>
+    <div class="pr" style="--pc:var(--amber)"><div class="t">Mínima fricción</div><div class="d">Passkey y teléfono. Pago en uno o dos toques. Cero frase semilla.</div></div>
+    <div class="pr" style="--pc:var(--green)"><div class="t">Flujos atómicos</div><div class="d">Cada cobro se completa o se revierte como una unidad idempotente.</div></div>
+  </div>
+
+  <div class="foot"><b>Lectura:</b> capas 02 a 05 son de Accesly · capa 01 es el canal (Meta) · capas 06 y 07 son terceros (Etherfuse, Stellar). La frontera marca dónde empieza la capa cripto, oculta al usuario final.</div>
+
+</div>
+</body>
+</html>

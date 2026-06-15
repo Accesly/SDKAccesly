@@ -82,15 +82,6 @@ export {
   type IdTokenProvider,
   type TelemetryEvent,
   type TelemetrySink,
-  type ConfigureRecoveryRequest,
-  type RecoveryAuthenticationMethod,
-  type RecoveryConfigResponse,
-  type RecoveryDeleteResponse,
-  type RecoveryIdentity,
-  type RecoverySignerPublic,
-  type RecoverySignerRequest,
-  type RecoverySignRequest,
-  type RecoverySignResponse,
 } from './api/index.js';
 
 export {
@@ -128,11 +119,7 @@ export {
   type StellarNetworkParams,
 } from './stellar/index.js';
 
-export {
-  recoverWallet,
-  type RecoverWalletInput,
-  type RecoverWalletResult,
-  type RecoverStep,
-  type RecoverProgressCallback,
-  type ZkEmailProverHandle as ZkEmailProverHandleForRecovery,
-} from './recovery/index.js';
+// Recovery via ZK email + `@accesly/zkemail` se removió en 1.0.0-pre.0 (2026-06-15).
+// El nuevo modelo (OTP-email + password de Cognito) llega en `@accesly/react`
+// como `recovery` namespace en 1.0.0 final.
+// Ver SDKAccesly/docs/Plan_Final_v1.md §5 (Fase 1).

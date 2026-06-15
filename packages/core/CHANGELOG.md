@@ -1,5 +1,40 @@
 # @accesly/core
 
+## 1.0.0
+
+### Major Changes
+
+- BREAKING: remover `@accesly/zkemail`, recovery wire y endpoints SEP-30
+
+  Prep para la `1.0.0` final con el nuevo flujo de recovery
+  (OTP por email + password de Cognito). Ver `docs/Plan_Final_v1.md` §5
+  (Fase 1).
+
+  **`@accesly/core`:**
+  - Borrado `src/recovery/` (orchestrator ZK + tipos).
+  - Removidos los endpoints SEP-30 de `AccesslyEndpoints`: `configureRecovery`,
+    `getRecoveryConfig`, `requestRecoverySignature`, `deleteRecoveryConfig`,
+    `recoverWallet`.
+  - Removidos los tipos asociados: `ConfigureRecoveryRequest`, `RecoveryConfigResponse`,
+    `RecoverySignerRequest`, `RecoverySignerPublic`, `RecoveryIdentity`,
+    `RecoveryAuthenticationMethod`, `RecoverySignRequest`, `RecoverySignResponse`,
+    `RecoveryDeleteResponse`.
+
+  **`@accesly/react`:**
+  - `auth.recover()` y `RecoveryNotAvailableError` removidos.
+  - `RecoveryNamespace`, `RecoverInput`, `RecoverResult`, `ZkEmailProverLike`
+    removidos.
+  - Prop `zkEmailProver` removida de `<AcceslyProvider>`.
+  - `ZkEmailProverHandle` removido de `AcceslyContextValue`.
+
+  **`@accesly/zkemail`:**
+  - Paquete eliminado del monorepo. La versión publicada `0.1.0` se deprecará
+    en npm apuntando a la nueva `1.0.0` de core.
+
+  Migración: si dependes de `auth.recover()` o de los endpoints SEP-30, quédate
+  en `0.7.0` hasta que `1.0.0` final salga con el nuevo flujo. El tag npm
+  `latest` sigue apuntando a `0.7.x` durante la transición.
+
 ## 0.7.0
 
 ### Minor Changes

@@ -7,7 +7,6 @@
  */
 
 import type {
-  ConfigureRecoveryRequest,
   CreateWalletRequest,
   CreateWalletResponse,
   GetFragment2Request,
@@ -17,10 +16,6 @@ import type {
   KycStartResponse,
   OrderRequest,
   OrderResponse,
-  RecoveryConfigResponse,
-  RecoveryDeleteResponse,
-  RecoverySignRequest,
-  RecoverySignResponse,
   SimulateTxRequest,
   SimulateTxResponse,
   SubmitTxRequest,
@@ -103,84 +98,9 @@ export class AccesslyEndpoints {
     return this.client.post<OrderResponse>('/offramp', req as unknown as Json);
   }
 
-  /* ── SEP-30 recovery (Phase 6) — endpoints públicos (no Cognito) ──────── */
-
-  /** Public. Configure recovery identities + signers for `address`. */
-  configureRecovery(
-    address: string,
-    req: ConfigureRecoveryRequest,
-  ): Promise<RecoveryConfigResponse> {
-    return this.client.post<RecoveryConfigResponse>(
-      `/sep30/accounts/${encodeURIComponent(address)}`,
-      req as unknown as Json,
-    );
-  }
-
-  /** Public. Returns the recovery config for `address`, or `null` if none. */
-  async getRecoveryConfig(address: string): Promise<RecoveryConfigResponse | null> {
-    try {
-      return await this.client.get<RecoveryConfigResponse>(
-        `/sep30/accounts/${encodeURIComponent(address)}`,
-      );
-    } catch (err) {
-      if (err instanceof NotFoundError) return null;
-      throw err;
-    }
-  }
-
-  /**
-   * Public. Asks the backend to authorize a recovery transaction. In mock
-   * mode it returns `authorized: true` if the identity matches a registered
-   * one. In real mode it polls the `zk-email-verifier` on-chain event before
-   * authorizing.
-   */
-  requestRecoverySignature(
-    address: string,
-    signingAddress: string,
-    req: RecoverySignRequest,
-  ): Promise<RecoverySignResponse> {
-    return this.client.put<RecoverySignResponse>(
-      `/sep30/accounts/${encodeURIComponent(address)}/sign/${encodeURIComponent(signingAddress)}`,
-      req as unknown as Json,
-    );
-  }
-
-  /** Public. Removes the recovery config for `address`. Returns `null` on 404. */
-  async deleteRecoveryConfig(address: string): Promise<RecoveryDeleteResponse | null> {
-    try {
-      return await this.client.delete<RecoveryDeleteResponse>(
-        `/sep30/accounts/${encodeURIComponent(address)}`,
-      );
-    } catch (err) {
-      if (err instanceof NotFoundError) return null;
-      throw err;
-    }
-  }
-
-  /**
-   * Public. Executes the real recovery (flow B). Submits the SDK-built
-   * envelope to Soroban (KMS-fee-bumped by the backend channels-fund) and,
-   * on success, persists the new F2/F3 ciphertexts + new passkey under
-   * the same userId. The backend reads the on-chain verify() result —
-   * a failed proof returns 422 here.
-   */
-  recoverWallet(
-    address: string,
-    req: {
-      readonly unsignedXdr: string;
-      readonly newSecp256r1Pubkey: string;
-      readonly newFragmentF2: import('../types/api.js').EncryptedFragmentWire;
-      readonly newFragmentF3: import('../types/api.js').EncryptedFragmentWire;
-      readonly newEmailCommitment: string;
-    },
-  ): Promise<{
-    readonly walletAddress: string;
-    readonly txHash: string;
-    readonly status: string;
-  }> {
-    return this.client.post(
-      `/sep30/accounts/${encodeURIComponent(address)}/recover`,
-      req as unknown as Json,
-    );
-  }
+  // SEP-30 endpoints (configureRecovery, getRecoveryConfig,
+  // requestRecoverySignature, deleteRecoveryConfig, recoverWallet) se removieron
+  // en 1.0.0-pre.0 (2026-06-15). Los reemplazará la nueva familia
+  // /recovery/otp/*  +  /fragments/3  +  /recovery/finalize en 1.0.0 final.
+  // Ver SDKAccesly/docs/Plan_Final_v1.md §5 (Fase 1).
 }

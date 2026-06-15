@@ -17,71 +17,19 @@ import {
   generateX25519Keypair,
   normalizeSecp256r1Pubkey,
   reconstructFromPlainAndEncrypted,
-  recoverWallet as coreRecoverWallet,
   signSorobanAuthEntry,
   signTransaction as coreSignTransaction,
   unwrapSessionFragment2,
   type AuthStatus,
-  type ConfigureRecoveryRequest,
   type CredentialRecord,
   type EncryptedEnvelope,
-  type RecoveryConfigResponse,
-  type RecoveryDeleteResponse,
-  type RecoverySignRequest,
-  type RecoverySignResponse,
-  type RecoverWalletInput,
-  type RecoverWalletResult,
-  type RecoverProgressCallback,
 } from '@accesly/core';
 import { AcceslyContext, type AcceslyContextValue } from '../context.js';
 import { ENVIRONMENT_DEFAULTS } from '../config.js';
 
-/**
- * Structural type of `@accesly/zkemail`'s `ZkEmailProver`. Defined here so
- * `@accesly/react` does not take a hard runtime dep on `@accesly/zkemail`.
- * Consumers who use recovery wire in a real prover via `<AcceslyProvider>`.
- */
-export interface ZkEmailProverLike {
-  prove(args: {
-    readonly eml: string;
-    readonly recovery: {
-      readonly recipientEmail: string;
-      readonly walletAddress: string;
-      readonly newPasskeyPubkey: Uint8Array;
-      readonly domainSalt: Uint8Array;
-    };
-    readonly rsaModulus: bigint;
-  }): Promise<{
-    readonly bundle: {
-      readonly proof: { readonly a: Uint8Array; readonly b: Uint8Array; readonly c: Uint8Array };
-      readonly publicSignals: readonly Uint8Array[];
-    };
-    readonly elapsedMs: number;
-  }>;
-}
-
-/** Input to `auth.recover()` once a `ZkEmailProver` is configured. */
-export interface RecoverInput {
-  /** Raw .eml as downloaded by the user from Gmail's "Show original". */
-  readonly eml: string;
-  /** Lowercase, trimmed recipient address that received the DKIM-signed message. */
-  readonly recipientEmail: string;
-  /** Wallet address being recovered (G... strkey). */
-  readonly walletAddress: string;
-  /** New passkey public key (secp256r1, 64 bytes) that will replace the lost one. */
-  readonly newPasskeyPubkey: Uint8Array;
-  /** Domain salt from the deployed Smart Account, per D1.4. 32 bytes. */
-  readonly domainSalt: Uint8Array;
-  /** RSA-2048 modulus of the DKIM key that signed the .eml. */
-  readonly rsaModulus: bigint;
-}
-
-/** Output of a successful recovery proof build. The backend Lambda (Phase 6) submits this. */
-export interface RecoverResult {
-  readonly proof: { readonly a: Uint8Array; readonly b: Uint8Array; readonly c: Uint8Array };
-  readonly publicSignals: readonly Uint8Array[];
-  readonly elapsedMs: number;
-}
+// Recovery (ZK email) se removió en 1.0.0-pre.0 (2026-06-15). El nuevo modelo
+// OTP-email + password de Cognito se introduce en 1.0.0 como un namespace
+// `recovery` en este mismo hook. Ver docs/Plan_Final_v1.md §5.
 
 export interface AuthNamespace {
   readonly status: AuthStatus;
@@ -91,31 +39,6 @@ export interface AuthNamespace {
   resendConfirmation(email: string): Promise<void>;
   signIn(email: string, password: string): Promise<void>;
   signOut(): Promise<void>;
-  /**
-   * SEP-30 account recovery via ZK email proof. Generates a Groth16 proof
-   * client-side that the deployed Soroban verifier accepts. Throws
-   * `RecoveryNotAvailableError` if no `zkEmailProver` was configured on
-   * the `<AcceslyProvider>`.
-   *
-   * The returned `RecoverResult` is ready for the Phase 6 `sep30Handler`
-   * Lambda, which submits the rotation tx to Soroban on the user's behalf.
-   */
-  recover(input: RecoverInput): Promise<RecoverResult>;
-}
-
-/**
- * Thrown by `auth.recover()` when the app did not configure a `zkEmailProver`
- * on the `<AcceslyProvider>`. To enable recovery, install `@accesly/zkemail`
- * and pass `<AcceslyProvider zkEmailProver={prover}>`.
- */
-export class RecoveryNotAvailableError extends Error {
-  constructor() {
-    super(
-      'recover() is not available because no zkEmailProver was configured. ' +
-        'Install @accesly/zkemail and pass an instance to <AcceslyProvider zkEmailProver={...}>.',
-    );
-    this.name = 'RecoveryNotAvailableError';
-  }
 }
 
 export interface CreateWalletInput {
@@ -431,62 +354,15 @@ export class NotImplementedYetError extends Error {
   }
 }
 
-/**
- * Backend-side SEP-30 recovery namespace. Wraps the public `/sep30/accounts/*`
- * endpoints exposed by the Phase 6 `sep30Handler` Lambda. These are SEP-30
- * standard — interoperable with Freighter/Lobstr/etc. — and stateful from the
- * backend's perspective (persists identities + signers in DynamoDB).
- *
- * The cryptographic proof generation that authorizes the actual rotation
- * lives in `auth.recover()` (when a `ZkEmailProver` is wired).
- */
-export interface RecoveryNamespace {
-  /** Persist or replace the recovery config for `walletAddress`. */
-  configure(
-    walletAddress: string,
-    input: ConfigureRecoveryRequest,
-  ): Promise<RecoveryConfigResponse>;
-  /** Read the current recovery config, or `null` if none is registered. */
-  get(walletAddress: string): Promise<RecoveryConfigResponse | null>;
-  /**
-   * Ask the backend to authorize a recovery transaction. In `mock` mode it
-   * authorizes when the identity matches a registered one. In `real` mode it
-   * polls the on-chain `zk-email-verifier` event before authorizing.
-   */
-  requestSignature(
-    walletAddress: string,
-    signingAddress: string,
-    input: RecoverySignRequest,
-  ): Promise<RecoverySignResponse>;
-  /** Remove the recovery config. Returns `null` if it did not exist. */
-  remove(walletAddress: string): Promise<RecoveryDeleteResponse | null>;
-  /**
-   * Real recovery (flow B). Drives the full pipeline:
-   *  1. Generates a NEW master key + Shamir split.
-   *  2. Runs the ZK email prover against the user's .eml + new passkey.
-   *  3. Queries the SA's context rules and builds a multi-op envelope
-   *     that rotates owner_ed25519 (in admin-cfg + every biometric-tx)
-   *     and secp256r1 (in sep10-auth) — all atomic.
-   *  4. POSTs to `/sep30/accounts/{address}/recover`.
-   *  5. Returns the new ed25519 owner pubkey + encrypted F1 for the
-   *     caller to persist locally.
-   *
-   * The user must NOT be signed-in (this is a public, recovery-mode flow).
-   * Pass a `ZkEmailProverHandle` from `@accesly/zkemail` configured against
-   * the live CDN of artifacts.
-   */
-  run(
-    input: Omit<RecoverWalletInput, 'networkPassphrase' | 'sorobanRpcUrl'>,
-    onProgress?: RecoverProgressCallback,
-  ): Promise<RecoverWalletResult>;
-}
+// Recovery se removió en 1.0.0-pre.0 (2026-06-15). El nuevo flujo (OTP-email
+// + password de Cognito) llega en 1.0.0 final con un namespace `recovery`
+// distinto. Ver SDKAccesly/docs/Plan_Final_v1.md §5 (Fase 1).
 
 export interface AcceslyHook {
   readonly auth: AuthNamespace;
   readonly wallet: WalletNamespace;
   readonly tx: TxNamespace;
   readonly kyc: KycNamespace;
-  readonly recovery: RecoveryNamespace;
   readonly session: SessionNamespace;
   readonly settings: SettingsNamespace;
   readonly yieldOps: YieldNamespace;
@@ -523,26 +399,6 @@ export function useAccesly(): AcceslyHook {
       async signOut() {
         await ctx.tokenManager.signOut();
         await ctx.refreshStatus();
-      },
-      async recover(input) {
-        if (!ctx.zkEmailProver) {
-          throw new RecoveryNotAvailableError();
-        }
-        const { bundle, elapsedMs } = await ctx.zkEmailProver.prove({
-          eml: input.eml,
-          rsaModulus: input.rsaModulus,
-          recovery: {
-            recipientEmail: input.recipientEmail,
-            walletAddress: input.walletAddress,
-            newPasskeyPubkey: input.newPasskeyPubkey,
-            domainSalt: input.domainSalt,
-          },
-        });
-        return {
-          proof: bundle.proof,
-          publicSignals: bundle.publicSignals,
-          elapsedMs,
-        };
       },
     }),
     [ctx],
@@ -1022,34 +878,8 @@ export function useAccesly(): AcceslyHook {
     [ctx],
   );
 
-  const recovery = useMemo<RecoveryNamespace>(
-    () => ({
-      configure(walletAddress, input) {
-        return ctx.endpoints.configureRecovery(walletAddress, input);
-      },
-      get(walletAddress) {
-        return ctx.endpoints.getRecoveryConfig(walletAddress);
-      },
-      requestSignature(walletAddress, signingAddress, input) {
-        return ctx.endpoints.requestRecoverySignature(walletAddress, signingAddress, input);
-      },
-      remove(walletAddress) {
-        return ctx.endpoints.deleteRecoveryConfig(walletAddress);
-      },
-      run(input, onProgress) {
-        return coreRecoverWallet(
-          {
-            ...input,
-            networkPassphrase: stellarConfig.networkPassphrase,
-            sorobanRpcUrl: stellarConfig.sorobanRpcUrl,
-          },
-          ctx.endpoints,
-          onProgress,
-        );
-      },
-    }),
-    [ctx, stellarConfig],
-  );
+  // recovery namespace removida en 1.0.0-pre.0. Vuelve en 1.0.0 final con el
+  // nuevo flujo OTP-email + password de Cognito (ver Plan_Final_v1.md §5).
 
   const session = useMemo<SessionNamespace>(
     () => ({
@@ -1098,7 +928,7 @@ export function useAccesly(): AcceslyHook {
 
   // hexToBytes is reserved for future helpers.
   void hexToBytes;
-  return { auth, wallet, tx, kyc, recovery, session, settings, yieldOps, _internal: ctx };
+  return { auth, wallet, tx, kyc, session, settings, yieldOps, _internal: ctx };
 }
 
 /* --------------------------------- helpers --------------------------------- */
