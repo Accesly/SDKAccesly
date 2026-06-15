@@ -22,6 +22,7 @@ import {
   generateX25519Keypair,
   normalizeSecp256r1Pubkey,
   reconstructFromPlainAndEncrypted,
+  reconstructKey,
   signSorobanAuthEntry,
   signTransaction as coreSignTransaction,
   unwrapSessionFragment2,
@@ -394,6 +395,17 @@ export class NotImplementedYetError extends Error {
  *      - Persiste new CredentialRecord local
  *      - Zero-iza la seed
  */
+export interface ReconstructedSeed {
+  /** 32-byte ed25519 seed reconstruida vía Shamir(F2_recovery + F3). CALLER ZEROIZE. */
+  readonly privateSeed: Uint8Array;
+  /** 32-byte ed25519 public key derivada. */
+  readonly publicKey: Uint8Array;
+  /** 32-byte recoveryKey derivada del password — útil para re-cifrar F2'/F3' nuevos. */
+  readonly recoveryKey: Uint8Array;
+  /** Base64 32-byte salt que vino del backend. */
+  readonly recoverySalt: string;
+}
+
 export interface RecoveryNamespace {
   /** Pide OTP. Backend rate-limita; el caller debe respetar `cooldownSeconds`. */
   requestOtp(input: { email: string }): Promise<{
@@ -406,17 +418,33 @@ export interface RecoveryNamespace {
     expiresAt: number;
   }>;
   /**
-   * Cierra el flujo de recovery. Tras éxito el `walletAddress` rotó sus
-   * signers on-chain y el dispositivo nuevo tiene los fragmentos
-   * persistidos. Pasar el password de Cognito en plano (UTF-8).
+   * Descarga `/fragments/3`, descifra F2_recovery + F3 con la `recoveryKey`
+   * derivada del password y reconstruye la seed via Shamir.
    *
-   * El caller es responsable de zeroizar `cognitoPassword` después.
+   * El caller DEBE zero-izar `result.privateSeed` y `result.recoveryKey`
+   * tras firmar la rotación + cifrar las nuevas F1'/F2'/F3'.
+   *
+   * El caller también es responsable de zeroizar `cognitoPassword` después.
    */
-  finalize(input: {
-    email: string;
+  reconstructSeed(input: {
     cognitoPassword: Uint8Array;
     recoveryJwt: string;
-  }): Promise<{ walletAddress: string; txHash: string }>;
+  }): Promise<ReconstructedSeed>;
+  /**
+   * Envía la rotación al backend tras que el caller haya construido la tx
+   * `rotate_signer` y firmado el auth entry localmente.
+   */
+  submitFinalize(input: {
+    recoveryJwt: string;
+    unsignedXdr: string;
+    newSecp256r1Pubkey: string;
+    newFragmentF1Encrypted: EncryptedEnvelope;
+    newFragmentF2Encrypted: EncryptedEnvelope;
+    newFragmentF2Recovery: EncryptedEnvelope;
+    newFragmentF3Encrypted: EncryptedEnvelope;
+    newRecoverySalt: string;
+    newEmailCommitment: string;
+  }): Promise<{ walletAddress: string; txHash: string; status: string }>;
 }
 
 export interface AcceslyHook {
@@ -486,6 +514,8 @@ export function useAccesly(): AcceslyHook {
       secp256r1Pubkey: Uint8Array;
       fragmentF2: EncryptedEnvelope;
       fragmentF3: EncryptedEnvelope;
+      /** Recovery v2 — F2 cipher-bound a recoveryKey. */
+      fragmentF2Recovery?: EncryptedEnvelope;
       /** Recovery v2 — `sha256(email)` en hex. Optional para compat. */
       emailHash?: string;
       /** Recovery v2 — base64 salt. Optional para compat. */
@@ -498,6 +528,9 @@ export function useAccesly(): AcceslyHook {
         secp256r1Pubkey: hexFromBytes(params.secp256r1Pubkey),
         fragmentF2: encodeFragmentToWire(params.fragmentF2),
         fragmentF3: encodeFragmentToWire(params.fragmentF3),
+        ...(params.fragmentF2Recovery
+          ? { fragmentF2Recovery: encodeFragmentToWire(params.fragmentF2Recovery) }
+          : {}),
         ...(params.emailHash ? { emailHash: params.emailHash } : {}),
         ...(params.recoverySalt ? { recoverySalt: params.recoverySalt } : {}),
       });
@@ -628,31 +661,32 @@ export function useAccesly(): AcceslyHook {
           encryptionKeys: input.encryptionKeys,
         });
 
-        // Recovery v2: si el caller pasó `cognitoPassword`, generamos
-        // un recoverySalt y re-ciframos F3 con `recoveryKey =
-        // PBKDF2(password, recoverySalt, 600k)`. Esa key vive SOLO en
-        // cliente — el backend recibe { F3_enc, recoverySalt } y nunca
-        // puede descifrar sin el password.
+        // Recovery v2: si el caller pasó `cognitoPassword`, generamos un
+        // recoverySalt y re-ciframos F2 + F3 con `recoveryKey =
+        // PBKDF2(password, recoverySalt, 600k)`. Necesitamos AMBOS porque
+        // Shamir 2-de-3 exige DOS shares para reconstruir el seed durante
+        // recovery (F1 está perdido cuando el device se pierde).
         //
-        // Para conseguir el F3 plaintext partimos del envelope que
-        // `coreCreateWallet` produjo (cifrado con `encryptionKeys[2]`)
-        // y lo descifrado in-place; luego lo re-ciframos. Si después
-        // queremos optimizar, exponemos un flag en coreCreateWallet
-        // para devolver F3 ya en claro.
+        // Esa key vive SOLO en cliente — el backend recibe `{F2_recovery,
+        // F3, recoverySalt}` y nunca puede descifrar sin el password.
         let fragmentF3ToSend = created.encryptedFragments[2];
+        let fragmentF2Recovery: EncryptedEnvelope | undefined;
         let recoverySaltBase64: string | undefined;
         if (input.cognitoPassword) {
           const recoverySalt = generateRecoverySalt();
+          const f2Plain = decryptAesGcm(created.encryptedFragments[1], input.encryptionKeys[1]);
           const f3Plain = decryptAesGcm(created.encryptedFragments[2], input.encryptionKeys[2]);
           const recoveryKey = deriveRecoveryKey({
             password: input.cognitoPassword,
             salt: recoverySalt,
           });
           try {
+            fragmentF2Recovery = encryptAesGcm(f2Plain, recoveryKey);
             fragmentF3ToSend = encryptAesGcm(f3Plain, recoveryKey);
           } finally {
-            // No leak: zeroize la key derivada y la plaintext de F3.
+            // No leak: zeroize la key + plaintexts.
             for (let i = 0; i < recoveryKey.length; i += 1) recoveryKey[i] = 0;
+            for (let i = 0; i < f2Plain.length; i += 1) f2Plain[i] = 0;
             for (let i = 0; i < f3Plain.length; i += 1) f3Plain[i] = 0;
           }
           recoverySaltBase64 = base64FromBytes(recoverySalt);
@@ -703,6 +737,7 @@ export function useAccesly(): AcceslyHook {
             fragmentF2: created.encryptedFragments[1],
             fragmentF3: fragmentF3ToSend,
             emailHash: emailHashHex,
+            ...(fragmentF2Recovery ? { fragmentF2Recovery } : {}),
             ...(recoverySaltBase64 ? { recoverySalt: recoverySaltBase64 } : {}),
           });
           // POST succeeded — leave status as 'unknown'; the next
@@ -999,12 +1034,57 @@ export function useAccesly(): AcceslyHook {
       async verifyOtp(input) {
         return ctx.endpoints.verifyRecoveryOtp(input);
       },
-      async finalize(_input) {
-        // Stub: el orchestrator full lo construirá el example en PR-F.
-        // Cuando exista, este método tomará { email, cognitoPassword,
-        // recoveryJwt } y devolverá { walletAddress, txHash } después de
-        // ejecutar el flujo completo. Por ahora marcamos como pendiente.
-        throw new NotImplementedYetError('recovery', 'finalize');
+      async reconstructSeed(input) {
+        // 1. Trae F2_recovery + F3 + recoverySalt del backend.
+        const frag = await ctx.endpoints.getFragment3(input.recoveryJwt);
+        if (!frag.fragmentF2Recovery) {
+          throw new Error(
+            'recovery.reconstructSeed: la wallet fue creada antes de Fase 1 y no tiene F2 cipher-bound a recoveryKey. No es recuperable vía OTP.',
+          );
+        }
+
+        // 2. Decode salt + deriva recoveryKey con el password.
+        const recoverySalt = base64ToBytes(frag.recoverySalt);
+        const recoveryKey = deriveRecoveryKey({
+          password: input.cognitoPassword,
+          salt: recoverySalt,
+        });
+
+        // 3. Reconstruye seed via Shamir(F2, F3) ambos descifrados con
+        //    recoveryKey. `reconstructKey` zeroiza las plaintexts internas.
+        const f2Envelope: EncryptedEnvelope = {
+          ciphertext: base64ToBytes(frag.fragmentF2Recovery.ciphertext),
+          nonce: base64ToBytes(frag.fragmentF2Recovery.nonce),
+        };
+        const f3Envelope: EncryptedEnvelope = {
+          ciphertext: base64ToBytes(frag.fragmentF3Encrypted.ciphertext),
+          nonce: base64ToBytes(frag.fragmentF3Encrypted.nonce),
+        };
+        const seedResult = reconstructKey({
+          fragments: [
+            { envelope: f2Envelope, key: recoveryKey },
+            { envelope: f3Envelope, key: recoveryKey },
+          ],
+        });
+
+        return {
+          privateSeed: seedResult.privateSeed,
+          publicKey: seedResult.publicKey,
+          recoveryKey,
+          recoverySalt: frag.recoverySalt,
+        };
+      },
+      async submitFinalize(input) {
+        return ctx.endpoints.finalizeRecovery(input.recoveryJwt, {
+          unsignedXdr: input.unsignedXdr,
+          newSecp256r1Pubkey: input.newSecp256r1Pubkey,
+          newFragmentF1Encrypted: encodeFragmentToWire(input.newFragmentF1Encrypted),
+          newFragmentF2Encrypted: encodeFragmentToWire(input.newFragmentF2Encrypted),
+          newFragmentF2Recovery: encodeFragmentToWire(input.newFragmentF2Recovery),
+          newFragmentF3Encrypted: encodeFragmentToWire(input.newFragmentF3Encrypted),
+          newRecoverySalt: input.newRecoverySalt,
+          newEmailCommitment: input.newEmailCommitment,
+        });
       },
     }),
     [ctx],

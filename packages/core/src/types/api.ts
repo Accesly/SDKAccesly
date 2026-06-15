@@ -42,6 +42,22 @@ export interface CreateWalletRequest {
   readonly fragmentF2: EncryptedFragmentWire;
   readonly fragmentF3: EncryptedFragmentWire;
   /**
+   * F2 cifrado con `recoveryKey = PBKDF2(passwordCognito, recoverySalt, 600k)`.
+   *
+   * Recovery v2 (Fase 1, 2026-06-15). Necesario porque Shamir 2-de-3 requiere
+   * DOS shares para reconstruir el seed; en recovery `F1` está perdido
+   * (device gone) y `F2` cifrado con la PRF del passkey original no se puede
+   * descifrar. Esta segunda copia de F2 cipher-bound a `recoveryKey` permite
+   * que el cliente, con solo el password de Cognito, descifre F2 y F3 y
+   * combine ambos via Shamir para reconstruir el seed.
+   *
+   * El backend almacena este blob junto a F3 (cipher-bound a la misma key).
+   * Sin password el backend NO puede descifrar.
+   *
+   * Si se omite, el wallet se crea pero no será recuperable vía OTP.
+   */
+  readonly fragmentF2Recovery?: EncryptedFragmentWire;
+  /**
    * Hex 32 bytes — `SHA256(email.toLowerCase().trim())`.
    *
    * El backend indexa este valor en el GSI `by-email-hash` de
@@ -233,6 +249,15 @@ export interface RecoveryOtpVerifyResponse {
 
 /** `GET /fragments/3` response. */
 export interface GetFragment3Response {
+  /**
+   * F2 cifrado con la misma `recoveryKey` que F3. El backend lo guarda
+   * desde `createWallet` (campo `fragmentF2Recovery` del request). Junto
+   * con F3, el cliente reconstruye el seed con Shamir 2-de-3.
+   *
+   * Puede venir `null` para wallets viejas (creadas antes de Fase 1) que
+   * no tienen F2 cipher-bound a recoveryKey.
+   */
+  readonly fragmentF2Recovery: EncryptedFragmentWire | null;
   /** F3 cifrado con la `recoveryKey` derivada del password de Cognito. */
   readonly fragmentF3Encrypted: EncryptedFragmentWire;
   /** Base64 32 bytes — salt para re-derivar la `recoveryKey`. */
@@ -247,8 +272,10 @@ export interface FinalizeRecoveryRequest {
   readonly newSecp256r1Pubkey: HexString;
   /** F1 cifrado con la nueva PRF (passkey-bound). */
   readonly newFragmentF1Encrypted: EncryptedFragmentWire;
-  /** F2 cifrado con la session/KMS key (igual mecanismo que createWallet). */
+  /** F2 cifrado con la PRF de la nueva passkey (sign normal). */
   readonly newFragmentF2Encrypted: EncryptedFragmentWire;
+  /** F2 cifrado con la nueva recoveryKey (recovery path). */
+  readonly newFragmentF2Recovery: EncryptedFragmentWire;
   /** F3 cifrado con la nueva recoveryKey. */
   readonly newFragmentF3Encrypted: EncryptedFragmentWire;
   /** Base64 32 bytes — nuevo recoverySalt (puede ser igual al viejo si no se rota). */

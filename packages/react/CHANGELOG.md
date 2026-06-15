@@ -4,6 +4,45 @@
 
 ### Minor Changes
 
+- feat(recovery): F2 cipher-bound a recoveryKey + orchestrator de finalize
+
+  Completa el flujo Recovery v2 end-to-end (Fase 1 Track 2).
+
+  `@accesly/core`:
+  - `CreateWalletRequest` acepta `fragmentF2Recovery: EncryptedFragmentWire`
+    opcional — F2 cifrado con la `recoveryKey`. Necesario porque Shamir 2-de-3
+    exige DOS shares para reconstruir el seed durante recovery (F1 está
+    perdido cuando el device se pierde).
+  - `GetFragment3Response` ahora trae `fragmentF2Recovery: EncryptedFragmentWire | null`.
+  - `FinalizeRecoveryRequest` reemplaza el viejo bundle por `newFragmentF1Encrypted`,
+    `newFragmentF2Encrypted` (passkey-bound), `newFragmentF2Recovery` (password-bound)
+    y `newFragmentF3Encrypted`.
+
+  `@accesly/react`:
+  - `wallet.createWallet({ cognitoPassword })` ahora descifra F2 + F3 plain,
+    los re-cifra con la `recoveryKey` derivada, manda BOTH `fragmentF2` (PRF-bound)
+    - `fragmentF2Recovery` (password-bound) + `fragmentF3` (password-bound) al
+      backend.
+  - `recovery` namespace ahora expone DOS métodos (en vez de `finalize` monolítico):
+    - `reconstructSeed({ cognitoPassword, recoveryJwt })` → trae F2_recovery + F3 del
+      backend, descifra ambos con `recoveryKey`, reconstruye seed via Shamir.
+      Devuelve `{ privateSeed, publicKey, recoveryKey, recoverySalt }`. Caller
+      debe zero-izar `privateSeed` y `recoveryKey`.
+    - `submitFinalize({ recoveryJwt, ... })` envía la rotación al backend tras
+      que el caller construya la tx `rotate_signer` y firme el auth entry.
+
+  La separación permite que el caller intercale UI prompts (mostrar nueva
+  passkey, confirmar) sin perder el orchestrator entero.
+
+### Patch Changes
+
+- Updated dependencies
+  - @accesly/core@1.0.0
+
+## 1.0.0
+
+### Minor Changes
+
 - feat(recovery): Recovery v2 namespace + wallet.createWallet con F3 password-bound
 
   `@accesly/core`:
