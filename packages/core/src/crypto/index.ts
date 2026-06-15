@@ -43,6 +43,7 @@ export {
   RECOVERY_SALT_BYTES,
   deriveRecoveryKey,
   deriveRecoveryKeyFromPasswordString,
+  emailHashBytes,
   generateRecoverySalt,
   type DeriveRecoveryKeyParams,
 } from './recoveryKey.js';

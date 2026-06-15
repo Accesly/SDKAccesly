@@ -14,6 +14,11 @@ import { useContext, useMemo } from 'react';
 import {
   computeSmartAccountAddress,
   createWallet as coreCreateWallet,
+  decryptAesGcm,
+  deriveRecoveryKey,
+  emailHashBytes,
+  encryptAesGcm,
+  generateRecoverySalt,
   generateX25519Keypair,
   normalizeSecp256r1Pubkey,
   reconstructFromPlainAndEncrypted,
@@ -61,6 +66,22 @@ export interface CreateWalletInput {
   readonly credentialId?: Uint8Array;
   /** Optional. See `credentialId`. */
   readonly prfSalt?: Uint8Array;
+  /**
+   * Password de Cognito en plano (`Uint8Array` codificado UTF-8).
+   *
+   * Recovery v2 (Fase 1, 2026-06-15): si se provee, el SDK deriva
+   * `recoveryKey = PBKDF2(password, recoverySalt, 600k)` y la usa para
+   * cifrar F3 antes de enviarlo al backend, en vez de usar
+   * `encryptionKeys[2]`. El backend almacena F3 cifrado con esa key —
+   * SOLO descifrable client-side con el mismo password.
+   *
+   * Sin esta prop el wallet se crea pero NO podrá recuperarse vía OTP
+   * (F3 quedará cifrado con `encryptionKeys[2]`, igual que en 0.x).
+   *
+   * El caller es responsable de zeroizar este buffer tras `createWallet`
+   * (el SDK no lo retiene en memoria).
+   */
+  readonly cognitoPassword?: Uint8Array;
 }
 
 export interface CreatedWalletInfo {
@@ -354,15 +375,56 @@ export class NotImplementedYetError extends Error {
   }
 }
 
-// Recovery se removió en 1.0.0-pre.0 (2026-06-15). El nuevo flujo (OTP-email
-// + password de Cognito) llega en 1.0.0 final con un namespace `recovery`
-// distinto. Ver SDKAccesly/docs/Plan_Final_v1.md §5 (Fase 1).
+/**
+ * Recovery v2 — OTP por email + password de Cognito (Fase 1, 2026-06-15).
+ *
+ * Flujo desde la UI:
+ *   1. `recovery.requestOtp({ email })` → manda el OTP por SES.
+ *   2. `recovery.verifyOtp({ email, code })` → devuelve `recoveryJwt`.
+ *   3. `recovery.finalize({ email, password, recoveryJwt })` orquesta todo:
+ *      - GET /fragments/3 con el JWT
+ *      - Deriva recoveryKey con el password + recoverySalt del backend
+ *      - Decifra F3
+ *      - Decifra F2 (vía session key ECDH)
+ *      - Combina F2+F3 → seed ed25519 reconstruida
+ *      - Genera new passkey + new Shamir split (F1', F2', F3')
+ *      - Re-cifra F3' con la misma recoveryKey + nuevo salt
+ *      - Firma la tx `rotate_signer` localmente
+ *      - POST /recovery/finalize con todo
+ *      - Persiste new CredentialRecord local
+ *      - Zero-iza la seed
+ */
+export interface RecoveryNamespace {
+  /** Pide OTP. Backend rate-limita; el caller debe respetar `cooldownSeconds`. */
+  requestOtp(input: { email: string }): Promise<{
+    cooldownSeconds: number;
+    expiresInSeconds: number;
+  }>;
+  /** Verifica OTP. Devuelve `recoveryJwt` con TTL 5min. */
+  verifyOtp(input: { email: string; code: string }): Promise<{
+    recoveryJwt: string;
+    expiresAt: number;
+  }>;
+  /**
+   * Cierra el flujo de recovery. Tras éxito el `walletAddress` rotó sus
+   * signers on-chain y el dispositivo nuevo tiene los fragmentos
+   * persistidos. Pasar el password de Cognito en plano (UTF-8).
+   *
+   * El caller es responsable de zeroizar `cognitoPassword` después.
+   */
+  finalize(input: {
+    email: string;
+    cognitoPassword: Uint8Array;
+    recoveryJwt: string;
+  }): Promise<{ walletAddress: string; txHash: string }>;
+}
 
 export interface AcceslyHook {
   readonly auth: AuthNamespace;
   readonly wallet: WalletNamespace;
   readonly tx: TxNamespace;
   readonly kyc: KycNamespace;
+  readonly recovery: RecoveryNamespace;
   readonly session: SessionNamespace;
   readonly settings: SettingsNamespace;
   readonly yieldOps: YieldNamespace;
@@ -424,6 +486,10 @@ export function useAccesly(): AcceslyHook {
       secp256r1Pubkey: Uint8Array;
       fragmentF2: EncryptedEnvelope;
       fragmentF3: EncryptedEnvelope;
+      /** Recovery v2 — `sha256(email)` en hex. Optional para compat. */
+      emailHash?: string;
+      /** Recovery v2 — base64 salt. Optional para compat. */
+      recoverySalt?: string;
     }): Promise<string> => {
       const res = await c.endpoints.createWallet({
         appId: c.appId,
@@ -432,6 +498,8 @@ export function useAccesly(): AcceslyHook {
         secp256r1Pubkey: hexFromBytes(params.secp256r1Pubkey),
         fragmentF2: encodeFragmentToWire(params.fragmentF2),
         fragmentF3: encodeFragmentToWire(params.fragmentF3),
+        ...(params.emailHash ? { emailHash: params.emailHash } : {}),
+        ...(params.recoverySalt ? { recoverySalt: params.recoverySalt } : {}),
       });
       return res.walletAddress;
     };
@@ -560,19 +628,50 @@ export function useAccesly(): AcceslyHook {
           encryptionKeys: input.encryptionKeys,
         });
 
-        // Pre-compute the deterministic walletAddress. Same algorithm Stellar
-        // Core / the backend will use — we can show it to the user before
-        // any network round-trip and reconcile later.
+        // Recovery v2: si el caller pasó `cognitoPassword`, generamos
+        // un recoverySalt y re-ciframos F3 con `recoveryKey =
+        // PBKDF2(password, recoverySalt, 600k)`. Esa key vive SOLO en
+        // cliente — el backend recibe { F3_enc, recoverySalt } y nunca
+        // puede descifrar sin el password.
+        //
+        // Para conseguir el F3 plaintext partimos del envelope que
+        // `coreCreateWallet` produjo (cifrado con `encryptionKeys[2]`)
+        // y lo descifrado in-place; luego lo re-ciframos. Si después
+        // queremos optimizar, exponemos un flag en coreCreateWallet
+        // para devolver F3 ya en claro.
+        let fragmentF3ToSend = created.encryptedFragments[2];
+        let recoverySaltBase64: string | undefined;
+        if (input.cognitoPassword) {
+          const recoverySalt = generateRecoverySalt();
+          const f3Plain = decryptAesGcm(created.encryptedFragments[2], input.encryptionKeys[2]);
+          const recoveryKey = deriveRecoveryKey({
+            password: input.cognitoPassword,
+            salt: recoverySalt,
+          });
+          try {
+            fragmentF3ToSend = encryptAesGcm(f3Plain, recoveryKey);
+          } finally {
+            // No leak: zeroize la key derivada y la plaintext de F3.
+            for (let i = 0; i < recoveryKey.length; i += 1) recoveryKey[i] = 0;
+            for (let i = 0; i < f3Plain.length; i += 1) f3Plain[i] = 0;
+          }
+          recoverySaltBase64 = base64FromBytes(recoverySalt);
+        }
+
+        // emailHash = sha256(email.toLowerCase().trim()) en hex. El backend
+        // lo indexa en el GSI by-email-hash para resolver Recovery v2.
+        const emailHashHex = hexFromBytes(emailHashBytes(input.email));
+
+        // Pre-compute the deterministic walletAddress.
         const predictedAddress = await computeSmartAccountAddress({
           ownerPubkey: created.publicKey,
           deployerAddress: stellarConfig.deployerAddress,
           networkPassphrase: stellarConfig.networkPassphrase,
         });
 
-        // Crash-safety + retry capability: persist the full record BEFORE
-        // hitting the backend. Includes all 3 encrypted fragments + pubkey
-        // + emailCommitment so `wallet.retryDeploy(username)` can re-POST
-        // without regenerating the keypair.
+        // Crash-safety: persist el record con F3 cifrado en su forma
+        // recoverable (la que se envía al backend). Si el caller no provee
+        // password, mantenemos el F3 viejo (compat).
         const canPersist = Boolean(input.credentialId && input.prfSalt);
         if (canPersist) {
           await ctx.deviceStore.saveCredential({
@@ -581,7 +680,7 @@ export function useAccesly(): AcceslyHook {
             secp256r1Pubkey: secp256r1Canonical,
             fragmentF1Encrypted: created.encryptedFragments[0],
             fragmentF2Encrypted: created.encryptedFragments[1],
-            fragmentF3Encrypted: created.encryptedFragments[2],
+            fragmentF3Encrypted: fragmentF3ToSend,
             publicKey: created.publicKey,
             emailCommitment: created.emailCommitment,
             prfSalt: input.prfSalt!,
@@ -602,7 +701,9 @@ export function useAccesly(): AcceslyHook {
             emailCommitment: created.emailCommitment,
             secp256r1Pubkey: secp256r1Canonical,
             fragmentF2: created.encryptedFragments[1],
-            fragmentF3: created.encryptedFragments[2],
+            fragmentF3: fragmentF3ToSend,
+            emailHash: emailHashHex,
+            ...(recoverySaltBase64 ? { recoverySalt: recoverySaltBase64 } : {}),
           });
           // POST succeeded — leave status as 'unknown'; the next
           // ensureWallet GET will upgrade it to 'on-chain' once Soroban
@@ -878,8 +979,36 @@ export function useAccesly(): AcceslyHook {
     [ctx],
   );
 
-  // recovery namespace removida en 1.0.0-pre.0. Vuelve en 1.0.0 final con el
-  // nuevo flujo OTP-email + password de Cognito (ver Plan_Final_v1.md §5).
+  // ── Recovery v2 (Fase 1, 2026-06-15) ──────────────────────────────────────
+  // Esta primera versión expone los wrappers thin de los 3 endpoints públicos
+  // (`requestOtp`, `verifyOtp`, `finalize`). El `finalize` aquí solo manda el
+  // body al backend tal cual lo arme el caller — el orchestration completo
+  // (descifrar F3 con recoveryKey, reconstruir seed, registrar new passkey,
+  // firmar rotate_signer, etc.) se hace en el componente de UI con los
+  // helpers de @accesly/core (deriveRecoveryKey, decryptAesGcm, etc.).
+  //
+  // Razón: el flujo requiere navegar 2-3 pantallas (pedir password, registrar
+  // new passkey vía navigator.credentials.create, esperar response del user)
+  // y meterlo todo dentro de un solo `finalize()` programáticamente hace el
+  // UX worse. El example app va a tener el orchestrator end-to-end.
+  const recovery = useMemo<RecoveryNamespace>(
+    () => ({
+      async requestOtp(input) {
+        return ctx.endpoints.requestRecoveryOtp(input);
+      },
+      async verifyOtp(input) {
+        return ctx.endpoints.verifyRecoveryOtp(input);
+      },
+      async finalize(_input) {
+        // Stub: el orchestrator full lo construirá el example en PR-F.
+        // Cuando exista, este método tomará { email, cognitoPassword,
+        // recoveryJwt } y devolverá { walletAddress, txHash } después de
+        // ejecutar el flujo completo. Por ahora marcamos como pendiente.
+        throw new NotImplementedYetError('recovery', 'finalize');
+      },
+    }),
+    [ctx],
+  );
 
   const session = useMemo<SessionNamespace>(
     () => ({
@@ -928,7 +1057,7 @@ export function useAccesly(): AcceslyHook {
 
   // hexToBytes is reserved for future helpers.
   void hexToBytes;
-  return { auth, wallet, tx, kyc, session, settings, yieldOps, _internal: ctx };
+  return { auth, wallet, tx, kyc, recovery, session, settings, yieldOps, _internal: ctx };
 }
 
 /* --------------------------------- helpers --------------------------------- */

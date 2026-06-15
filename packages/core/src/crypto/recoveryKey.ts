@@ -20,9 +20,22 @@
  * Ver SDKAccesly/docs/Plan_Final_v1.md §5 (Fase 1).
  */
 
+import { sha256 } from '@noble/hashes/sha2';
 import { pbkdf2Sha256, PBKDF2_DEFAULT_ITERATIONS } from './kdf.js';
 import { getRandomBytes } from './random.js';
 import { zeroize } from './zeroize.js';
+
+/**
+ * Calcula `sha256(email.toLowerCase().trim())` y devuelve 32 bytes.
+ *
+ * El backend lo usa como índice en el GSI `by-email-hash` de
+ * `user_fragments` para resolver Recovery v2 sin exponer el email en
+ * plano más allá de Cognito (que ya lo tiene).
+ */
+export function emailHashBytes(email: string): Uint8Array {
+  const normalized = email.toLowerCase().trim();
+  return sha256(new TextEncoder().encode(normalized));
+}
 
 /** Largo del salt en bytes. Coincide con `emailSalt` del flujo de createWallet. */
 export const RECOVERY_SALT_BYTES = 32;

@@ -41,6 +41,27 @@ export interface CreateWalletRequest {
   readonly secp256r1Pubkey: HexString;
   readonly fragmentF2: EncryptedFragmentWire;
   readonly fragmentF3: EncryptedFragmentWire;
+  /**
+   * Hex 32 bytes — `SHA256(email.toLowerCase().trim())`.
+   *
+   * El backend indexa este valor en el GSI `by-email-hash` de
+   * `user_fragments`, lo que permite que la Lambda `recovery-otp` resuelva
+   * `emailHash → userId` durante el flujo de recuperación.
+   *
+   * Recovery v2 (Fase 1, 2026-06-15). Si se omite, el wallet queda
+   * imposible de recuperar vía OTP; los flows sin recovery (smoke tests)
+   * lo dejan omitido y aceptan ese trade-off.
+   */
+  readonly emailHash?: HexString;
+  /**
+   * Base64 32 bytes — salt aleatorio para derivar `recoveryKey` con
+   * `PBKDF2(passwordCognito, recoverySalt, 600k)`. Lo guarda el backend
+   * junto con `fragmentF3`. En `/recovery/finalize` el SDK envía un nuevo
+   * `recoverySalt`.
+   *
+   * Recovery v2. Si se omite, el flow de recovery no podrá descifrar F3.
+   */
+  readonly recoverySalt?: Base64String;
 }
 
 export interface CreateWalletResponse {
@@ -175,7 +196,69 @@ export interface OrderResponse {
   readonly expiresAt?: string;
 }
 
-// SEP-30 recovery types (Phase 6 con ZK email) removidos en 1.0.0-pre.0.
-// Los reemplazará la nueva familia RecoveryOtp{Request,Verify}, Fragment3, etc.
-// en 1.0.0 final con OTP-email + password de Cognito.
-// Ver SDKAccesly/docs/Plan_Final_v1.md §5 (Fase 1).
+/* ── Recovery v2 (OTP-email + password de Cognito, Fase 1) ────────────────── */
+
+/** `POST /recovery/otp/request` body. */
+export interface RecoveryOtpRequestInput {
+  /** Email del usuario en plano. El backend solo persiste `sha256(email)`. */
+  readonly email: string;
+}
+
+export interface RecoveryOtpRequestResponse {
+  /**
+   * Segundos hasta poder pedir otro OTP. El SDK debe mostrar countdown en
+   * el botón de "Reenviar".
+   */
+  readonly cooldownSeconds: number;
+  /** Segundos hasta que el OTP guardado expire (default 600 = 10min). */
+  readonly expiresInSeconds: number;
+}
+
+/** `POST /recovery/otp/verify` body. */
+export interface RecoveryOtpVerifyInput {
+  readonly email: string;
+  /** 6 dígitos en string. */
+  readonly code: string;
+}
+
+export interface RecoveryOtpVerifyResponse {
+  /**
+   * Token opaco. El SDK lo envía en el header `X-Recovery-Jwt` a
+   * `/fragments/3` y `/recovery/finalize`. TTL 5min.
+   */
+  readonly recoveryJwt: string;
+  /** Epoch ms en el que el JWT expira (informativo). */
+  readonly expiresAt: number;
+}
+
+/** `GET /fragments/3` response. */
+export interface GetFragment3Response {
+  /** F3 cifrado con la `recoveryKey` derivada del password de Cognito. */
+  readonly fragmentF3Encrypted: EncryptedFragmentWire;
+  /** Base64 32 bytes — salt para re-derivar la `recoveryKey`. */
+  readonly recoverySalt: Base64String;
+}
+
+/** `POST /recovery/finalize` body. */
+export interface FinalizeRecoveryRequest {
+  /** XDR base64 de la tx `rotate_signer` firmada por el SDK. */
+  readonly unsignedXdr: string;
+  /** Hex 65 bytes — nueva passkey. */
+  readonly newSecp256r1Pubkey: HexString;
+  /** F1 cifrado con la nueva PRF (passkey-bound). */
+  readonly newFragmentF1Encrypted: EncryptedFragmentWire;
+  /** F2 cifrado con la session/KMS key (igual mecanismo que createWallet). */
+  readonly newFragmentF2Encrypted: EncryptedFragmentWire;
+  /** F3 cifrado con la nueva recoveryKey. */
+  readonly newFragmentF3Encrypted: EncryptedFragmentWire;
+  /** Base64 32 bytes — nuevo recoverySalt (puede ser igual al viejo si no se rota). */
+  readonly newRecoverySalt: Base64String;
+  /** Hex 32 bytes — `SHA256(email || newEmailSalt)`. */
+  readonly newEmailCommitment: HexString;
+}
+
+export interface FinalizeRecoveryResponse {
+  readonly walletAddress: string;
+  readonly txHash: string;
+  readonly status: string;
+}

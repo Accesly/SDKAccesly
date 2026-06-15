@@ -35,6 +35,7 @@ export {
   type CreateWalletInput,
   type EnsureWalletResult,
   type KycNamespace,
+  type RecoveryNamespace,
   type RemoteWalletInfo,
   type RetryDeployResult,
   type SendXlmInput,

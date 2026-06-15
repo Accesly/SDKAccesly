@@ -2,6 +2,39 @@
 
 ## 1.0.0
 
+### Minor Changes
+
+- feat(recovery): Recovery v2 namespace + wallet.createWallet con F3 password-bound
+
+  `@accesly/core`:
+  - Nuevos endpoints en `AccesslyEndpoints`: `requestRecoveryOtp`,
+    `verifyRecoveryOtp`, `getFragment3`, `finalizeRecovery`.
+  - Nuevos tipos: `RecoveryOtpRequestInput`, `RecoveryOtpRequestResponse`,
+    `RecoveryOtpVerifyInput`, `RecoveryOtpVerifyResponse`,
+    `GetFragment3Response`, `FinalizeRecoveryRequest`,
+    `FinalizeRecoveryResponse`.
+  - `CreateWalletRequest` ahora acepta `emailHash` (hex sha256) y
+    `recoverySalt` (base64) opcionales.
+  - Re-export del helper `emailHashBytes(email)` desde `crypto/`.
+
+  `@accesly/react`:
+  - Nuevo namespace `recovery` en `useAccesly()` con `requestOtp`,
+    `verifyOtp`, `finalize`. El `finalize` aún devuelve
+    `NotImplementedYetError` en esta release — el orchestrator full
+    (descifrar F3 + reconstruir seed + registrar new passkey + firmar
+    rotate_signer) se completará en el example en el siguiente PR.
+  - `wallet.createWallet` acepta `cognitoPassword?: Uint8Array` opcional.
+    Cuando se provee: deriva `recoveryKey = PBKDF2(password, salt, 600k)`,
+    re-cifra F3 con esa key, manda `emailHash + recoverySalt` al backend.
+    Las wallets creadas con esa prop son recuperables vía OTP.
+
+### Patch Changes
+
+- Updated dependencies
+  - @accesly/core@1.0.0
+
+## 1.0.0
+
 ### Major Changes
 
 - BREAKING: remover `@accesly/zkemail`, recovery wire y endpoints SEP-30

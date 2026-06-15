@@ -9,13 +9,20 @@
 import type {
   CreateWalletRequest,
   CreateWalletResponse,
+  FinalizeRecoveryRequest,
+  FinalizeRecoveryResponse,
   GetFragment2Request,
   GetFragment2Response,
+  GetFragment3Response,
   GetWalletResponse,
   HealthResponse,
   KycStartResponse,
   OrderRequest,
   OrderResponse,
+  RecoveryOtpRequestInput,
+  RecoveryOtpRequestResponse,
+  RecoveryOtpVerifyInput,
+  RecoveryOtpVerifyResponse,
   SimulateTxRequest,
   SimulateTxResponse,
   SubmitTxRequest,
@@ -98,9 +105,60 @@ export class AccesslyEndpoints {
     return this.client.post<OrderResponse>('/offramp', req as unknown as Json);
   }
 
-  // SEP-30 endpoints (configureRecovery, getRecoveryConfig,
-  // requestRecoverySignature, deleteRecoveryConfig, recoverWallet) se removieron
-  // en 1.0.0-pre.0 (2026-06-15). Los reemplazará la nueva familia
-  // /recovery/otp/*  +  /fragments/3  +  /recovery/finalize en 1.0.0 final.
-  // Ver SDKAccesly/docs/Plan_Final_v1.md §5 (Fase 1).
+  /* ── Recovery v2 (Fase 1, 2026-06-15) ──────────────────────────────────── */
+
+  /**
+   * Anónimo. Pide al backend que mande un OTP de 6 dígitos al email.
+   *
+   * Rate-limited: el backend rechaza con 429 si pediste otro hace menos de
+   * 60s o más de 3 en la última hora. Anti-enumeración: la respuesta es 200
+   * OK aunque el email no exista.
+   */
+  requestRecoveryOtp(input: RecoveryOtpRequestInput): Promise<RecoveryOtpRequestResponse> {
+    return this.client.post<RecoveryOtpRequestResponse>(
+      '/recovery/otp/request',
+      input as unknown as Json,
+    );
+  }
+
+  /**
+   * Anónimo. Verifica el OTP. Si OK, devuelve un `recoveryJwt` que
+   * autoriza los dos endpoints siguientes (`getFragment3`,
+   * `finalizeRecovery`) durante 5 min.
+   */
+  verifyRecoveryOtp(input: RecoveryOtpVerifyInput): Promise<RecoveryOtpVerifyResponse> {
+    return this.client.post<RecoveryOtpVerifyResponse>(
+      '/recovery/otp/verify',
+      input as unknown as Json,
+    );
+  }
+
+  /**
+   * Anónimo + header `X-Recovery-Jwt`. Devuelve `{fragmentF3Encrypted,
+   * recoverySalt}`. El SDK descifra F3 con la `recoveryKey` derivada
+   * client-side (PBKDF2(password, recoverySalt, 600k)).
+   */
+  getFragment3(recoveryJwt: string): Promise<GetFragment3Response> {
+    return this.client.get<GetFragment3Response>('/fragments/3', {
+      headers: { 'X-Recovery-Jwt': recoveryJwt },
+    });
+  }
+
+  /**
+   * Anónimo + header `X-Recovery-Jwt`. Submitea la tx `rotate_signer` firmada
+   * por el SDK con la seed reconstruida (F2+F3) y persiste las nuevas
+   * F1'/F2'/F3' en DDB. Idempotente del lado backend.
+   */
+  finalizeRecovery(
+    recoveryJwt: string,
+    payload: FinalizeRecoveryRequest,
+  ): Promise<FinalizeRecoveryResponse> {
+    return this.client.post<FinalizeRecoveryResponse>(
+      '/recovery/finalize',
+      payload as unknown as Json,
+      {
+        headers: { 'X-Recovery-Jwt': recoveryJwt },
+      },
+    );
+  }
 }
