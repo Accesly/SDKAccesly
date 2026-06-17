@@ -35,6 +35,7 @@ import {
   type AuthStatus,
   type CredentialRecord,
   type EncryptedEnvelope,
+  type TransferAsset,
 } from '@accesly/core';
 import { AcceslyContext, type AcceslyContextValue } from '../context.js';
 import { ENVIRONMENT_DEFAULTS } from '../config.js';
@@ -340,8 +341,8 @@ export interface FundTestnetResult {
 }
 
 /**
- * Input para `tx.send(...)` — manda XLM desde el Smart Account del usuario a
- * cualquier address Stellar (G… clásico o C… contrato).
+ * Input para `tx.send(...)` — manda XLM o USDC desde el Smart Account del
+ * usuario a cualquier address Stellar (G… clásico o C… contrato).
  *
  * El SDK orquesta todo el flujo: simulate → ECDH F2 → reconstruct seed →
  * sign auth entry → submit. El caller solo entrega los inputs sensibles que
@@ -350,8 +351,18 @@ export interface FundTestnetResult {
 export interface SendXlmInput {
   /** Destinatario. G… (clásico) o C… (contrato). */
   readonly destinationAddress: string;
-  /** Monto en STROOPS (1 XLM = 10_000_000 stroops). Base-10 string para evitar precisión. */
+  /**
+   * Monto en unidades atómicas (1e-7 para ambos XLM y USDC). Base-10 string
+   * para evitar precisión. Ejemplo: `"12500000"` = 1.25 XLM o 1.25 USDC.
+   */
   readonly amountStroops: string;
+  /**
+   * Asset a transferir. Default `'XLM'` (backwards compat con apps <1.4 que
+   * no pasaban este field). Para USDC el Smart Account debe tener el rule 1
+   * (USDC_SAC tx_target) activado — si no, el backend devuelve 409 y la app
+   * debe disparar el flow "Activar USDC".
+   */
+  readonly asset?: TransferAsset;
   /**
    * F1 (Shamir share encoded incluyendo el byte de índice) ya en plano —
    * típicamente desencriptado client-side via WebAuthn PRF antes de llamar.
@@ -1243,9 +1254,11 @@ export function useAccesly(): AcceslyHook {
             : 'https://stellar.expert/explorer/testnet/tx/';
 
         // 1. Backend simulate → returns the placeholder envelope + payload to sign.
+        //    `asset` default 'XLM' para backwards compat con apps que no migraron a 1.4.
         const sim = await ctx.endpoints.simulateTx({
           amountStroops: input.amountStroops,
           destinationAddress: input.destinationAddress,
+          ...(input.asset ? { asset: input.asset } : {}),
         });
 
         // 2. ECDH key exchange → backend re-wraps F2 with a per-request key.
@@ -1312,6 +1325,7 @@ export function useAccesly(): AcceslyHook {
                 timestamp: new Date().toISOString(),
                 to: input.destinationAddress,
                 amountStroops: input.amountStroops,
+                ...(input.asset ? { asset: input.asset } : {}),
               });
             }
           }

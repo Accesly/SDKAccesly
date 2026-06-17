@@ -103,6 +103,7 @@ export {
   type IdTokenProvider,
   type TelemetryEvent,
   type TelemetrySink,
+  type TransferAsset,
   type WalletActivityEvent,
   type WalletActivityResponse,
   type WalletBalanceResponse,

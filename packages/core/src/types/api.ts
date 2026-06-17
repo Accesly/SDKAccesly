@@ -133,11 +133,22 @@ export interface GetFragment2Response {
  * ed25519 sobre el `auth_digest` la produce el SDK con la llave reconstruida
  * de F1+F2+F3.
  */
+/** Assets soportados por `tx.send` (1.4+). USDC requiere wallet con rule 1 activado. */
+export type TransferAsset = 'XLM' | 'USDC';
+
 export interface SimulateTxRequest {
-  /** Base-10 string del monto en unidades base (XLM = stroops, 1 XLM = 1e7). */
+  /**
+   * Base-10 string del monto en unidades atómicas (1e-7 para ambos XLM y USDC).
+   * Ejemplo: `"12500000"` = 1.25 XLM o 1.25 USDC.
+   */
   readonly amountStroops: string;
   /** G… o C… — el SAC `transfer` acepta ambos como destino. */
   readonly destinationAddress: string;
+  /**
+   * Asset a transferir. Default `'XLM'` cuando no se especifica — el backend
+   * trata `undefined` como XLM para backwards compat con SDK <1.4.
+   */
+  readonly asset?: TransferAsset;
 }
 
 export interface SimulateTxResponse {
@@ -393,6 +404,12 @@ export interface WalletHistoryItem {
   readonly from?: string;
   /** Solo para transfers. */
   readonly amountStroops?: string;
+  /**
+   * Asset transferido (solo transfers). Default `'XLM'` cuando el backend no
+   * lo manda — typical para audits pre-1.4 que loggeaban solo to/amount sin
+   * asset. La UI debe tratar undefined como XLM para no romper.
+   */
+  readonly asset?: TransferAsset;
 }
 
 /** `GET /wallets/{address}/history?saCursor=&txCursor=&scanLimit=`. */

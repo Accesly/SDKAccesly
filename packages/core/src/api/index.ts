@@ -54,6 +54,7 @@ export type {
   SimulateTxResponse,
   SubmitTxRequest,
   SubmitTxResponse,
+  TransferAsset,
   WalletActivityEvent,
   WalletActivityResponse,
   WalletBalanceResponse,
