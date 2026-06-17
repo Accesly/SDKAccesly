@@ -15,8 +15,8 @@ import {
   AccesslyApiClient,
   AccesslyEndpoints,
   CognitoAuthClient,
+  defaultSessionStorage,
   InMemoryDeviceStore,
-  InMemorySessionStorage,
   TokenManager,
   type AuthClient,
   type AuthStatus,
@@ -26,7 +26,7 @@ import {
   type SessionStorage,
   type TelemetrySink,
 } from '@accesly/core';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AcceslyContext, type AcceslyContextValue } from './context.js';
 import { ENVIRONMENT_DEFAULTS } from './config.js';
 
@@ -59,8 +59,11 @@ export function AcceslyProvider(props: AcceslyProviderProps): JSX.Element {
   const instances = useMemo(() => {
     const authClient: AuthClient =
       props.overrides?.authClient ?? new CognitoAuthClient(cognitoConfig);
+    // Default: LocalStorageSessionStorage en browsers (sobrevive reload),
+    // InMemorySessionStorage en Node/SSR. Override solo si tu app necesita
+    // un backend distinto (httpOnly cookie, Electron safeStorage, etc.).
     const sessionStorage: SessionStorage =
-      props.overrides?.sessionStorage ?? new InMemorySessionStorage();
+      props.overrides?.sessionStorage ?? defaultSessionStorage();
     const deviceStore: DeviceStore = props.overrides?.deviceStore ?? new InMemoryDeviceStore();
     const tokenManager = new TokenManager({ authClient, storage: sessionStorage });
     const apiClient = new AccesslyApiClient({
@@ -89,14 +92,18 @@ export function AcceslyProvider(props: AcceslyProviderProps): JSX.Element {
   );
   const mountedRef = useRef(true);
 
-  const refreshStatus = async (): Promise<void> => {
+  // refreshStatus tiene que ser estable entre renders, si no el ctx value
+  // cambia siempre y los hooks consumers (useBalance, useWalletActivity,
+  // useWalletStatus) se re-disparan en loop infinito porque sus effects
+  // dependen de `_internal.endpoints` que viene del ctx.
+  const refreshStatus = useCallback(async (): Promise<void> => {
     const next = await instances.tokenManager.getStatus();
     const tokens = await Promise.resolve(instances.sessionStorage.load());
     if (mountedRef.current) {
       setStatus(next);
       setUsername(tokens?.username ?? null);
     }
-  };
+  }, [instances]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -127,9 +134,21 @@ export function AcceslyProvider(props: AcceslyProviderProps): JSX.Element {
   return <AcceslyContext.Provider value={value}>{props.children}</AcceslyContext.Provider>;
 }
 
+/**
+ * Estado inicial — antes de que el effect del provider corra `refreshStatus()`.
+ *
+ *  - Si el `SessionStorage` devuelve sync con tokens válidos → arrancamos directo
+ *    en `'authenticated'` / `'expired'`. Aplica al `LocalStorageSessionStorage`
+ *    default; el primer paint del browser ya conoce el status real → cero race
+ *    para `AuthGuard`.
+ *  - Si el `SessionStorage` devuelve sync con `null` → directo a `'anonymous'`.
+ *  - Si el `SessionStorage` es async (devuelve Promise) → `'bootstrapping'`,
+ *    para que `<AuthGuard>` muestre un loader en vez de redirigir a `/signin`
+ *    prematuramente. El effect lo flippa al estado real apenas resuelve.
+ */
 function initialStatus(storage: SessionStorage): AuthStatus {
   const tokens = storage.load();
-  if (tokens instanceof Promise) return 'anonymous';
+  if (tokens instanceof Promise) return 'bootstrapping';
   if (!tokens) return 'anonymous';
   return Date.now() + 5 * 60 * 1000 >= tokens.expiresAt ? 'expired' : 'authenticated';
 }

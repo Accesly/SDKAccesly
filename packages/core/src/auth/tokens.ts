@@ -19,7 +19,23 @@ export interface TokenManagerOptions {
   readonly clock?: () => number;
 }
 
-export type AuthStatus = 'anonymous' | 'authenticated' | 'expired';
+/**
+ * Estado de la sesión Cognito desde la perspectiva del SDK.
+ *
+ *  - `'bootstrapping'` — el provider arrancó pero todavía no terminó de leer
+ *    el `SessionStorage`. Aplica solo en el primer render (mientras corre el
+ *    `useEffect` que llama `refreshStatus`). Reemplaza al hack de
+ *    `setTimeout(200)` que el `AuthGuard` del example tenía que escribir a
+ *    mano para no patear al user a `/signin` durante el race del bootstrap.
+ *  - `'anonymous'` — no hay tokens persistidos (o el `SessionStorage` async
+ *    devolvió `null`). Routear a sign-in.
+ *  - `'authenticated'` — el `idToken` está vivo (no expirado y dentro del
+ *    refresh lead-time). El SDK puede llamar endpoints autenticados.
+ *  - `'expired'` — había tokens pero ya pasó el `expiresAt`. El próximo
+ *    `getValidIdToken()` intenta refresh; si falla, la sesión queda como
+ *    `'anonymous'`.
+ */
+export type AuthStatus = 'bootstrapping' | 'anonymous' | 'authenticated' | 'expired';
 
 export class TokenManager {
   private readonly authClient: AuthClient;

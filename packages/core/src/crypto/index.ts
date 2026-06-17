@@ -67,3 +67,5 @@ export {
 } from './sessionFragment.js';
 
 export { __setRandomSourceForTests, getRandomBytes } from './random.js';
+
+export { sha256, sha256Hex } from './hash.js';

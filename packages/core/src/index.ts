@@ -47,8 +47,13 @@ export {
   generateKeypair,
   generateRecoverySalt,
   generateX25519Keypair,
+  getRandomBytes,
+  hkdfSha256,
+  pbkdf2Sha256,
   RECOVERY_KEY_BYTES,
   RECOVERY_SALT_BYTES,
+  sha256,
+  sha256Hex,
   signEd25519,
   unwrapSessionFragment2,
   verifyEd25519,
@@ -57,6 +62,7 @@ export {
   type DeriveRecoveryKeyParams,
   type Ed25519Keypair,
   type EncryptedEnvelope,
+  type Pbkdf2Options,
   type SessionFragment2Response,
   type UnwrappedFragment2,
   type X25519Keypair,
@@ -64,7 +70,9 @@ export {
 
 export {
   CognitoAuthClient,
+  defaultSessionStorage,
   InMemorySessionStorage,
+  LocalStorageSessionStorage,
   TokenManager,
   type AuthClient,
   type AuthStatus,
@@ -74,6 +82,12 @@ export {
   type SignUpResult,
   type TokenManagerOptions,
 } from './auth/index.js';
+
+export {
+  formatError,
+  type FormatErrorLocale,
+  type FormatErrorOptions,
+} from './errors/index.js';
 
 export {
   AccesslyApiClient,
@@ -89,6 +103,12 @@ export {
   type IdTokenProvider,
   type TelemetryEvent,
   type TelemetrySink,
+  type WalletActivityEvent,
+  type WalletActivityResponse,
+  type WalletBalanceResponse,
+  type WalletHistoryItem,
+  type WalletHistoryRequestOptions,
+  type WalletHistoryResponse,
 } from './api/index.js';
 
 export {
@@ -107,19 +127,28 @@ export {
 } from './webauthn/index.js';
 
 export {
+  XLM_DECIMALS,
+  accountExplorerUrl,
   buildContractInvokeTransaction,
   buildPaymentTransaction,
   computeSmartAccountAddress,
   getBalances,
   getRecentOperations,
+  isValidStellarAddress,
+  shortAddress,
   signSorobanAuthEntry,
   signTransaction,
+  stroopsToXlm,
+  txExplorerUrl,
+  walletExplorerUrl,
+  xlmToStroops,
   type BalanceEntry,
   type BuildContractInvokeParams,
   type BuildPaymentParams,
   type ComputeSmartAccountAddressParams,
   type OperationEntry,
   type SignSorobanAuthEntryParams,
+  type StellarNetwork,
   type SignSorobanAuthEntryResult,
   type SignTransactionParams,
   type SignTransactionResult,

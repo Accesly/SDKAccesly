@@ -84,4 +84,26 @@ export interface CredentialRecord {
    * on mainnet (friendbot doesn't exist there; users fund via onramps).
    */
   readonly testnetFunded?: boolean;
+  /* ------------------------------------------------------------------ */
+  /* Added in v1.1.0 — backwards compatible (todos opcionales).         */
+  /* ------------------------------------------------------------------ */
+  /**
+   * 32-byte salt usado en `HKDF(prfOutput, encryptionSalt, info)` para derivar
+   * las llaves AES de F1 y F2. Persistido aquí para que `wallet.unlockForSigning`
+   * pueda recuperar las mismas keys en cada sesión sin que el integrador tenga
+   * que guardarlas en su propio store. Si está omitido (wallets pre-1.1.0), el
+   * SDK lo asume re-derivado con `prfSalt` como HKDF salt — compatible con el
+   * código del example legacy.
+   */
+  readonly encryptionSalt?: Uint8Array;
+  /**
+   * Bucket libre para metadata específica del integrador. Casos típicos:
+   * `{ kycCompleted: true, displayName: 'Daniel', avatarUrl: '...' }`. El SDK
+   * no toca ni lee este campo — solo lo persiste tal cual. Útil para no tener
+   * que mantener un store paralelo al `DeviceStore` del SDK.
+   *
+   * El integrador es responsable de que los valores sean JSON-serializable
+   * (no Uint8Array, no Date — usá strings/numbers/booleans/objects/arrays).
+   */
+  readonly metadata?: Record<string, unknown>;
 }

@@ -237,6 +237,31 @@ import { hkdfSha256, pbkdf2Sha256, encryptAesGcm, withZeroizeAsync } from '@acce
 
 ---
 
+## Vite — pre-bundle obligatorio de `@stellar/stellar-sdk`
+
+`@accesly/core` carga `@stellar/stellar-sdk` con `import()` dinámico para que tu bundle inicial no pague el costo (~600KB) si tu app solo autentica. En **Vite dev** eso puede disparar `TypeError: Failed to fetch dynamically imported module` cuando Vite descubre la dep tardíamente y re-pre-bundlea con un hash que no matchea con el que el browser ya tiene cargado.
+
+Agregá esto a tu `vite.config.ts` para forzar el pre-bundle al startup:
+
+```ts
+export default defineConfig({
+  optimizeDeps: {
+    include: [
+      '@accesly/core',
+      '@accesly/react',
+      '@stellar/stellar-sdk',
+      '@stellar/stellar-sdk/minimal',
+      '@stellar/stellar-sdk/rpc',
+      '@stellar/stellar-sdk/contract',
+    ],
+  },
+});
+```
+
+Si igual te aparece el error después de instalar deps nuevas, parate el dev server, borrá `node_modules/.vite` y volvé a correr `pnpm dev`. En prod (build estático) no aplica — Rollup resuelve todos los chunks en el bundle final.
+
+---
+
 ## Estado del SDK
 
 ### Funciona end-to-end hoy (`0.1.0`)

@@ -11,5 +11,10 @@
 
 export type { AuthClient, AuthTokens, SignUpResult } from './types.js';
 export { CognitoAuthClient, type CognitoConfig } from './cognito.js';
-export { InMemorySessionStorage, type SessionStorage } from './session.js';
+export {
+  InMemorySessionStorage,
+  LocalStorageSessionStorage,
+  defaultSessionStorage,
+  type SessionStorage,
+} from './session.js';
 export { TokenManager, type AuthStatus, type TokenManagerOptions } from './tokens.js';

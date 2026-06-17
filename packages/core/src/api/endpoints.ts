@@ -23,10 +23,16 @@ import type {
   RecoveryOtpRequestResponse,
   RecoveryOtpVerifyInput,
   RecoveryOtpVerifyResponse,
+  SimulateRotateSignerRequest,
+  SimulateRotateSignerResponse,
   SimulateTxRequest,
   SimulateTxResponse,
   SubmitTxRequest,
   SubmitTxResponse,
+  WalletActivityResponse,
+  WalletBalanceResponse,
+  WalletHistoryRequestOptions,
+  WalletHistoryResponse,
 } from '../types/api.js';
 import { NotFoundError } from './errors.js';
 import type { AccesslyApiClient, Json } from './client.js';
@@ -105,6 +111,54 @@ export class AccesslyEndpoints {
     return this.client.post<OrderResponse>('/offramp', req as unknown as Json);
   }
 
+  /* ── v1.1.0: read-only wallet data ─────────────────────────────────────── */
+
+  /**
+   * Anónimo. Balance XLM del Smart Account (vía Soroban RPC, cached ~5s).
+   * No requiere JWT — la address en sí es pública on-chain.
+   */
+  walletBalance(address: string): Promise<WalletBalanceResponse> {
+    return this.client.get<WalletBalanceResponse>(
+      `/wallets/${encodeURIComponent(address)}/balance`,
+    );
+  }
+
+  /**
+   * Anónimo. Últimos eventos on-chain del Smart Account (rotate_signer,
+   * transfers, etc.). Cacheado ~15s. `limit` default 20, max 50.
+   */
+  walletActivity(address: string, limit?: number): Promise<WalletActivityResponse> {
+    const qs = limit !== undefined ? `?limit=${encodeURIComponent(String(limit))}` : '';
+    return this.client.get<WalletActivityResponse>(
+      `/wallets/${encodeURIComponent(address)}/activity${qs}`,
+    );
+  }
+
+  /**
+   * Anónimo. Historial completo del wallet — pre-decodificado server-side desde
+   * Stellar Expert (que en browser está bloqueado por CORS). Devuelve items
+   * tipados: `wallet-created`, `signer-rotated`, `transfer-in`, `transfer-out`.
+   *
+   * Cursor-based: pasa `saCursor` y/o `txCursor` para paginar atrás. El primer
+   * fetch (sin cursors) incluye un evento sintético `wallet-created` desde la
+   * metadata del contrato.
+   */
+  walletHistory(
+    address: string,
+    opts: WalletHistoryRequestOptions = {},
+  ): Promise<WalletHistoryResponse> {
+    const params = new URLSearchParams();
+    if (opts.smartAccountCursor) params.set('saCursor', opts.smartAccountCursor);
+    if (opts.transfersCursor) params.set('txCursor', opts.transfersCursor);
+    if (opts.transferScanLimit !== undefined) {
+      params.set('scanLimit', String(opts.transferScanLimit));
+    }
+    const qs = params.toString();
+    return this.client.get<WalletHistoryResponse>(
+      `/wallets/${encodeURIComponent(address)}/history${qs ? '?' + qs : ''}`,
+    );
+  }
+
   /* ── Recovery v2 (Fase 1, 2026-06-15) ──────────────────────────────────── */
 
   /**
@@ -142,6 +196,26 @@ export class AccesslyEndpoints {
     return this.client.get<GetFragment3Response>('/fragments/3', {
       headers: { 'X-Recovery-Jwt': recoveryJwt },
     });
+  }
+
+  /**
+   * Anónimo + header `X-Recovery-Jwt`. El backend arma + simula la tx
+   * `rotate_signer(newOwner, newSecp256r1, newEmailCommit)` contra el Smart
+   * Account del usuario y devuelve el material que el SDK necesita para
+   * firmar la `SorobanAuthorizationEntry` con la seed VIEJA (reconstruida
+   * por Shamir(F2_recovery, F3)) contra la regla `admin-cfg`.
+   */
+  simulateRotateSigner(
+    recoveryJwt: string,
+    payload: SimulateRotateSignerRequest,
+  ): Promise<SimulateRotateSignerResponse> {
+    return this.client.post<SimulateRotateSignerResponse>(
+      '/recovery/simulate-rotate-signer',
+      payload as unknown as Json,
+      {
+        headers: { 'X-Recovery-Jwt': recoveryJwt },
+      },
+    );
   }
 
   /**

@@ -264,11 +264,44 @@ export interface GetFragment3Response {
   readonly recoverySalt: Base64String;
 }
 
+/**
+ * `POST /recovery/simulate-rotate-signer` body.
+ *
+ * Recovery v2 — paso intermedio entre `reconstructSeed` y `submitFinalize`:
+ * el SDK pide al backend que arme + simule la tx `rotate_signer(newOwner,
+ * newSecp256r1, newEmailCommit)` contra el Smart Account del usuario y
+ * devuelva el material para firmar la `SorobanAuthorizationEntry` con la
+ * seed VIEJA (reconstruida) contra la regla `admin-cfg`.
+ */
+export interface SimulateRotateSignerRequest {
+  /** Hex 64 chars — nuevo ed25519 pubkey (derivado de la nueva seed). */
+  readonly newOwnerEd25519Pubkey: HexString;
+  /** Hex 130 chars — nueva passkey secp256r1 uncompressed. */
+  readonly newSecp256r1Pubkey: HexString;
+  /** Hex 64 chars — nuevo email commitment. */
+  readonly newEmailCommitment: HexString;
+}
+
+export interface SimulateRotateSignerResponse {
+  readonly unsignedXdr: Base64String;
+  readonly signaturePayloadHashBase64: Base64String;
+  readonly nonce: string;
+  readonly signatureExpirationLedger: number;
+  readonly contextRuleIds: readonly number[];
+  readonly placeholderAuthEntryXdr: Base64String;
+  readonly resourceFeeStroops: string;
+  readonly walletAddress: string;
+}
+
 /** `POST /recovery/finalize` body. */
 export interface FinalizeRecoveryRequest {
-  /** XDR base64 de la tx `rotate_signer` firmada por el SDK. */
+  /** XDR base64 de la tx `rotate_signer` (el `unsignedXdr` que devolvió simulate). */
   readonly unsignedXdr: string;
-  /** Hex 65 bytes — nueva passkey. */
+  /** XDR base64 de la `SorobanAuthorizationEntry` firmada por el SDK con la seed vieja. */
+  readonly signedAuthEntryXdr: Base64String;
+  /** Hex 64 chars — nuevo ed25519 pubkey (lo persiste en `user_fragments.pubkeyEd25519`). */
+  readonly newOwnerEd25519Pubkey: HexString;
+  /** Hex 130 chars — nueva passkey. */
   readonly newSecp256r1Pubkey: HexString;
   /** F1 cifrado con la nueva PRF (passkey-bound). */
   readonly newFragmentF1Encrypted: EncryptedFragmentWire;
@@ -280,7 +313,7 @@ export interface FinalizeRecoveryRequest {
   readonly newFragmentF3Encrypted: EncryptedFragmentWire;
   /** Base64 32 bytes — nuevo recoverySalt (puede ser igual al viejo si no se rota). */
   readonly newRecoverySalt: Base64String;
-  /** Hex 32 bytes — `SHA256(email || newEmailSalt)`. */
+  /** Hex 64 chars — `SHA256(email || newEmailSalt)`. */
   readonly newEmailCommitment: HexString;
 }
 
@@ -288,4 +321,72 @@ export interface FinalizeRecoveryResponse {
   readonly walletAddress: string;
   readonly txHash: string;
   readonly status: string;
+}
+
+/* ── v1.1.0: read-only data endpoints (balance, activity) ───────────────── */
+
+/** `GET /wallets/{address}/balance`. */
+export interface WalletBalanceResponse {
+  readonly xlm: {
+    /** Balance en stroops (string base-10 — puede exceder 2^53). */
+    readonly stroops: string;
+    /** Misma cantidad como string decimal en XLM (1 XLM = 10^7 stroops). */
+    readonly xlm: string;
+  };
+}
+
+/**
+ * Un evento on-chain del contrato del Smart Account. Decodificado por el
+ * backend (topics + value vienen ya como native types — strings/numbers/
+ * arrays/objects).
+ */
+export interface WalletActivityEvent {
+  readonly type: string;
+  readonly txHash: string;
+  readonly ledger: number;
+  readonly timestamp: string | null;
+  readonly topics: readonly unknown[];
+  readonly value: unknown;
+}
+
+/** `GET /wallets/{address}/activity?limit=N`. */
+export interface WalletActivityResponse {
+  readonly events: readonly WalletActivityEvent[];
+  readonly cursor: string | null;
+}
+
+/** Item del history pre-decodificado por el backend proxy. */
+export interface WalletHistoryItem {
+  readonly type: 'wallet-created' | 'signer-rotated' | 'transfer-in' | 'transfer-out';
+  /** Toid del evento específico (string para preservar precisión > 2^53). */
+  readonly eventToid: string;
+  /** Toid de la tx-level identifier. */
+  readonly txToid: string;
+  /** URL pre-armada a Stellar Expert con anchor — listo para renderizar. */
+  readonly explorerUrl: string;
+  readonly ledger: number;
+  readonly timestamp: string;
+  /** Solo para `signer-rotated`. */
+  readonly newOwnerEd25519Hex?: string;
+  /** Solo para `transfer-out`. */
+  readonly to?: string;
+  /** Solo para `transfer-in`. */
+  readonly from?: string;
+  /** Solo para transfers. */
+  readonly amountStroops?: string;
+}
+
+/** `GET /wallets/{address}/history?saCursor=&txCursor=&scanLimit=`. */
+export interface WalletHistoryResponse {
+  readonly events: readonly WalletHistoryItem[];
+  readonly cursors: {
+    readonly smartAccount: string | null;
+    readonly transfers: string | null;
+  };
+}
+
+export interface WalletHistoryRequestOptions {
+  readonly smartAccountCursor?: string;
+  readonly transfersCursor?: string;
+  readonly transferScanLimit?: number;
 }

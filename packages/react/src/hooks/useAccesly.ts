@@ -20,12 +20,18 @@ import {
   encryptAesGcm,
   generateRecoverySalt,
   generateX25519Keypair,
+  getRandomBytes,
+  hkdfSha256,
   normalizeSecp256r1Pubkey,
   reconstructFromPlainAndEncrypted,
   reconstructKey,
+  registerPasskey,
+  sha256,
   signSorobanAuthEntry,
   signTransaction as coreSignTransaction,
+  unlockPasskey,
   unwrapSessionFragment2,
+  zeroize,
   type AuthStatus,
   type CredentialRecord,
   type EncryptedEnvelope,
@@ -83,6 +89,15 @@ export interface CreateWalletInput {
    * (el SDK no lo retiene en memoria).
    */
   readonly cognitoPassword?: Uint8Array;
+  /**
+   * 32-byte salt para HKDF — si se persiste en el `CredentialRecord`,
+   * `wallet.unlockForSigning` lo recupera y re-deriva las mismas keys sin
+   * intervención del caller. Si se omite, el SDK genera uno random y lo
+   * persiste igualmente. Si la wallet ya existe en el `DeviceStore` con un
+   * `encryptionSalt`, este input se ignora a favor del salt persistido (para
+   * preservar la decriptabilidad de F1).
+   */
+  readonly encryptionSalt?: Uint8Array;
 }
 
 export interface CreatedWalletInfo {
@@ -141,7 +156,83 @@ export interface RetryDeployResult {
   readonly status: WalletStatus;
 }
 
+/**
+ * Input para `wallet.bootstrap(...)` — el high-level "todo en uno" que cualquier
+ * integrador típico va a llamar como entry point. Hace **TODO**:
+ *
+ *   1. `sha256(email)` → userId opaco para el RP.
+ *   2. Genera `prfSalt` aleatorio (32 bytes).
+ *   3. `registerPasskey(...)` con extensión PRF — pide huella/face/Hello.
+ *   4. Genera `encryptionSalt` aleatorio (32 bytes).
+ *   5. HKDF(prfOutput, encryptionSalt, "accesly-{f1,f2,f3}-encryption") → 3 keys AES.
+ *   6. Genera `emailSalt` aleatorio (32 bytes).
+ *   7. `wallet.ensureWallet(...)` — el flujo idempotente get-or-create.
+ *   8. Persiste `encryptionSalt` en `CredentialRecord` para que `unlockForSigning`
+ *      pueda re-derivar las mismas keys.
+ *   9. Zeroiza `prfOutput`, `f1Key`, `f2Key`, `f3Key`, `cognitoPasswordBytes`.
+ *
+ * Después de `bootstrap`, llamá `tx.send(...)` directamente con
+ * `wallet.unlockForSigning(email)` — no hace falta más wiring.
+ */
+export interface BootstrapWalletInput {
+  readonly email: string;
+  /**
+   * Password de Cognito en plano. Usado para:
+   *  - Re-cifrar F3 (y F2_recovery) con `recoveryKey = PBKDF2(password,
+   *    recoverySalt, 600k)` para el flujo de Recovery v2.
+   *
+   * El SDK lo zeroiza tras el ensureWallet.
+   */
+  readonly password: string;
+  /**
+   * Overrides opcionales para el `registerPasskey` interno. Caso típico:
+   * cambiar `rpName: 'MiApp'` para que el browser muestre tu marca en el
+   * prompt biométrico. `rpId` por default = `window.location.hostname`.
+   */
+  readonly passkey?: {
+    readonly rpId?: string;
+    readonly rpName?: string;
+  };
+}
+
+/**
+ * Material reconstruido por `wallet.unlockForSigning(...)` y listo para pasar
+ * a `tx.send(...)`. Las llaves se zeroizan tras la firma; el caller no debería
+ * retenerlas más allá del round-trip.
+ */
+export interface UnlockedSigningMaterial {
+  /** F1 share desencriptado (Shamir-encoded blob). Lo zero-iza `tx.send`. */
+  readonly fragmentF1Plain: Uint8Array;
+  /** AES key con la que el SDK desencripta el envelope F2 del backend. */
+  readonly fragmentF2Key: Uint8Array;
+  /** Pubkey ed25519 del owner del Smart Account (32 bytes). */
+  readonly ownerPubkey: Uint8Array;
+  /** Address C… del Smart Account (display only). */
+  readonly walletAddress: string;
+}
+
 export interface WalletNamespace {
+  /**
+   * **Entry-point recomendado.** Registra passkey + deriva keys + crea-o-recupera
+   * wallet en una sola llamada. Sustituye al patrón histórico de
+   * `ensureWalletWithPasskey` que tenía que copiar-pegar cada integrador.
+   *
+   * Idempotente: si ya hay wallet en el backend para este Cognito user, devuelve
+   * `{createdNow: false}` sin re-registrar passkey. Si no, hace el flow completo.
+   */
+  bootstrap(input: BootstrapWalletInput): Promise<EnsureWalletResult>;
+  /**
+   * **Helper para `tx.send`.** Lee la credencial del DeviceStore, abre el
+   * passkey via WebAuthn (PIN/biométrico), re-deriva las AES keys con HKDF, y
+   * descifra F1 local. Devuelve los 3 materiales que `tx.send` necesita.
+   *
+   * Lanza con mensaje claro si:
+   *  - no hay credential local (el user tiene que correr `recovery.finalize`
+   *    en este device);
+   *  - el passkey no devolvió PRF (browser sin soporte);
+   *  - el envelope F1 falla al descifrar (corrupto / passkey distinto).
+   */
+  unlockForSigning(username: string): Promise<UnlockedSigningMaterial>;
   /**
    * End-to-end wallet creation:
    *  1. Generate keypair + Shamir split + encrypt fragments (client-side).
@@ -406,6 +497,50 @@ export interface ReconstructedSeed {
   readonly recoverySalt: string;
 }
 
+/**
+ * Input para `recovery.finalize(...)` — **orquestador end-to-end**. El integrador
+ * solo provee email + password + recoveryJwt; el SDK hace TODO el resto:
+ *
+ *   1. `reconstructSeed(...)` con el password → seed VIEJA + recoveryKey.
+ *   2. `registerPasskey(...)` con PRF → nuevo credentialId + secp256r1Pubkey + prfOutput.
+ *   3. HKDF(prfOutput, encryptionSalt, "accesly-{f1,f2}-encryption") → newF1Key + newF2Key.
+ *   4. Genera new ed25519 seed + Shamir 2-of-3 + cifra F1'/F2' con PRF keys, F3' con recoveryKey.
+ *   5. `POST /recovery/simulate-rotate-signer` → backend arma + simula.
+ *   6. Firma `SorobanAuthorizationEntry` con la SEED VIEJA contra `admin-cfg`.
+ *   7. `POST /recovery/finalize` con auth entry firmada + new fragments.
+ *   8. Persiste new `CredentialRecord` (con `encryptionSalt`) en `DeviceStore`.
+ *   9. Zeroiza TODAS las llaves intermedias (privateSeed vieja, recoveryKey, PRF output, password).
+ */
+export interface FinalizeRecoveryInput {
+  /** Email del usuario (case-insensitive, se normaliza). */
+  readonly email: string;
+  /**
+   * Password de Cognito (string). El SDK lo encoda a UTF-8 internamente y lo
+   * zeroiza tras la operación. No retengas referencias.
+   */
+  readonly password: string;
+  /** Token KMS-HMAC que devolvió `verifyOtp()` — TTL 5min. */
+  readonly recoveryJwt: string;
+  /**
+   * Overrides opcionales para el `registerPasskey` interno (mismo shape que
+   * `wallet.bootstrap`). Caso típico: `rpName: 'MiApp'`.
+   */
+  readonly passkey?: {
+    readonly rpId?: string;
+    readonly rpName?: string;
+  };
+}
+
+export interface FinalizeRecoveryResult {
+  readonly walletAddress: string;
+  readonly txHash: string;
+  readonly status: string;
+  /** Pubkey ed25519 NUEVA (32 bytes). Útil para UI confirmación. */
+  readonly newPublicKey: Uint8Array;
+  /** Link al explorer. */
+  readonly explorerUrl: string;
+}
+
 export interface RecoveryNamespace {
   /** Pide OTP. Backend rate-limita; el caller debe respetar `cooldownSeconds`. */
   requestOtp(input: { email: string }): Promise<{
@@ -431,12 +566,19 @@ export interface RecoveryNamespace {
     recoveryJwt: string;
   }): Promise<ReconstructedSeed>;
   /**
-   * Envía la rotación al backend tras que el caller haya construido la tx
-   * `rotate_signer` y firmado el auth entry localmente.
+   * Orquestador completo de la rotación de signers para Recovery v2.
+   * Ver `FinalizeRecoveryInput` para los pre-requisitos.
+   */
+  finalize(input: FinalizeRecoveryInput): Promise<FinalizeRecoveryResult>;
+  /**
+   * Bajo nivel: submitea la rotación al backend tras que el caller haya
+   * armado el body manualmente. `finalize(...)` es el wrapper recomendado.
    */
   submitFinalize(input: {
     recoveryJwt: string;
     unsignedXdr: string;
+    signedAuthEntryXdr: string;
+    newOwnerEd25519Pubkey: string;
     newSecp256r1Pubkey: string;
     newFragmentF1Encrypted: EncryptedEnvelope;
     newFragmentF2Encrypted: EncryptedEnvelope;
@@ -722,6 +864,7 @@ export function useAccesly(): AcceslyHook {
             walletAddress: predictedAddress,
             onChain: null,
             createdAt: Date.now(),
+            ...(input.encryptionSalt ? { encryptionSalt: input.encryptionSalt } : {}),
           });
         }
 
@@ -921,6 +1064,171 @@ export function useAccesly(): AcceslyHook {
         // Username viene del context — coincide con el primary key del DeviceStore.
         return fundTestnetIfNeeded(walletAddress, c.username);
       },
+
+      /**
+       * Implementación del high-level entry point. Combina registración de
+       * passkey + derivación HKDF + ensureWallet en una sola llamada.
+       */
+      async bootstrap(input) {
+        // Forzar refresh del JWT antes de empezar — el bootstrap completo (passkey
+        // register + Shamir + POST) puede tomar 30s+, suficiente para que un
+        // token cerca de expirar quede inválido a mitad del flow. Pidiendo el
+        // valid token ahora dispara el refresh automático si el token está
+        // dentro del `refreshLeadTimeMs` (default 5 min antes de exp).
+        try {
+          await ctx.tokenManager.getValidIdToken();
+        } catch {
+          // Si el refresh falla, dejamos que el primer fetch del flow lo capture
+          // y formatError lo mapeará a "sesión expirada".
+        }
+
+        const enc = new TextEncoder();
+        const userIdHash = sha256(enc.encode(input.email));
+        const prfSalt = getRandomBytes(32);
+
+        const rpId =
+          input.passkey?.rpId ??
+          (typeof window !== 'undefined' ? window.location.hostname : 'localhost');
+        const rpName = input.passkey?.rpName ?? 'Accesly';
+
+        const passkey = await registerPasskey({
+          rpId,
+          rpName,
+          userId: userIdHash,
+          userName: input.email,
+          prfSalt,
+        });
+
+        if (!passkey.prfSupported || !passkey.prfOutput) {
+          throw new Error(
+            'wallet.bootstrap: this authenticator does not support the WebAuthn PRF ' +
+              'extension. Use Chrome 116+, Edge 116+, or Safari 18+ with a native ' +
+              'OS passkey (Touch ID, Face ID, Windows Hello).',
+          );
+        }
+
+        const encryptionSalt = getRandomBytes(32);
+        const f1Key = hkdfSha256(
+          passkey.prfOutput,
+          encryptionSalt,
+          enc.encode('accesly-f1-encryption'),
+          32,
+        );
+        const f2Key = hkdfSha256(
+          passkey.prfOutput,
+          encryptionSalt,
+          enc.encode('accesly-f2-encryption'),
+          32,
+        );
+        const f3Key = hkdfSha256(
+          passkey.prfOutput,
+          encryptionSalt,
+          enc.encode('accesly-f3-encryption'),
+          32,
+        );
+
+        // prfOutput drained — zeroize lo antes posible.
+        zeroize(passkey.prfOutput);
+
+        const emailSalt = getRandomBytes(32);
+        const cognitoPasswordBytes = enc.encode(input.password);
+
+        try {
+          const result = await this.ensureWallet({
+            email: input.email,
+            emailSalt,
+            encryptionKeys: [f1Key, f2Key, f3Key] as const,
+            secp256r1Pubkey: passkey.secp256r1Pubkey,
+            credentialId: passkey.credentialId,
+            prfSalt,
+            cognitoPassword: cognitoPasswordBytes,
+            encryptionSalt,
+          });
+          return result;
+        } finally {
+          zeroize(f1Key);
+          zeroize(f2Key);
+          zeroize(f3Key);
+          zeroize(cognitoPasswordBytes);
+        }
+      },
+
+      /**
+       * Implementación del helper de unlock. Reemplaza al
+       * `lib/unlockForSigning.ts` que cada integrador tenía que copiar.
+       */
+      async unlockForSigning(username) {
+        const record = await ctx.deviceStore.loadCredential(username);
+        if (!record) {
+          throw new Error(
+            `wallet.unlockForSigning: no local CredentialRecord for "${username}". ` +
+              'Run recovery.finalize on this device or create a new wallet.',
+          );
+        }
+        if (!record.publicKey) {
+          throw new Error(
+            'wallet.unlockForSigning: stored CredentialRecord has no publicKey. ' +
+              'Legacy wallet — recreate it with wallet.bootstrap.',
+          );
+        }
+        if (!record.fragmentF1Encrypted) {
+          throw new Error(
+            'wallet.unlockForSigning: stored CredentialRecord has no fragmentF1Encrypted.',
+          );
+        }
+
+        const challenge = getRandomBytes(32);
+        const rpId =
+          typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+        const unlock = await unlockPasskey({
+          rpId,
+          credentialId: record.credentialId,
+          challenge,
+          prfSalt: record.prfSalt,
+        });
+        if (!unlock.prfOutput) {
+          throw new Error(
+            'wallet.unlockForSigning: authenticator did not return PRF output. ' +
+              'Did you use the same browser/device where the wallet was created?',
+          );
+        }
+
+        // Backwards compat: legacy CredentialRecords (pre-1.1.0) no tienen
+        // `encryptionSalt`. Fallback al `prfSalt` — el flujo legacy del example
+        // usaba un encryptionSalt separado pero que vive en otro store fuera
+        // del SDK. Para nuevas wallets `wallet.bootstrap` siempre persiste el
+        // encryptionSalt, así que este path solo aplica a wallets viejas.
+        const salt = record.encryptionSalt ?? record.prfSalt;
+        const enc = new TextEncoder();
+        const f1Key = hkdfSha256(
+          unlock.prfOutput,
+          salt,
+          enc.encode('accesly-f1-encryption'),
+          32,
+        );
+        const fragmentF2Key = hkdfSha256(
+          unlock.prfOutput,
+          salt,
+          enc.encode('accesly-f2-encryption'),
+          32,
+        );
+
+        zeroize(unlock.prfOutput);
+
+        let fragmentF1Plain: Uint8Array;
+        try {
+          fragmentF1Plain = decryptAesGcm(record.fragmentF1Encrypted, f1Key);
+        } finally {
+          zeroize(f1Key);
+        }
+
+        return {
+          fragmentF1Plain,
+          fragmentF2Key,
+          ownerPubkey: record.publicKey,
+          walletAddress: record.walletAddress ?? '',
+        };
+      },
     };
   }, [ctx, hexFromBytes, stellarConfig]);
 
@@ -983,6 +1291,33 @@ export function useAccesly(): AcceslyHook {
           unsignedXdr: sim.unsignedXdr,
           signedAuthEntryXdr,
         });
+
+        // 7. Optimistic update — push el item al `useWalletHistory` cache para
+        //    que aparezca al instante sin esperar el indexing de Stellar
+        //    Expert (~30-60s típico). El próximo poll del hook lo va a
+        //    descartar cuando confirme que ya está en el feed real.
+        try {
+          // walletAddress = computeSmartAccountAddress requeriría el deployer.
+          // En vez de re-computar, los hooks que consumen optimistic resuelven
+          // el wallet via DeviceStore; acá insertamos por ownerPubkey hex.
+          const username = ctx.username;
+          if (username) {
+            const stored = await ctx.deviceStore.loadCredential(username);
+            if (stored?.walletAddress) {
+              const { historyOptimisticPush } = await import('./useWalletHistory.js');
+              historyOptimisticPush(stored.walletAddress, {
+                type: 'transfer-out',
+                txHash: submit.txHash,
+                ledger: Math.floor(Date.now() / 1000),
+                timestamp: new Date().toISOString(),
+                to: input.destinationAddress,
+                amountStroops: input.amountStroops,
+              });
+            }
+          }
+        } catch {
+          // Fire-and-forget — no rompemos el send si falla el optimistic push.
+        }
 
         return {
           txHash: submit.txHash,
@@ -1074,9 +1409,177 @@ export function useAccesly(): AcceslyHook {
           recoverySalt: frag.recoverySalt,
         };
       },
+      async finalize(input) {
+        const networkPassphrase = stellarConfig.networkPassphrase;
+        const verifierAddress = stellarConfig.ed25519VerifierAddress;
+        const explorerBase =
+          networkPassphrase === 'Public Global Stellar Network ; September 2015'
+            ? 'https://stellar.expert/explorer/public/tx/'
+            : 'https://stellar.expert/explorer/testnet/tx/';
+
+        const enc = new TextEncoder();
+        const cognitoPasswordBytes = enc.encode(input.password);
+
+        // 1. Reconstruct la seed VIEJA via Shamir(F2_recovery + F3). El SDK ya
+        //    expone esto como `this.reconstructSeed` — reusamos.
+        const seedResult = await this.reconstructSeed({
+          cognitoPassword: cognitoPasswordBytes,
+          recoveryJwt: input.recoveryJwt,
+        });
+        const oldReconstructedSeed = seedResult.privateSeed;
+        const oldOwnerPubkey = seedResult.publicKey;
+        const oldRecoveryKey = seedResult.recoveryKey;
+
+        try {
+          // 2. Registrar el NUEVO passkey con PRF.
+          const userIdHash = sha256(enc.encode(input.email));
+          const newPrfSalt = getRandomBytes(32);
+          const rpId =
+            input.passkey?.rpId ??
+            (typeof window !== 'undefined' ? window.location.hostname : 'localhost');
+          const rpName = input.passkey?.rpName ?? 'Accesly';
+          const passkey = await registerPasskey({
+            rpId,
+            rpName,
+            userId: userIdHash,
+            userName: input.email,
+            prfSalt: newPrfSalt,
+          });
+          if (!passkey.prfSupported || !passkey.prfOutput) {
+            throw new Error(
+              'recovery.finalize: the new authenticator did not return PRF output. ' +
+                'Required by Accesly. Use Chrome 116+, Edge 116+, Safari 18+ with a native OS passkey.',
+            );
+          }
+
+          // 3. Derivar las dos AES keys nuevas (F1' PRF-bound, F2' PRF-bound)
+          //    + el encryptionSalt persistible.
+          const encryptionSalt = getRandomBytes(32);
+          const newF1Key = hkdfSha256(
+            passkey.prfOutput,
+            encryptionSalt,
+            enc.encode('accesly-f1-encryption'),
+            32,
+          );
+          const newF2Key = hkdfSha256(
+            passkey.prfOutput,
+            encryptionSalt,
+            enc.encode('accesly-f2-encryption'),
+            32,
+          );
+          zeroize(passkey.prfOutput);
+
+          // 4. Genera NUEVA seed + new Shamir split. F3' se cifra con
+          //    newRecoveryKey (PBKDF2(password, newRecoverySalt, 600k)).
+          const newRecoverySalt = generateRecoverySalt();
+          const newRecoveryKey = deriveRecoveryKey({
+            password: cognitoPasswordBytes,
+            salt: newRecoverySalt,
+          });
+          const newRecoverySaltBase64 = base64FromBytes(newRecoverySalt);
+          const newEmailSalt = getRandomBytes(32);
+
+          const created = coreCreateWallet({
+            emailBytes: enc.encode(input.email),
+            emailSalt: newEmailSalt,
+            encryptionKeys: [newF1Key, newF2Key, newRecoveryKey] as const,
+          });
+
+          // 5. F2_recovery — derivar el envelope cifrado con newRecoveryKey.
+          //    Descifra F2' (PRF-bound) → re-cifra con recoveryKey. La seed
+          //    plaintext nunca se toca acá; solo el SHARE plaintext.
+          const f2PlainShare = decryptAesGcm(created.encryptedFragments[1], newF2Key);
+          let newFragmentF2Recovery: EncryptedEnvelope;
+          try {
+            newFragmentF2Recovery = encryptAesGcm(f2PlainShare, newRecoveryKey);
+          } finally {
+            zeroize(f2PlainShare);
+          }
+
+          const newSecp256r1Canonical = normalizeSecp256r1Pubkey(passkey.secp256r1Pubkey);
+          const newOwnerHex = hexFromBytes(created.publicKey);
+          const newSecpHex = hexFromBytes(newSecp256r1Canonical);
+          const newEmailCommitHex = hexFromBytes(created.emailCommitment);
+
+          // 6. POST /recovery/simulate-rotate-signer.
+          const sim = await ctx.endpoints.simulateRotateSigner(input.recoveryJwt, {
+            newOwnerEd25519Pubkey: newOwnerHex,
+            newSecp256r1Pubkey: newSecpHex,
+            newEmailCommitment: newEmailCommitHex,
+          });
+
+          // 7. Firmar la auth entry con la SEED VIEJA. signSorobanAuthEntry
+          //    zero-iza la seed internamente.
+          const { signedAuthEntryXdr } = await signSorobanAuthEntry({
+            signaturePayloadHashBase64: sim.signaturePayloadHashBase64,
+            contextRuleIds: [...sim.contextRuleIds],
+            placeholderAuthEntryXdr: sim.placeholderAuthEntryXdr,
+            ed25519Seed: oldReconstructedSeed,
+            ed25519VerifierAddress: verifierAddress,
+            ownerPubkey: oldOwnerPubkey,
+          });
+
+          // 8. POST /recovery/finalize.
+          let finalizeResp;
+          try {
+            finalizeResp = await ctx.endpoints.finalizeRecovery(input.recoveryJwt, {
+              unsignedXdr: sim.unsignedXdr,
+              signedAuthEntryXdr,
+              newOwnerEd25519Pubkey: newOwnerHex,
+              newSecp256r1Pubkey: newSecpHex,
+              newFragmentF1Encrypted: encodeFragmentToWire(created.encryptedFragments[0]),
+              newFragmentF2Encrypted: encodeFragmentToWire(created.encryptedFragments[1]),
+              newFragmentF2Recovery: encodeFragmentToWire(newFragmentF2Recovery),
+              newFragmentF3Encrypted: encodeFragmentToWire(created.encryptedFragments[2]),
+              newRecoverySalt: newRecoverySaltBase64,
+              newEmailCommitment: newEmailCommitHex,
+            });
+          } finally {
+            zeroize(newRecoveryKey);
+          }
+
+          // 9. Persistir el nuevo CredentialRecord (con encryptionSalt para que
+          //    unlockForSigning pueda re-derivar las mismas keys).
+          await ctx.deviceStore.saveCredential({
+            username: input.email,
+            credentialId: passkey.credentialId,
+            secp256r1Pubkey: newSecp256r1Canonical,
+            fragmentF1Encrypted: created.encryptedFragments[0],
+            fragmentF2Encrypted: created.encryptedFragments[1],
+            fragmentF3Encrypted: created.encryptedFragments[2],
+            publicKey: created.publicKey,
+            emailCommitment: created.emailCommitment,
+            prfSalt: newPrfSalt,
+            encryptionSalt,
+            fallbackKeyMaterial: new Uint8Array(0),
+            walletAddress: finalizeResp.walletAddress,
+            onChain: true,
+            createdAt: Date.now(),
+          });
+
+          // Zeroize key material que aún tenemos en mano.
+          zeroize(newF1Key);
+          zeroize(newF2Key);
+
+          return {
+            walletAddress: finalizeResp.walletAddress,
+            txHash: finalizeResp.txHash,
+            status: finalizeResp.status,
+            newPublicKey: created.publicKey,
+            explorerUrl: `${explorerBase}${finalizeResp.txHash}`,
+          };
+        } finally {
+          // Zeroize TODO el material sensitive aunque algo truene a mitad.
+          zeroize(cognitoPasswordBytes);
+          zeroize(oldReconstructedSeed);
+          zeroize(oldRecoveryKey);
+        }
+      },
       async submitFinalize(input) {
         return ctx.endpoints.finalizeRecovery(input.recoveryJwt, {
           unsignedXdr: input.unsignedXdr,
+          signedAuthEntryXdr: input.signedAuthEntryXdr,
+          newOwnerEd25519Pubkey: input.newOwnerEd25519Pubkey,
           newSecp256r1Pubkey: input.newSecp256r1Pubkey,
           newFragmentF1Encrypted: encodeFragmentToWire(input.newFragmentF1Encrypted),
           newFragmentF2Encrypted: encodeFragmentToWire(input.newFragmentF2Encrypted),
@@ -1087,7 +1590,7 @@ export function useAccesly(): AcceslyHook {
         });
       },
     }),
-    [ctx],
+    [ctx, stellarConfig, hexFromBytes],
   );
 
   const session = useMemo<SessionNamespace>(

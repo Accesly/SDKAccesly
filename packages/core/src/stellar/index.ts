@@ -36,3 +36,15 @@ export {
   type SignSorobanAuthEntryParams,
   type SignSorobanAuthEntryResult,
 } from './sorobanAuth.js';
+
+export {
+  XLM_DECIMALS,
+  accountExplorerUrl,
+  isValidStellarAddress,
+  shortAddress,
+  stroopsToXlm,
+  txExplorerUrl,
+  walletExplorerUrl,
+  xlmToStroops,
+  type StellarNetwork,
+} from './format.js';

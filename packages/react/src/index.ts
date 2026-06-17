@@ -31,11 +31,15 @@ export {
   useAccesly,
   type AcceslyHook,
   type AuthNamespace,
+  type BootstrapWalletInput,
   type CreatedWalletInfo,
   type CreateWalletInput,
   type EnsureWalletResult,
+  type FinalizeRecoveryInput,
+  type FinalizeRecoveryResult,
   type KycNamespace,
   type RecoveryNamespace,
+  type ReconstructedSeed,
   type RemoteWalletInfo,
   type RetryDeployResult,
   type SendXlmInput,
@@ -43,7 +47,32 @@ export {
   type SessionNamespace,
   type SettingsNamespace,
   type TxNamespace,
+  type UnlockedSigningMaterial,
   type WalletNamespace,
   type WalletStatus,
   type YieldNamespace,
 } from './hooks/useAccesly.js';
+
+export { useWalletStatus, type UseWalletStatusResult, type WalletStatusValue } from './hooks/useWalletStatus.js';
+export { useBalance, type UseBalanceResult } from './hooks/useBalance.js';
+export {
+  useWalletActivity,
+  type UseWalletActivityOptions,
+  type UseWalletActivityResult,
+} from './hooks/useWalletActivity.js';
+export {
+  useWalletHistory,
+  historyOptimisticPush,
+  historyClearOptimistic,
+  type UseWalletHistoryOptions,
+  type UseWalletHistoryResult,
+} from './hooks/useWalletHistory.js';
+export {
+  closeAllWalletSubscriptions,
+  subscribeToWalletEvent,
+  type WalletActivityItem,
+  type WalletStreamActivityPayload,
+  type WalletStreamBalancePayload,
+  type WalletStreamEventType,
+  type WalletStreamStatusPayload,
+} from './hooks/walletSubscription.js';

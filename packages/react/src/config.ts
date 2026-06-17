@@ -8,6 +8,13 @@ import type { CognitoConfig, Environment } from '@accesly/core';
 
 export interface EnvironmentDefaults {
   readonly apiUrl: string;
+  /**
+   * Lambda Function URL del `wallet-stream` Lambda — Server-Sent Events
+   * que multiplexa status + balance + activity en una sola conexión.
+   * Si está vacío, los hooks `useBalance` / `useWalletActivity` /
+   * `useWalletStatus` caen al polling fallback (mucho menos eficiente).
+   */
+  readonly walletStreamUrl: string;
   readonly cognito: CognitoConfig;
   readonly stellar: {
     readonly networkPassphrase: string;
@@ -33,6 +40,7 @@ export interface EnvironmentDefaults {
 export const ENVIRONMENT_DEFAULTS: Record<Environment, EnvironmentDefaults> = {
   dev: {
     apiUrl: 'https://3fki7eiio5.execute-api.us-east-1.amazonaws.com/dev',
+    walletStreamUrl: 'https://ajlmn37thw7fxen3oyykbfmlrm0eecue.lambda-url.us-east-1.on.aws/',
     cognito: {
       region: 'us-east-1',
       userPoolId: 'us-east-1_K2Nag1tB1',
@@ -50,6 +58,7 @@ export const ENVIRONMENT_DEFAULTS: Record<Environment, EnvironmentDefaults> = {
   },
   staging: {
     apiUrl: 'https://api-staging.accesly.xyz',
+    walletStreamUrl: '',
     cognito: {
       region: 'us-east-1',
       userPoolId: 'TBD-staging',
@@ -65,6 +74,7 @@ export const ENVIRONMENT_DEFAULTS: Record<Environment, EnvironmentDefaults> = {
   },
   prod: {
     apiUrl: 'https://api.accesly.xyz',
+    walletStreamUrl: '',
     cognito: {
       region: 'us-east-1',
       userPoolId: 'TBD-prod',
