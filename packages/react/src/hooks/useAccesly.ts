@@ -424,6 +424,47 @@ export interface SendXlmResult {
   readonly explorerUrl: string;
 }
 
+/**
+ * Input para `tx.swap(...)` — cambia XLM por USDC (o viceversa) usando Soroswap
+ * Aggregator. El SDK firma la auth entry del Smart Account contra la regla
+ * biometric-tx del asset de entrada.
+ */
+export interface SwapInput {
+  /** Asset de entrada. */
+  readonly fromAsset: TransferAsset;
+  /** Asset de salida (debe diferir de `fromAsset`). */
+  readonly toAsset: TransferAsset;
+  /** Stroops del input (1e-7). Ejemplo: `"125000000"` = 12.5 XLM. */
+  readonly amountIn: string;
+  /** Tolerancia de slippage en basis points. Default 50 (0.5%). */
+  readonly slippageBps?: number;
+  /** F1 (Shamir share) en plano — zeroizado tras firmar. */
+  readonly fragmentF1Plain: Uint8Array;
+  /** Llave AES-256 para descifrar el F2 envelope. */
+  readonly fragmentF2Key: Uint8Array;
+  /** Pubkey ed25519 del owner del Smart Account. */
+  readonly ownerPubkey: Uint8Array;
+}
+
+export interface SwapResult {
+  readonly txHash: string;
+  readonly status: string;
+  readonly explorerUrl: string;
+  /**
+   * Quote summary que cotizó Soroswap. La UI puede mostrar
+   * `recibiste ${amountOut} ${toAsset}` después del success.
+   */
+  readonly quote: {
+    readonly fromAsset: TransferAsset;
+    readonly toAsset: TransferAsset;
+    readonly amountIn: string;
+    readonly amountOut: string;
+    readonly minAmountOut: string;
+    readonly priceImpactPct: string;
+    readonly platform: string;
+  };
+}
+
 export interface TxNamespace {
   /**
    * End-to-end XLM transfer desde el Smart Account del user.
@@ -448,6 +489,21 @@ export interface TxNamespace {
    *   - La pubkey derivada de la seed no matchea `ownerPubkey`.
    */
   send(input: SendXlmInput): Promise<SendXlmResult>;
+  /**
+   * **Fase D (1.6+):** swap XLM↔USDC vía Soroswap Aggregator. El backend hace
+   * el round-trip a la API de Soroswap (`/quote` + `/quote/build`), procesa el
+   * XDR resultante, y devuelve el material para que el SDK firme con el
+   * mismo passkey que `tx.send`.
+   *
+   * Auth: la auth entry del Smart Account se firma contra la regla
+   * biometric-tx del `fromAsset` (rule 0 para XLM, rule 1 para USDC). Si la
+   * wallet no tiene la regla del `fromAsset` (pre-1.4 sin USDC), el backend
+   * devuelve 409 — el caller debe disparar `wallet.activateAsset` primero.
+   *
+   * Returns `txHash` + `quote` summary con `amountOut` y `priceImpactPct` para
+   * que la UI muestre "Recibiste X USDC".
+   */
+  swap(input: SwapInput): Promise<SwapResult>;
 
   /**
    * Bajo nivel: firma un envelope Stellar ya construido con una seed ed25519
@@ -1439,6 +1495,66 @@ export function useAccesly(): AcceslyHook {
           networkPassphrase: stellarConfig.networkPassphrase,
           ...(input.expectedPublicKey ? { expectedPublicKey: input.expectedPublicKey } : {}),
         });
+      },
+
+      async swap(input) {
+        const networkPassphrase = stellarConfig.networkPassphrase;
+        const verifierAddress = stellarConfig.ed25519VerifierAddress;
+        const explorerBase =
+          networkPassphrase === 'Public Global Stellar Network ; September 2015'
+            ? 'https://stellar.expert/explorer/public/tx/'
+            : 'https://stellar.expert/explorer/testnet/tx/';
+
+        // 1. Backend simulate (hits Soroswap /quote + /quote/build internamente).
+        const sim = await ctx.endpoints.swapSimulate({
+          fromAsset: input.fromAsset,
+          toAsset: input.toAsset,
+          amountIn: input.amountIn,
+          ...(input.slippageBps !== undefined ? { slippageBps: input.slippageBps } : {}),
+        });
+
+        // 2-4. Mismo flow ECDH + Shamir + reconstruct que tx.send.
+        const ephemeral = generateX25519Keypair();
+        const wrappedF2 = await ctx.endpoints.getFragment2({
+          clientEphemeralPubkey: base64FromBytes(ephemeral.publicKey),
+        });
+        const sessionPlaintext = unwrapSessionFragment2(wrappedF2, ephemeral.privateKey).plaintext;
+        const fragmentF2Wire = JSON.parse(new TextDecoder().decode(sessionPlaintext)) as {
+          ciphertext: string;
+          nonce: string;
+          algo: string;
+        };
+        const fragmentF2Envelope: EncryptedEnvelope = {
+          nonce: base64ToBytes(fragmentF2Wire.nonce),
+          ciphertext: base64ToBytes(fragmentF2Wire.ciphertext),
+        };
+        const reconstructed = reconstructFromPlainAndEncrypted({
+          fragmentF1Plain: input.fragmentF1Plain,
+          fragmentF2: { envelope: fragmentF2Envelope, key: input.fragmentF2Key },
+        });
+
+        // 5. Firma la auth entry contra la regla biometric-tx del fromAsset.
+        const { signedAuthEntryXdr } = await signSorobanAuthEntry({
+          signaturePayloadHashBase64: sim.signaturePayloadHashBase64,
+          contextRuleIds: [...sim.contextRuleIds],
+          placeholderAuthEntryXdr: sim.placeholderAuthEntryXdr,
+          ed25519Seed: reconstructed.privateSeed,
+          ed25519VerifierAddress: verifierAddress,
+          ownerPubkey: input.ownerPubkey,
+        });
+
+        // 6. Submit — backend re-inyecta sig, KMS-firma con channels-fund, submitea.
+        const submit = await ctx.endpoints.swapSubmit({
+          unsignedXdr: sim.unsignedXdr,
+          signedAuthEntryXdr,
+        });
+
+        return {
+          txHash: submit.txHash,
+          status: submit.status,
+          explorerUrl: `${explorerBase}${submit.txHash}`,
+          quote: sim.quote,
+        };
       },
     }),
     [ctx, stellarConfig],

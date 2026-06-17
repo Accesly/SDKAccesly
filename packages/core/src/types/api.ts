@@ -150,6 +150,41 @@ export interface ActivateAssetSimulateRequest {
   readonly asset: ActivatableAsset;
 }
 
+/**
+ * `POST /tx/swap/simulate` — cotiza un swap XLM↔USDC via Soroswap y devuelve
+ * el material que el SDK necesita para firmar la auth entry del Smart Account.
+ *
+ * El backend internamente:
+ *   1) Hits Soroswap `/quote` para descubrir path + amounts.
+ *   2) Hits Soroswap `/quote/build` para obtener el XDR del envelope.
+ *   3) Extrae la auth entry del SA + computa signature_payload_hash.
+ *   4) Devuelve `SimulateTxResponse` + el quote summary para mostrar en UI.
+ */
+export interface SimulateSwapRequest {
+  readonly fromAsset: TransferAsset;
+  readonly toAsset: TransferAsset;
+  /** Stroops del input (1e-7). */
+  readonly amountIn: string;
+  /** Tolerancia de slippage en basis points. Default 50 (0.5%). */
+  readonly slippageBps?: number;
+}
+
+export interface SimulateSwapResponse extends SimulateTxResponse {
+  readonly quote: {
+    readonly fromAsset: TransferAsset;
+    readonly toAsset: TransferAsset;
+    readonly amountIn: string;
+    /** Stroops out proyectados (sin slippage aplicado). */
+    readonly amountOut: string;
+    /** Stroops min out aceptables (con slippage) — esto es lo que el router enforça. */
+    readonly minAmountOut: string;
+    /** "0.12" = 0.12% de price impact. */
+    readonly priceImpactPct: string;
+    /** `router` | `aggregator` | `sdex` — qué venue se usó. */
+    readonly platform: string;
+  };
+}
+
 export interface SimulateTxRequest {
   /**
    * Base-10 string del monto en unidades atómicas (1e-7 para ambos XLM y USDC).

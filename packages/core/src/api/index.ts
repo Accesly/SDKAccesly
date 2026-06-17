@@ -52,6 +52,8 @@ export type {
   SimulateRotateSignerResponse,
   ActivatableAsset,
   ActivateAssetSimulateRequest,
+  SimulateSwapRequest,
+  SimulateSwapResponse,
   SimulateTxRequest,
   SimulateTxResponse,
   SubmitTxRequest,

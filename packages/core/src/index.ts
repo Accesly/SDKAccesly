@@ -105,6 +105,8 @@ export {
   type TelemetrySink,
   type ActivatableAsset,
   type ActivateAssetSimulateRequest,
+  type SimulateSwapRequest,
+  type SimulateSwapResponse,
   type TransferAsset,
   type WalletActivityEvent,
   type WalletActivityResponse,

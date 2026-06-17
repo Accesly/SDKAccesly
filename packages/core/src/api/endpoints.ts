@@ -26,6 +26,8 @@ import type {
   SimulateRotateSignerRequest,
   SimulateRotateSignerResponse,
   ActivateAssetSimulateRequest,
+  SimulateSwapRequest,
+  SimulateSwapResponse,
   SimulateTxRequest,
   SimulateTxResponse,
   SubmitTxRequest,
@@ -114,6 +116,26 @@ export class AccesslyEndpoints {
   activateAssetSubmit(req: SubmitTxRequest): Promise<SubmitTxResponse> {
     return this.client.post<SubmitTxResponse>(
       '/tx/activate-asset/submit',
+      req as unknown as Json,
+    );
+  }
+
+  /**
+   * Cognito-auth. Cotiza un swap XLM↔USDC via Soroswap Aggregator y devuelve
+   * el material para que el SDK firme la auth entry contra la regla
+   * biometric-tx del asset de entrada.
+   */
+  swapSimulate(req: SimulateSwapRequest): Promise<SimulateSwapResponse> {
+    return this.client.post<SimulateSwapResponse>(
+      '/tx/swap/simulate',
+      req as unknown as Json,
+    );
+  }
+
+  /** Cognito-auth. Submit del swap firmado (mismo shape que submitTx). */
+  swapSubmit(req: SubmitTxRequest): Promise<SubmitTxResponse> {
+    return this.client.post<SubmitTxResponse>(
+      '/tx/swap/submit',
       req as unknown as Json,
     );
   }
