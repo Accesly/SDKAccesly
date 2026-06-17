@@ -257,7 +257,13 @@ export interface OrderRequest {
   readonly amount: string;
   readonly walletAddress: string;
   readonly appId: string;
-  /** Required for `offramp` `submit`: SPEI destination CLABE. */
+  /**
+   * Offramp v1.7+: `bankAccountId` ya registrada via POST /kyc/bank-accounts.
+   * Si la app legacy <1.7 manda `clabe` plana, el backend rechaza con 400
+   * (la real Etherfuse API no acepta CLABE pelada).
+   */
+  readonly bankAccountId?: string;
+  /** @deprecated v1.7+ — usar `bankAccountId`. */
   readonly clabe?: string;
   /** Required for `submit`: quote id returned by the previous `quote` call. */
   readonly quoteId?: string;
@@ -270,6 +276,31 @@ export interface OrderResponse {
   readonly amount: string;
   readonly fxRate?: string;
   readonly expiresAt?: string;
+}
+
+/* ── Fiat — KYC + Bank Account registration (Fase E.2+) ──────────────────── */
+
+/** `POST /kyc/bank-accounts` body — registra CLABE mexicana para offramp. */
+export interface RegisterBankAccountRequest {
+  /** 18 dígitos. */
+  readonly clabe: string;
+  /** Nombre como aparece en el estado de cuenta. */
+  readonly holderName: string;
+  /** RFC con homoclave (13 personal, 12 moral). */
+  readonly holderRfc: string;
+  /** 18 chars (solo PERSONAL). */
+  readonly holderCurp?: string;
+  /** Default 'PERSONAL'. */
+  readonly accountType?: 'PERSONAL' | 'BUSINESS';
+  /** Label friendly para distinguir multiples cuentas. */
+  readonly label?: string;
+}
+
+export interface RegisterBankAccountResponse {
+  readonly bankAccountId: string;
+  readonly status: 'pending' | 'approved' | 'rejected';
+  readonly label?: string;
+  readonly clabeLast4: string;
 }
 
 /* ── Recovery v2 (OTP-email + password de Cognito, Fase 1) ────────────────── */

@@ -19,6 +19,8 @@ import type {
   KycStartResponse,
   OrderRequest,
   OrderResponse,
+  RegisterBankAccountRequest,
+  RegisterBankAccountResponse,
   RecoveryOtpRequestInput,
   RecoveryOtpRequestResponse,
   RecoveryOtpVerifyInput,
@@ -158,6 +160,18 @@ export class AccesslyEndpoints {
   /** Cognito-auth. Quote or submit a USDC→MXN offramp order. */
   offramp(req: OrderRequest): Promise<OrderResponse> {
     return this.client.post<OrderResponse>('/offramp', req as unknown as Json);
+  }
+
+  /**
+   * Cognito-auth. Registra una CLABE mexicana en el customer Etherfuse del
+   * usuario. Requiere KYC pre-existente. Devuelve un `bankAccountId` que se
+   * usa después en `offramp({ bankAccountId, ... })`.
+   */
+  registerBankAccount(req: RegisterBankAccountRequest): Promise<RegisterBankAccountResponse> {
+    return this.client.post<RegisterBankAccountResponse>(
+      '/kyc/bank-accounts',
+      req as unknown as Json,
+    );
   }
 
   /* ── v1.1.0: read-only wallet data ─────────────────────────────────────── */

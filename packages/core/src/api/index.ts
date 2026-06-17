@@ -52,6 +52,8 @@ export type {
   SimulateRotateSignerResponse,
   ActivatableAsset,
   ActivateAssetSimulateRequest,
+  RegisterBankAccountRequest,
+  RegisterBankAccountResponse,
   SimulateSwapRequest,
   SimulateSwapResponse,
   SimulateTxRequest,

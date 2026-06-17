@@ -36,6 +36,9 @@ import {
   type AuthStatus,
   type CredentialRecord,
   type EncryptedEnvelope,
+  type OrderResponse,
+  type RegisterBankAccountRequest,
+  type RegisterBankAccountResponse,
   type TransferAsset,
 } from '@accesly/core';
 import { AcceslyContext, type AcceslyContextValue } from '../context.js';
@@ -521,6 +524,53 @@ export interface KycNamespace {
   status(): Promise<{ customerId: string; status: string; hostedUrl: string | null }>;
 }
 
+/**
+ * **Fase E.2+ (1.7+):** namespace high-level para operaciones MXN ⇄ USDC
+ * vía Etherfuse. Envuelve los endpoints crudos `/kyc`, `/onramp`, `/offramp`,
+ * `/kyc/bank-accounts` para que la app no tenga que armar `OrderRequest`
+ * con `appId`/`walletAddress`/`action` cada vez — los toma del contexto.
+ *
+ * El integrador típicamente solo necesita estos métodos high-level. Para
+ * casos avanzados (custom action shape, listado paginado, etc.) acceder a
+ * `_internal.endpoints.{onramp, offramp, kycStart, ...}` directo.
+ */
+export interface FiatNamespace {
+  /**
+   * Inicia el KYC del user actual via Etherfuse hosted form. Devuelve la URL
+   * presignada — la UI hace `window.open` y el user completa identidad +
+   * documentos directamente en Etherfuse (Accesly nunca los ve).
+   */
+  startKyc(): Promise<{ customerId: string; status: string; hostedUrl: string | null }>;
+  /** Status actual del KYC del user (pending/approved/rejected/not_started). */
+  kycStatus(): Promise<{ customerId: string; status: string; hostedUrl: string | null }>;
+  /**
+   * Registra una CLABE mexicana en el customer Etherfuse del user. Requiere
+   * KYC pre-existente (status='pending' o 'approved' alcanza). Devuelve el
+   * `bankAccountId` que `fiat.quoteOfframp` necesita.
+   */
+  registerBankAccount(
+    input: Omit<RegisterBankAccountRequest, never>,
+  ): Promise<RegisterBankAccountResponse>;
+  /**
+   * Cotiza onramp MXN→USDC. La quote es válida ~60s. Devuelve `amountUsdc`
+   * que el user recibe + `fxRate` aplicado.
+   */
+  quoteOnramp(input: { amountMxn: string }): Promise<OrderResponse>;
+  /**
+   * Ejecuta el onramp. El user hace una transferencia SPEI a la cuenta que
+   * Etherfuse devuelve (out-of-band) y los USDC llegan al Smart Account
+   * cuando el webhook `order_updated` confirma settlement.
+   */
+  submitOnramp(input: { quoteId: string }): Promise<OrderResponse>;
+  /** Cotiza offramp USDC→MXN contra una bank account ya registrada. */
+  quoteOfframp(input: {
+    amountUsdc: string;
+    bankAccountId: string;
+  }): Promise<OrderResponse>;
+  /** Ejecuta el offramp (USDC sale del SA, MXN llega a la CLABE registrada). */
+  submitOfframp(input: { quoteId: string }): Promise<OrderResponse>;
+}
+
 export interface SessionNamespace {
   /** Create a temporary session key for unattended low-value tx (Soroban policy). */
   create(_opts: { readonly ttlSeconds: number; readonly maxAmountStroops: string }): Promise<never>;
@@ -694,6 +744,7 @@ export interface AcceslyHook {
   readonly wallet: WalletNamespace;
   readonly tx: TxNamespace;
   readonly kyc: KycNamespace;
+  readonly fiat: FiatNamespace;
   readonly recovery: RecoveryNamespace;
   readonly session: SessionNamespace;
   readonly settings: SettingsNamespace;
@@ -1572,6 +1623,74 @@ export function useAccesly(): AcceslyHook {
     [ctx],
   );
 
+  // ── Fiat (Etherfuse onramp/offramp/bank-accounts) ─────────────────────────
+  const fiat = useMemo<FiatNamespace>(
+    () => {
+      const c = ctx;
+      // Resuelve walletAddress del DeviceStore o tira con mensaje claro.
+      async function resolveWalletAddress(): Promise<string> {
+        if (!c.username) throw new Error('fiat: no authenticated user');
+        const stored = await c.deviceStore.loadCredential(c.username);
+        if (!stored?.walletAddress) {
+          throw new Error('fiat: no wallet for current user (run wallet.bootstrap first)');
+        }
+        return stored.walletAddress;
+      }
+
+      return {
+        async startKyc() {
+          return c.endpoints.kycStart();
+        },
+        async kycStatus() {
+          return c.endpoints.kycStatus();
+        },
+        async registerBankAccount(input) {
+          return c.endpoints.registerBankAccount(input);
+        },
+        async quoteOnramp(input) {
+          const walletAddress = await resolveWalletAddress();
+          return c.endpoints.onramp({
+            action: 'quote',
+            amount: input.amountMxn,
+            walletAddress,
+            appId: c.appId,
+          });
+        },
+        async submitOnramp(input) {
+          const walletAddress = await resolveWalletAddress();
+          return c.endpoints.onramp({
+            action: 'submit',
+            amount: '0', // ignorado en submit, el quote dicta
+            quoteId: input.quoteId,
+            walletAddress,
+            appId: c.appId,
+          });
+        },
+        async quoteOfframp(input) {
+          const walletAddress = await resolveWalletAddress();
+          return c.endpoints.offramp({
+            action: 'quote',
+            amount: input.amountUsdc,
+            bankAccountId: input.bankAccountId,
+            walletAddress,
+            appId: c.appId,
+          });
+        },
+        async submitOfframp(input) {
+          const walletAddress = await resolveWalletAddress();
+          return c.endpoints.offramp({
+            action: 'submit',
+            amount: '0',
+            quoteId: input.quoteId,
+            walletAddress,
+            appId: c.appId,
+          });
+        },
+      };
+    },
+    [ctx],
+  );
+
   // ── Recovery v2 (Fase 1, 2026-06-15) ──────────────────────────────────────
   // Esta primera versión expone los wrappers thin de los 3 endpoints públicos
   // (`requestOtp`, `verifyOtp`, `finalize`). El `finalize` aquí solo manda el
@@ -1863,7 +1982,7 @@ export function useAccesly(): AcceslyHook {
 
   // hexToBytes is reserved for future helpers.
   void hexToBytes;
-  return { auth, wallet, tx, kyc, recovery, session, settings, yieldOps, _internal: ctx };
+  return { auth, wallet, tx, kyc, fiat, recovery, session, settings, yieldOps, _internal: ctx };
 }
 
 /* --------------------------------- helpers --------------------------------- */
