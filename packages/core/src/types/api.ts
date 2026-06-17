@@ -325,14 +325,33 @@ export interface FinalizeRecoveryResponse {
 
 /* ── v1.1.0: read-only data endpoints (balance, activity) ───────────────── */
 
-/** `GET /wallets/{address}/balance`. */
+/**
+ * Balance de un asset individual. `atomic` es la cantidad en unidades atómicas
+ * (stroops para XLM, micro-USDC para USDC — ambos 1e-7). `formatted` es la
+ * misma cantidad como string decimal sin trailing zeros ni notación científica
+ * (e.g. `"12.345"`). Ambas son strings para soportar valores > 2^53.
+ */
+export interface AssetBalance {
+  readonly atomic: string;
+  readonly formatted: string;
+}
+
+/**
+ * `GET /wallets/{address}/balance` — devuelve XLM + USDC en una sola llamada.
+ *
+ * Backwards compat con SDK <1.4: el `xlm` mantiene los campos legacy
+ * `stroops` + `xlm` además del nuevo shape `atomic + formatted`. Apps en 1.3
+ * siguen funcionando; apps en 1.4+ leen `atomic`/`formatted` para acceso
+ * uniforme entre assets.
+ */
 export interface WalletBalanceResponse {
-  readonly xlm: {
-    /** Balance en stroops (string base-10 — puede exceder 2^53). */
+  readonly xlm: AssetBalance & {
+    /** @deprecated usá `atomic` (mismo valor). Removido en 2.0. */
     readonly stroops: string;
-    /** Misma cantidad como string decimal en XLM (1 XLM = 10^7 stroops). */
+    /** @deprecated usá `formatted` (mismo valor). Removido en 2.0. */
     readonly xlm: string;
   };
+  readonly usdc: AssetBalance;
 }
 
 /**

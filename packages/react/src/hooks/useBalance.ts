@@ -1,6 +1,6 @@
 /**
- * `useBalance(walletAddress?)` — devuelve el balance XLM del Smart Account
- * con push real-time vía SSE.
+ * `useBalance(walletAddress?)` — devuelve los balances XLM y USDC del Smart
+ * Account con push real-time vía SSE.
  *
  * Si SSE está configurado (env tiene `walletStreamUrl` y `EventSource` existe),
  * el hook se suscribe al canal `balance` del `wallet-stream` Lambda y se
@@ -11,6 +11,10 @@
  *
  * El `walletAddress` se auto-resuelve desde el `DeviceStore` si no se pasa
  * (cubrir el caso "wallet del user actual sin tener que pasarla a mano").
+ *
+ * **Multi-asset (1.4.0+):** además de `stroops`/`xlm` (XLM) ahora devuelve
+ * `usdc` (formatted) y `usdcAtomic` (micro-USDC, 1e-7). Backwards compat:
+ * apps en 1.3 que solo leen `stroops`/`xlm` siguen funcionando sin cambios.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -27,10 +31,14 @@ function useStableRef<T>(value: T): { readonly current: T } {
 }
 
 export interface UseBalanceResult {
-  /** Stroops como string base-10. `null` mientras se carga o no hay address. */
+  /** XLM en stroops (string base-10). `null` mientras se carga o no hay address. */
   readonly stroops: string | null;
-  /** Mismo balance como string decimal en XLM. `null` mientras se carga. */
+  /** XLM formatted (sin trailing zeros). `null` mientras se carga. */
   readonly xlm: string | null;
+  /** USDC formatted (sin trailing zeros). `null` mientras se carga o si el SAC nunca registró la cuenta. */
+  readonly usdc: string | null;
+  /** USDC en unidades atómicas (1e-7 USDC). `null` mientras se carga. */
+  readonly usdcAtomic: string | null;
   readonly isLoading: boolean;
   readonly error: Error | null;
   /** Fuerza fetch HTTP inmediato (útil tras una operación del user). */
@@ -46,6 +54,8 @@ export function useBalance(walletAddress?: string | null): UseBalanceResult {
   );
   const [stroops, setStroops] = useState<string | null>(null);
   const [xlm, setXlm] = useState<string | null>(null);
+  const [usdc, setUsdc] = useState<string | null>(null);
+  const [usdcAtomic, setUsdcAtomic] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -84,8 +94,21 @@ export function useBalance(walletAddress?: string | null): UseBalanceResult {
     if (!resolvedAddress) return;
     try {
       const res = await endpointsRef.current.walletBalance(resolvedAddress);
-      setStroops(res.xlm.stroops);
-      setXlm(res.xlm.xlm);
+      // Backend >=1.4 devuelve `atomic`/`formatted`; <1.4 devolvía `stroops`/`xlm`.
+      // Soportamos ambos para que un SDK 1.4 pegue contra un backend viejo (poco
+      // probable pero barato) y un SDK 1.3 contra backend nuevo (caso real
+      // durante el rollout).
+      setStroops(res.xlm.atomic ?? res.xlm.stroops);
+      setXlm(res.xlm.formatted ?? res.xlm.xlm);
+      // USDC: presente solo en backend >=1.4. Si no viene, queda en null
+      // (no rompe — el integrador solo no muestra el badge).
+      if (res.usdc) {
+        setUsdc(res.usdc.formatted);
+        setUsdcAtomic(res.usdc.atomic);
+      } else {
+        setUsdc(null);
+        setUsdcAtomic(null);
+      }
       setError(null);
     } catch (err) {
       setError(err as Error);
@@ -106,9 +129,25 @@ export function useBalance(walletAddress?: string | null): UseBalanceResult {
       streamUrl,
       resolvedAddress,
       'balance',
-      (data) => {
-        setStroops(data.stroops);
-        setXlm(data.xlm);
+      (data: unknown) => {
+        // Backend nuevo (>=1.4): `{ xlm: { atomic, formatted }, usdc: {...} }`
+        // Backend viejo (<1.4):  `{ stroops, xlm }` (flat)
+        const d = data as Record<string, unknown>;
+        const xlmField = d['xlm'];
+        if (xlmField && typeof xlmField === 'object') {
+          const x = xlmField as { atomic?: string; formatted?: string };
+          if (typeof x.atomic === 'string') setStroops(x.atomic);
+          if (typeof x.formatted === 'string') setXlm(x.formatted);
+        } else if (typeof xlmField === 'string') {
+          setXlm(xlmField);
+        }
+        if (typeof d['stroops'] === 'string') setStroops(d['stroops']);
+        const usdcField = d['usdc'];
+        if (usdcField && typeof usdcField === 'object') {
+          const u = usdcField as { atomic?: string; formatted?: string };
+          if (typeof u.formatted === 'string') setUsdc(u.formatted);
+          if (typeof u.atomic === 'string') setUsdcAtomic(u.atomic);
+        }
         setError(null);
         setIsLoading(false);
       },
@@ -148,5 +187,5 @@ export function useBalance(walletAddress?: string | null): UseBalanceResult {
     await doFetchRef.current();
   }, [doFetchRef]);
 
-  return { stroops, xlm, isLoading, error, refresh };
+  return { stroops, xlm, usdc, usdcAtomic, isLoading, error, refresh };
 }
