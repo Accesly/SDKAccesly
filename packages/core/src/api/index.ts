@@ -50,6 +50,8 @@ export type {
   RecoveryOtpVerifyResponse,
   SimulateRotateSignerRequest,
   SimulateRotateSignerResponse,
+  ActivatableAsset,
+  ActivateAssetSimulateRequest,
   SimulateTxRequest,
   SimulateTxResponse,
   SubmitTxRequest,

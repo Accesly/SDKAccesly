@@ -103,6 +103,8 @@ export {
   type IdTokenProvider,
   type TelemetryEvent,
   type TelemetrySink,
+  type ActivatableAsset,
+  type ActivateAssetSimulateRequest,
   type TransferAsset,
   type WalletActivityEvent,
   type WalletActivityResponse,

@@ -136,6 +136,20 @@ export interface GetFragment2Response {
 /** Assets soportados por `tx.send` (1.4+). USDC requiere wallet con rule 1 activado. */
 export type TransferAsset = 'XLM' | 'USDC';
 
+/** Assets activables vía `wallet.activateAsset(...)` (Fase C). */
+export type ActivatableAsset = 'USDC';
+
+/**
+ * `POST /tx/activate-asset/simulate` — primer paso del flow "Activar USDC".
+ *
+ * Devuelve un `SimulateTxResponse` con el envelope + payload a firmar. El SDK
+ * firma contra la regla `admin-cfg` del Smart Account con el mismo passkey
+ * que se usa para transfers (mismo signer ed25519 vive en ambas reglas).
+ */
+export interface ActivateAssetSimulateRequest {
+  readonly asset: ActivatableAsset;
+}
+
 export interface SimulateTxRequest {
   /**
    * Base-10 string del monto en unidades atómicas (1e-7 para ambos XLM y USDC).

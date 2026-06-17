@@ -25,6 +25,7 @@ import type {
   RecoveryOtpVerifyResponse,
   SimulateRotateSignerRequest,
   SimulateRotateSignerResponse,
+  ActivateAssetSimulateRequest,
   SimulateTxRequest,
   SimulateTxResponse,
   SubmitTxRequest,
@@ -89,6 +90,32 @@ export class AccesslyEndpoints {
    */
   submitTx(req: SubmitTxRequest): Promise<SubmitTxResponse> {
     return this.client.post<SubmitTxResponse>('/tx/submit', req as unknown as Json);
+  }
+
+  /**
+   * Cognito-auth. Simula `smart_account.add_context_rule(...)` para activar un
+   * nuevo asset (e.g. USDC) en una wallet ya deployada. Caso típico: wallets
+   * pre-1.4 que vienen con rule 0 = XLM solo y necesitan agregar rule N+1
+   * para USDC sin re-deployar.
+   *
+   * Response shape idéntico a `simulateTx` — el SDK firma el `auth_digest` con
+   * el mismo passkey contra la regla admin-cfg.
+   */
+  activateAssetSimulate(
+    req: ActivateAssetSimulateRequest,
+  ): Promise<SimulateTxResponse> {
+    return this.client.post<SimulateTxResponse>(
+      '/tx/activate-asset/simulate',
+      req as unknown as Json,
+    );
+  }
+
+  /** Cognito-auth. Submit del add_context_rule firmado (mismo shape que submitTx). */
+  activateAssetSubmit(req: SubmitTxRequest): Promise<SubmitTxResponse> {
+    return this.client.post<SubmitTxResponse>(
+      '/tx/activate-asset/submit',
+      req as unknown as Json,
+    );
   }
 
   /** Cognito-auth. Starts a KYC verification with Etherfuse. */

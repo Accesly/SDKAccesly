@@ -32,6 +32,7 @@ import {
   unlockPasskey,
   unwrapSessionFragment2,
   zeroize,
+  type ActivatableAsset,
   type AuthStatus,
   type CredentialRecord,
   type EncryptedEnvelope,
@@ -325,6 +326,38 @@ export interface WalletNamespace {
    * explícitamente si quiere mostrar feedback en la UI durante el funding.
    */
   fundTestnet(walletAddress: string): Promise<FundTestnetResult>;
+  /**
+   * **Fase C (1.5+):** activa un asset adicional (e.g. USDC) en una wallet
+   * ya deployada agregando un context rule `biometric-tx` para su SAC. Caso
+   * típico: wallets pre-1.4 que vinieron con rule 0 = XLM solo y necesitan
+   * habilitar USDC sin re-deployar.
+   *
+   * El flow firma con el mismo passkey biométrico (mismo signer ed25519 que
+   * autoriza transfers) pero contra la regla `admin-cfg`. Idempotente: si el
+   * rule ya existe, Soroban devuelve error y este método throwea — el caller
+   * puede catchear y mostrar "ya está activado".
+   *
+   * Tras el éxito, futuros `tx.send({ asset: 'USDC' })` desde esta wallet
+   * funcionan sin tocar `wallet.activateAsset` de nuevo.
+   */
+  activateAsset(input: ActivateAssetInput): Promise<ActivateAssetResult>;
+}
+
+export interface ActivateAssetInput {
+  /** Asset a habilitar. Hoy solo `'USDC'`. */
+  readonly asset: ActivatableAsset;
+  /** F1 (Shamir share) en plano — desencriptado client-side via WebAuthn PRF. */
+  readonly fragmentF1Plain: Uint8Array;
+  /** Llave AES-256 con la que el SDK desencripta el F2 envelope. */
+  readonly fragmentF2Key: Uint8Array;
+  /** Pubkey ed25519 (32 bytes) del owner del Smart Account. */
+  readonly ownerPubkey: Uint8Array;
+}
+
+export interface ActivateAssetResult {
+  readonly txHash: string;
+  readonly status: string;
+  readonly explorerUrl: string;
 }
 
 export interface FundTestnetResult {
@@ -1074,6 +1107,66 @@ export function useAccesly(): AcceslyHook {
       fundTestnet(walletAddress) {
         // Username viene del context — coincide con el primary key del DeviceStore.
         return fundTestnetIfNeeded(walletAddress, c.username);
+      },
+
+      async activateAsset(input) {
+        const networkPassphrase = stellarConfig.networkPassphrase;
+        const verifierAddress = stellarConfig.ed25519VerifierAddress;
+        const explorerBase =
+          networkPassphrase === 'Public Global Stellar Network ; September 2015'
+            ? 'https://stellar.expert/explorer/public/tx/'
+            : 'https://stellar.expert/explorer/testnet/tx/';
+
+        // 1. Backend simulate del add_context_rule.
+        const sim = await ctx.endpoints.activateAssetSimulate({
+          asset: input.asset,
+        });
+
+        // 2. ECDH para wrappear F2 con session key per-request.
+        const ephemeral = generateX25519Keypair();
+        const wrappedF2 = await ctx.endpoints.getFragment2({
+          clientEphemeralPubkey: base64FromBytes(ephemeral.publicKey),
+        });
+        const sessionPlaintext = unwrapSessionFragment2(wrappedF2, ephemeral.privateKey).plaintext;
+        const fragmentF2Wire = JSON.parse(new TextDecoder().decode(sessionPlaintext)) as {
+          ciphertext: string;
+          nonce: string;
+          algo: string;
+        };
+        const fragmentF2Envelope: EncryptedEnvelope = {
+          nonce: base64ToBytes(fragmentF2Wire.nonce),
+          ciphertext: base64ToBytes(fragmentF2Wire.ciphertext),
+        };
+
+        // 3. Reconstruct seed (Shamir F1 plain + F2 envelope+key).
+        const reconstructed = reconstructFromPlainAndEncrypted({
+          fragmentF1Plain: input.fragmentF1Plain,
+          fragmentF2: { envelope: fragmentF2Envelope, key: input.fragmentF2Key },
+        });
+
+        // 4. Firma la auth entry contra la regla admin-cfg (rule en el slot
+        //    `deployedTxTargetsCount`). El backend ya nos pasó `contextRuleIds`
+        //    que es exactamente el slot correcto para esta wallet.
+        const { signedAuthEntryXdr } = await signSorobanAuthEntry({
+          signaturePayloadHashBase64: sim.signaturePayloadHashBase64,
+          contextRuleIds: [...sim.contextRuleIds],
+          placeholderAuthEntryXdr: sim.placeholderAuthEntryXdr,
+          ed25519Seed: reconstructed.privateSeed,
+          ed25519VerifierAddress: verifierAddress,
+          ownerPubkey: input.ownerPubkey,
+        });
+
+        // 5. Submit.
+        const submit = await ctx.endpoints.activateAssetSubmit({
+          unsignedXdr: sim.unsignedXdr,
+          signedAuthEntryXdr,
+        });
+
+        return {
+          txHash: submit.txHash,
+          status: submit.status,
+          explorerUrl: `${explorerBase}${submit.txHash}`,
+        };
       },
 
       /**
