@@ -104,6 +104,17 @@ export interface GetWalletResponse {
   readonly appId: string;
   readonly createdAt: string;
   readonly onChain: boolean | null;
+  /**
+   * v1.8+ (Fase G): conteo de `tx_targets` que el Smart Account deployó
+   * en el constructor. Determina qué assets tienen rule biometric-tx pre-
+   * instalada:
+   *   1 = solo XLM (wallets pre-Fase-B). Si reciben USDC, el SDK debe
+   *       disparar `wallet.activateAsset('USDC')` automáticamente.
+   *   2 = XLM + USDC (wallets post-Fase-B). Todo wired out-of-the-box.
+   *
+   * Si está `undefined` (records pre-1.4 sin el field), assumir `1`.
+   */
+  readonly deployedTxTargetsCount?: number;
 }
 
 export interface GetFragment2Request {

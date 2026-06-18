@@ -35,6 +35,12 @@ export interface UseWalletStatusResult {
   readonly status: WalletStatusValue;
   readonly walletAddress: string | null;
   readonly onChain: boolean | null;
+  /**
+   * v1.8+ (Fase G): conteo de tx_targets que el constructor del Smart Account
+   * recibió. `1` = pre-Fase-B (solo XLM); `2` = post-Fase-B (XLM + USDC).
+   * El SDK lo usa para auto-detectar wallets que necesitan activar USDC.
+   */
+  readonly deployedTxTargetsCount: number | null;
   readonly isStale: boolean;
   refresh(): Promise<void>;
 }
@@ -52,6 +58,7 @@ export function useWalletStatus(): UseWalletStatusResult {
   const [status, setStatus] = useState<WalletStatusValue>('unknown');
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [onChain, setOnChain] = useState<boolean | null>(null);
+  const [deployedTxTargetsCount, setDeployedTxTargetsCount] = useState<number | null>(null);
   const [lastSuccessAt, setLastSuccessAt] = useState<number>(0);
   const [isStale, setIsStale] = useState(false);
 
@@ -75,6 +82,8 @@ export function useWalletStatus(): UseWalletStatusResult {
       setStatus(next);
       setWalletAddress(remote.walletAddress);
       setOnChain(remote.onChain);
+      // `undefined` (records pre-1.4) → 1 (pre-Fase-B default).
+      setDeployedTxTargetsCount(remote.deployedTxTargetsCount ?? 1);
       setLastSuccessAt(Date.now());
       setIsStale(false);
       return next;
@@ -163,5 +172,5 @@ export function useWalletStatus(): UseWalletStatusResult {
     await doFetchRef.current();
   }, [doFetchRef]);
 
-  return { status, walletAddress, onChain, isStale, refresh };
+  return { status, walletAddress, onChain, deployedTxTargetsCount, isStale, refresh };
 }

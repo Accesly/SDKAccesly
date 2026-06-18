@@ -154,6 +154,14 @@ export interface RemoteWalletInfo {
   readonly appId: string;
   readonly createdAt: string;
   readonly onChain: boolean | null;
+  /**
+   * v1.8+ (Fase G): conteo de tx_targets que el constructor recibió.
+   * `1` = wallets pre-Fase-B (solo XLM rule). El SDK debería auto-detectar
+   * USDC inflows y disparar `wallet.activateAsset('USDC')` sin botón visible.
+   * `2` = wallets post-Fase-B (XLM + USDC rules pre-instaladas).
+   * `undefined` = records pre-1.4 — asumir `1`.
+   */
+  readonly deployedTxTargetsCount?: number;
 }
 
 export interface RetryDeployResult {
