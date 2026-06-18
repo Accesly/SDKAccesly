@@ -346,18 +346,30 @@ export interface OrderResponse {
 
 /* ── Fiat — KYC + Bank Account registration (Fase E.2+) ──────────────────── */
 
-/** `POST /kyc/bank-accounts` body — registra CLABE mexicana para offramp. */
+/**
+ * `POST /kyc/bank-accounts` body — registra CLABE mexicana para offramp.
+ *
+ * Etherfuse v2 (2026-06): pide los apellidos separados + fecha de
+ * nacimiento. RFC y CURP siguen iguales. En sandbox, el RFC mágico
+ * `XEXX010101000` skip-ea la verificación SPEI.
+ */
 export interface RegisterBankAccountRequest {
   /** 18 dígitos. */
   readonly clabe: string;
-  /** Nombre como aparece en el estado de cuenta. */
-  readonly holderName: string;
-  /** RFC con homoclave (13 personal, 12 moral). */
+  /** Nombre(s) del titular. */
+  readonly firstName: string;
+  /** Apellido paterno. */
+  readonly paternalLastName: string;
+  /** Apellido materno. */
+  readonly maternalLastName: string;
+  /** Fecha de nacimiento, formato YYYY-MM-DD. */
+  readonly birthDate: string;
+  /** RFC con homoclave (13 char personal). */
   readonly holderRfc: string;
-  /** 18 chars (solo PERSONAL). */
-  readonly holderCurp?: string;
-  /** Default 'PERSONAL'. */
-  readonly accountType?: 'PERSONAL' | 'BUSINESS';
+  /** CURP 18 char. */
+  readonly holderCurp: string;
+  /** ISO code del país de nacimiento. Default `'MX'`. */
+  readonly birthCountryIsoCode?: string;
   /** Label friendly para distinguir multiples cuentas. */
   readonly label?: string;
 }
