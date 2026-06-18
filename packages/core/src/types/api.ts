@@ -196,6 +196,61 @@ export interface SimulateSwapResponse extends SimulateTxResponse {
   };
 }
 
+/**
+ * `POST /tx/swap-sdex/simulate` — Fase H (SDK 1.9+). Fallback de
+ * `/tx/swap/simulate` que va contra el SDEX classic vía una G-account helper
+ * firmada por KMS. Útil cuando Soroswap devuelve "no path" (caso típico
+ * testnet sin pools).
+ *
+ * El backend:
+ *   1) Cotiza el orderbook SDEX directo (sin AMM).
+ *   2) Construye tx1: `<from>_SAC.transfer(SA → helper_g, amountIn)`.
+ *   3) Devuelve el material para que el SDK firme tx1.
+ *
+ * Tx2 (PathPaymentStrictSend) y tx3 (helper→SA SAC.transfer) las orquesta el
+ * backend al hacer submit — el SDK NO firma esas.
+ */
+export interface SimulateSwapSdexResponse extends SimulateTxResponse {
+  /** G-address del swap-helper KMS — informativa para auditoría. */
+  readonly helperAddress: string;
+  readonly quote: {
+    readonly fromAsset: TransferAsset;
+    readonly toAsset: TransferAsset;
+    readonly amountIn: string;
+    /** Stroops out proyectados según orderbook (sin slippage). */
+    readonly amountOut: string;
+    /** Min stroops out con slippage — esto es lo que PathPayment enforça. */
+    readonly destMinStroops: string;
+    /** "0.0001234" — precio output/input efectivo del trade simulado. */
+    readonly effectivePrice: string;
+    /** "0.12" = 0.12% — diferencia vs top-of-book. */
+    readonly priceImpactPct: string;
+    readonly platform: 'sdex';
+  };
+}
+
+/**
+ * `POST /tx/swap-sdex/submit` — submitea el swap SDEX. El SDK manda el envelope
+ * firmado de tx1 + meta del trade para que el backend pueda armar tx2/tx3 sin
+ * tener que re-cotizar.
+ */
+export interface SubmitSwapSdexRequest {
+  readonly unsignedXdr: Base64String;
+  readonly signedAuthEntryXdr: Base64String;
+  readonly fromAsset: TransferAsset;
+  readonly toAsset: TransferAsset;
+  readonly amountIn: string;
+  readonly destMinStroops: string;
+}
+
+export interface SubmitSwapSdexResponse {
+  readonly tx1Hash: string;
+  readonly tx2Hash: string;
+  readonly tx3Hash: string;
+  readonly actualAmountOut: string;
+  readonly status: 'SUCCESS';
+}
+
 export interface SimulateTxRequest {
   /**
    * Base-10 string del monto en unidades atómicas (1e-7 para ambos XLM y USDC).

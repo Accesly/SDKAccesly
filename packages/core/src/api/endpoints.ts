@@ -30,6 +30,9 @@ import type {
   ActivateAssetSimulateRequest,
   SimulateSwapRequest,
   SimulateSwapResponse,
+  SimulateSwapSdexResponse,
+  SubmitSwapSdexRequest,
+  SubmitSwapSdexResponse,
   SimulateTxRequest,
   SimulateTxResponse,
   SubmitTxRequest,
@@ -138,6 +141,31 @@ export class AccesslyEndpoints {
   swapSubmit(req: SubmitTxRequest): Promise<SubmitTxResponse> {
     return this.client.post<SubmitTxResponse>(
       '/tx/swap/submit',
+      req as unknown as Json,
+    );
+  }
+
+  /**
+   * Cognito-auth (Fase H, 1.9+). Fallback de `swapSimulate` que va contra SDEX
+   * classic con una G-account helper. Mismo input shape, response trae
+   * `helperAddress` + `quote.destMinStroops` que el SDK debe re-enviar al
+   * submit.
+   */
+  swapSdexSimulate(req: SimulateSwapRequest): Promise<SimulateSwapSdexResponse> {
+    return this.client.post<SimulateSwapSdexResponse>(
+      '/tx/swap-sdex/simulate',
+      req as unknown as Json,
+    );
+  }
+
+  /**
+   * Cognito-auth (Fase H, 1.9+). Submit del swap SDEX firmado. El backend
+   * orquesta tx1 (SDK auth) → tx2 (PathPayment helper KMS) → tx3 (helper→SA
+   * KMS). Devuelve los 3 hashes para auditoría / explorer linking.
+   */
+  swapSdexSubmit(req: SubmitSwapSdexRequest): Promise<SubmitSwapSdexResponse> {
+    return this.client.post<SubmitSwapSdexResponse>(
+      '/tx/swap-sdex/submit',
       req as unknown as Json,
     );
   }

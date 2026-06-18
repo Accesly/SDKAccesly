@@ -476,6 +476,32 @@ export interface SwapResult {
   };
 }
 
+/**
+ * Resultado del swap via SDEX classic (Fase H). Devuelve 3 hashes porque el
+ * backend orquesta 3 txs (tx1 Soroban auth-SDK, tx2 PathPayment KMS, tx3
+ * Soroban KMS). `txHash` = tx1 — es el que la UI muestra de “entrada”. Para
+ * auditoría se exponen los otros dos también.
+ */
+export interface SwapViaSdexResult {
+  /** Hash de tx1 (SA→helper). Es el referenciable como "swap tx". */
+  readonly txHash: string;
+  readonly tx1Hash: string;
+  readonly tx2Hash: string;
+  readonly tx3Hash: string;
+  readonly explorerUrl: string;
+  readonly quote: {
+    readonly fromAsset: TransferAsset;
+    readonly toAsset: TransferAsset;
+    readonly amountIn: string;
+    readonly amountOut: string;
+    readonly destMinStroops: string;
+    readonly effectivePrice: string;
+    readonly priceImpactPct: string;
+    readonly platform: 'sdex';
+    readonly helperAddress: string;
+  };
+}
+
 export interface TxNamespace {
   /**
    * End-to-end XLM transfer desde el Smart Account del user.
@@ -515,6 +541,19 @@ export interface TxNamespace {
    * que la UI muestre "Recibiste X USDC".
    */
   swap(input: SwapInput): Promise<SwapResult>;
+
+  /**
+   * **Fase H (1.9+):** swap XLM↔USDC vía SDEX classic con una G-account helper
+   * firmada por KMS. Fallback de `swap` cuando Soroswap no tiene path (caso
+   * típico testnet sin pools).
+   *
+   * Input shape idéntico a `swap`. El backend orquesta 3 txs: el SDK solo firma
+   * la primera (transfer SA→helper). Las otras dos (PathPayment + transfer
+   * helper→SA) las firma el KMS swap-helper sin requerir al user.
+   *
+   * Retorna `tx1Hash` (referenciable) + `tx2Hash`/`tx3Hash` para auditoría.
+   */
+  swapViaSdex(input: SwapInput): Promise<SwapViaSdexResult>;
 
   /**
    * Bajo nivel: firma un envelope Stellar ya construido con una seed ed25519
@@ -1613,6 +1652,83 @@ export function useAccesly(): AcceslyHook {
           status: submit.status,
           explorerUrl: `${explorerBase}${submit.txHash}`,
           quote: sim.quote,
+        };
+      },
+
+      async swapViaSdex(input) {
+        const networkPassphrase = stellarConfig.networkPassphrase;
+        const verifierAddress = stellarConfig.ed25519VerifierAddress;
+        const explorerBase =
+          networkPassphrase === 'Public Global Stellar Network ; September 2015'
+            ? 'https://stellar.expert/explorer/public/tx/'
+            : 'https://stellar.expert/explorer/testnet/tx/';
+
+        // 1. Simulate — backend cotiza SDEX y arma tx1 (SA→helper).
+        const sim = await ctx.endpoints.swapSdexSimulate({
+          fromAsset: input.fromAsset,
+          toAsset: input.toAsset,
+          amountIn: input.amountIn,
+          ...(input.slippageBps !== undefined ? { slippageBps: input.slippageBps } : {}),
+        });
+
+        // 2-4. Mismo flow ECDH + Shamir + reconstruct que tx.send/swap.
+        const ephemeral = generateX25519Keypair();
+        const wrappedF2 = await ctx.endpoints.getFragment2({
+          clientEphemeralPubkey: base64FromBytes(ephemeral.publicKey),
+        });
+        const sessionPlaintext = unwrapSessionFragment2(wrappedF2, ephemeral.privateKey).plaintext;
+        const fragmentF2Wire = JSON.parse(new TextDecoder().decode(sessionPlaintext)) as {
+          ciphertext: string;
+          nonce: string;
+          algo: string;
+        };
+        const fragmentF2Envelope: EncryptedEnvelope = {
+          nonce: base64ToBytes(fragmentF2Wire.nonce),
+          ciphertext: base64ToBytes(fragmentF2Wire.ciphertext),
+        };
+        const reconstructed = reconstructFromPlainAndEncrypted({
+          fragmentF1Plain: input.fragmentF1Plain,
+          fragmentF2: { envelope: fragmentF2Envelope, key: input.fragmentF2Key },
+        });
+
+        // 5. Firma la auth entry de tx1 (transfer SA→helper) contra la regla
+        // biometric-tx del fromAsset. Tx2/tx3 las firma el KMS swap-helper.
+        const { signedAuthEntryXdr } = await signSorobanAuthEntry({
+          signaturePayloadHashBase64: sim.signaturePayloadHashBase64,
+          contextRuleIds: [...sim.contextRuleIds],
+          placeholderAuthEntryXdr: sim.placeholderAuthEntryXdr,
+          ed25519Seed: reconstructed.privateSeed,
+          ed25519VerifierAddress: verifierAddress,
+          ownerPubkey: input.ownerPubkey,
+        });
+
+        // 6. Submit — backend orquesta las 3 txs (puede tardar 30-60s).
+        const submit = await ctx.endpoints.swapSdexSubmit({
+          unsignedXdr: sim.unsignedXdr,
+          signedAuthEntryXdr,
+          fromAsset: input.fromAsset,
+          toAsset: input.toAsset,
+          amountIn: input.amountIn,
+          destMinStroops: sim.quote.destMinStroops,
+        });
+
+        return {
+          txHash: submit.tx1Hash,
+          tx1Hash: submit.tx1Hash,
+          tx2Hash: submit.tx2Hash,
+          tx3Hash: submit.tx3Hash,
+          explorerUrl: `${explorerBase}${submit.tx1Hash}`,
+          quote: {
+            fromAsset: sim.quote.fromAsset,
+            toAsset: sim.quote.toAsset,
+            amountIn: sim.quote.amountIn,
+            amountOut: sim.quote.amountOut,
+            destMinStroops: sim.quote.destMinStroops,
+            effectivePrice: sim.quote.effectivePrice,
+            priceImpactPct: sim.quote.priceImpactPct,
+            platform: sim.quote.platform,
+            helperAddress: sim.helperAddress,
+          },
         };
       },
     }),
