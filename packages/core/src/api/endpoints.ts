@@ -28,6 +28,9 @@ import type {
   SimulateRotateSignerRequest,
   SimulateRotateSignerResponse,
   ActivateAssetSimulateRequest,
+  BootstrapGSimulateResponse,
+  BootstrapGSubmitRequest,
+  BootstrapGSubmitResponse,
   SimulateSwapRequest,
   SimulateSwapResponse,
   SimulateSwapSdexResponse,
@@ -113,6 +116,24 @@ export class AccesslyEndpoints {
   ): Promise<SimulateTxResponse> {
     return this.client.post<SimulateTxResponse>(
       '/tx/activate-asset/simulate',
+      req as unknown as Json,
+    );
+  }
+
+  /**
+   * Cognito-auth (Fase I, 1.10+). Simula el bootstrap on-chain de la G-address
+   * bridge. Backend deriva la G, chequea si ya existe + tiene trustline USDC.
+   * Si no, arma una tx classic con 4 ops sponsored por channels-fund. El SDK
+   * firma con la seed reconstruida y submitea via `bootstrapGSubmit`.
+   */
+  bootstrapGSimulate(): Promise<BootstrapGSimulateResponse> {
+    return this.client.post<BootstrapGSimulateResponse>('/wallets/bootstrap-g/simulate', {});
+  }
+
+  /** Cognito-auth (Fase I). Submit del bootstrap firmado. */
+  bootstrapGSubmit(req: BootstrapGSubmitRequest): Promise<BootstrapGSubmitResponse> {
+    return this.client.post<BootstrapGSubmitResponse>(
+      '/wallets/bootstrap-g/submit',
       req as unknown as Json,
     );
   }

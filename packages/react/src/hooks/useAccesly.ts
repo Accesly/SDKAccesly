@@ -352,6 +352,50 @@ export interface WalletNamespace {
    * funcionan sin tocar `wallet.activateAsset` de nuevo.
    */
   activateAsset(input: ActivateAssetInput): Promise<ActivateAssetResult>;
+  /**
+   * **Fase I (1.10+):** crea la **G-address bridge** del user on-chain.
+   *
+   * La G-address es una cuenta classic Stellar derivada del mismo owner
+   * ed25519 del Smart Account. Existe solo para hablar con sistemas legacy:
+   * Etherfuse (onramp/offramp) y SDEX classic (swap fallback). El balance
+   * vive en el Smart Account — la G se llena y se vacía con cada operación.
+   *
+   * Bootstrap = una sola tx classic sponsored por `channels-fund` con:
+   *   1. BeginSponsoringFutureReserves(sponsored=G)
+   *   2. CreateAccount(G, startingBalance=0)
+   *   3. ChangeTrust(USDC, source=G)
+   *   4. EndSponsoringFutureReserves(source=G)
+   *
+   * El user firma como G (con la seed ed25519 reconstruida); el backend
+   * agrega la firma KMS de `channels-fund` (sponsor) y submitea.
+   *
+   * Idempotente: si la G ya existe + tiene trustline USDC, el backend marca
+   * el flag en DDB y devuelve `{ alreadyBootstrapped: true }` sin tocar
+   * passkey ni Shamir reconstruction.
+   *
+   * Costo on-chain: ~1.5 XLM de reservas (1 cuenta + 0.5 trustline) pagado
+   * por `channels-fund`. El user NO paga gas ni reservas. Las reservas son
+   * recuperables si la G se cierra (no son lost cost).
+   */
+  bootstrapG(input: BootstrapGInput): Promise<BootstrapGResult>;
+}
+
+export interface BootstrapGInput {
+  /** F1 (Shamir share) en plano. */
+  readonly fragmentF1Plain: Uint8Array;
+  /** Llave AES-256 con la que el SDK desencripta el F2 envelope. */
+  readonly fragmentF2Key: Uint8Array;
+  /** Pubkey ed25519 (32 bytes) del owner. */
+  readonly ownerPubkey: Uint8Array;
+}
+
+export interface BootstrapGResult {
+  /** G-address derivada del owner ed25519. */
+  readonly gAddress: string;
+  /** `true` si la G ya existía on-chain con trustline USDC — no se mandó tx. */
+  readonly alreadyBootstrapped: boolean;
+  /** Hash de la tx classic submitted. `null` si `alreadyBootstrapped`. */
+  readonly txHash: string | null;
 }
 
 export interface ActivateAssetInput {
@@ -1320,6 +1364,64 @@ export function useAccesly(): AcceslyHook {
           txHash: submit.txHash,
           status: submit.status,
           explorerUrl: `${explorerBase}${submit.txHash}`,
+        };
+      },
+
+      async bootstrapG(input) {
+        const networkPassphrase = stellarConfig.networkPassphrase;
+
+        // 1. Backend simulate — deriva G, chequea si ya está on-chain.
+        const sim = await ctx.endpoints.bootstrapGSimulate();
+        if (sim.alreadyBootstrapped) {
+          return {
+            gAddress: sim.gAddress,
+            alreadyBootstrapped: true,
+            txHash: null,
+          };
+        }
+        if (!sim.unsignedXdr) {
+          throw new Error(
+            'wallet.bootstrapG: backend did not return unsignedXdr but alreadyBootstrapped=false',
+          );
+        }
+
+        // 2-4. Mismo flow ECDH + Shamir + reconstruct que tx.send.
+        const ephemeral = generateX25519Keypair();
+        const wrappedF2 = await ctx.endpoints.getFragment2({
+          clientEphemeralPubkey: base64FromBytes(ephemeral.publicKey),
+        });
+        const sessionPlaintext = unwrapSessionFragment2(wrappedF2, ephemeral.privateKey).plaintext;
+        const fragmentF2Wire = JSON.parse(new TextDecoder().decode(sessionPlaintext)) as {
+          ciphertext: string;
+          nonce: string;
+          algo: string;
+        };
+        const fragmentF2Envelope: EncryptedEnvelope = {
+          nonce: base64ToBytes(fragmentF2Wire.nonce),
+          ciphertext: base64ToBytes(fragmentF2Wire.ciphertext),
+        };
+        const reconstructed = reconstructFromPlainAndEncrypted({
+          fragmentF1Plain: input.fragmentF1Plain,
+          fragmentF2: { envelope: fragmentF2Envelope, key: input.fragmentF2Key },
+        });
+
+        // 5. Firma la tx classic con la seed (= la del G-address).
+        const { signedXdr } = await coreSignTransaction({
+          transactionXdr: sim.unsignedXdr,
+          ed25519Seed: reconstructed.privateSeed,
+          networkPassphrase,
+          expectedPublicKey: input.ownerPubkey,
+        });
+
+        // 6. Submit — backend agrega KMS sponsor sig + manda a Horizon.
+        const submit = await ctx.endpoints.bootstrapGSubmit({
+          userSignedXdr: signedXdr,
+        });
+
+        return {
+          gAddress: submit.gAddress,
+          alreadyBootstrapped: false,
+          txHash: submit.txHash,
         };
       },
 

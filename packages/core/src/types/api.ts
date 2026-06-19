@@ -347,6 +347,36 @@ export interface OrderResponse {
 /* ── Fiat — KYC + Bank Account registration (Fase E.2+) ──────────────────── */
 
 /**
+ * `POST /wallets/bootstrap-g/simulate` (Fase I, 1.10+) — backend deriva la
+ * G-address bridge del user y arma una tx classic con CreateAccount +
+ * ChangeTrust(USDC) sponsored por channels-fund. El SDK firma con la seed
+ * reconstruida (Shamir F1+F2) y submitea via `/bootstrap-g/submit`.
+ *
+ * Si la G ya existe on-chain + tiene trustline USDC, `alreadyBootstrapped`
+ * es `true` y no hace falta firmar/submitear. El backend sólo persiste el
+ * flag en DDB y devuelve el `gAddress`.
+ */
+export interface BootstrapGSimulateResponse {
+  readonly gAddress: string;
+  readonly alreadyBootstrapped: boolean;
+  /** Envelope sin firmas — undefined cuando alreadyBootstrapped=true. */
+  readonly unsignedXdr?: Base64String;
+  /** Hash de 32 bytes (base64) que el SDK firma. */
+  readonly txHashBase64?: Base64String;
+}
+
+export interface BootstrapGSubmitRequest {
+  /** Envelope con la firma del owner ya agregada por el SDK. */
+  readonly userSignedXdr: Base64String;
+}
+
+export interface BootstrapGSubmitResponse {
+  readonly gAddress: string;
+  readonly txHash: string;
+  readonly status: 'SUCCESS';
+}
+
+/**
  * `POST /kyc/bank-accounts` body — registra CLABE mexicana para offramp.
  *
  * Etherfuse v2 (2026-06): pide los apellidos separados + fecha de
