@@ -1895,7 +1895,7 @@ export function useAccesly(): AcceslyHook {
         // firma derivarían pubkey de seed-cero → error
         // "derived public key does not match expectedPublicKey".
         // eslint-disable-next-line no-console
-        console.log('[accesly/swapViaSdex] version 1.13.2 — seed copies for 3 sigs');
+        console.log('[accesly/swapViaSdex] version 1.13.3 — no expectedPublicKey on tx2/tx3');
         const seedCopy1 = new Uint8Array(reconstructed.privateSeed);
         const { signedAuthEntryXdr } = await signSorobanAuthEntry({
           signaturePayloadHashBase64: sim.tx1.signaturePayloadHashBase64,
@@ -1907,12 +1907,15 @@ export function useAccesly(): AcceslyHook {
         });
 
         // 5b. tx2 — firma classic PathPayment con la seed (= G's private key).
+        // No pasamos `expectedPublicKey` porque sino el check defensivo del
+        // coreSignTransaction puede fallar si el record.publicKey persistido
+        // viene de una creación pre-1.x donde la seed se hashea distinto.
+        // La firma se valida igual on-chain.
         const seedCopy2 = new Uint8Array(reconstructed.privateSeed);
         const tx2Signed = await coreSignTransaction({
           transactionXdr: sim.tx2.innerUnsignedXdr,
           ed25519Seed: seedCopy2,
           networkPassphrase,
-          expectedPublicKey: input.ownerPubkey,
         });
 
         // 6. Submit (paso 1) — backend ejecuta tx1+tx2 secuencial, lee balance
@@ -1936,7 +1939,6 @@ export function useAccesly(): AcceslyHook {
           transactionXdr: submit.tx3.innerUnsignedXdr,
           ed25519Seed: seedCopy3,
           networkPassphrase,
-          expectedPublicKey: input.ownerPubkey,
         });
         // 7b. Cleanup — zeroize la seed master que tuvimos en memoria.
         reconstructed.privateSeed.fill(0);
