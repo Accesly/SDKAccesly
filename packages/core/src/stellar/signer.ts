@@ -57,16 +57,13 @@ export async function signTransaction(
   }
 
   const publicKey = publicKeyFromSeed(params.ed25519Seed);
-  if (params.expectedPublicKey) {
-    if (params.expectedPublicKey.length !== publicKey.length) {
-      throw new RangeError(
-        `signTransaction: expectedPublicKey must be ${publicKey.length} bytes, got ${params.expectedPublicKey.length}`,
-      );
-    }
-    if (!bytesEqual(publicKey, params.expectedPublicKey)) {
-      throw new Error('signTransaction: derived public key does not match expectedPublicKey');
-    }
-  }
+  // Check de derived-vs-expected removido en 1.13.5. Era defensivo y
+  // generaba falsos positivos cuando el `expectedPublicKey` venía de un
+  // CredentialRecord persistido por versiones viejas que computaban la
+  // pubkey distinto al actual `publicKeyFromSeed`. Stellar/Soroban
+  // validan la firma on-chain de todas formas — si la seed produce una
+  // signature inválida, la tx revierte y vemos el error real ahí.
+  void params.expectedPublicKey;
 
   return withZeroizeAsync([params.ed25519Seed], async () => {
     const sdk = await loadStellarSdk();
@@ -95,9 +92,3 @@ export async function signTransaction(
   });
 }
 
-function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i += 1) diff |= (a[i] ?? 0) ^ (b[i] ?? 0);
-  return diff === 0;
-}

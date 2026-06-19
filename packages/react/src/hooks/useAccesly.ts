@@ -1896,7 +1896,7 @@ export function useAccesly(): AcceslyHook {
         // firma derivarían pubkey de seed-cero → error
         // "derived public key does not match expectedPublicKey".
         // eslint-disable-next-line no-console
-        console.log('[accesly/swapViaSdex] version 1.13.4 — no expectedPublicKey anywhere in g-flows');
+        console.log('[accesly/swapViaSdex] version 1.13.5 — check eliminated in core');
         const seedCopy1 = new Uint8Array(reconstructed.privateSeed);
         const { signedAuthEntryXdr } = await signSorobanAuthEntry({
           signaturePayloadHashBase64: sim.tx1.signaturePayloadHashBase64,
