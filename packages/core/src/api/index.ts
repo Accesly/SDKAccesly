@@ -65,6 +65,8 @@ export type {
   SimulateSwapSdexResponse,
   SubmitSwapSdexRequest,
   SubmitSwapSdexResponse,
+  FinalizeSwapSdexRequest,
+  FinalizeSwapSdexResponse,
   SimulateTxRequest,
   SimulateTxResponse,
   SubmitTxRequest,

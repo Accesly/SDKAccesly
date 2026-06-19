@@ -39,6 +39,8 @@ import type {
   SimulateSwapSdexResponse,
   SubmitSwapSdexRequest,
   SubmitSwapSdexResponse,
+  FinalizeSwapSdexRequest,
+  FinalizeSwapSdexResponse,
   SimulateTxRequest,
   SimulateTxResponse,
   SubmitTxRequest,
@@ -207,6 +209,17 @@ export class AccesslyEndpoints {
   swapSdexSubmit(req: SubmitSwapSdexRequest): Promise<SubmitSwapSdexResponse> {
     return this.client.post<SubmitSwapSdexResponse>(
       '/tx/swap-sdex/submit',
+      req as unknown as Json,
+    );
+  }
+
+  /**
+   * Cognito-auth (Fase IV.b, 1.13+). Finalize del swap SDEX paso 3 — backend
+   * ejecuta tx3 (G→SA) fee-bumped por channels-fund.
+   */
+  swapSdexFinalize(req: FinalizeSwapSdexRequest): Promise<FinalizeSwapSdexResponse> {
+    return this.client.post<FinalizeSwapSdexResponse>(
+      '/tx/swap-sdex/finalize',
       req as unknown as Json,
     );
   }

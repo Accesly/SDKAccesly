@@ -197,31 +197,25 @@ export interface SimulateSwapResponse extends SimulateTxResponse {
 }
 
 /**
- * `POST /tx/swap-sdex/simulate` — Fase IV (SDK 1.12+, 2026-06-18).
+ * `POST /tx/swap-sdex/simulate` — Fase IV.b (SDK 1.13+, 2026-06-18).
  *
  * Fallback de `/tx/swap/simulate` que va contra SDEX classic con la
- * **G-address bridge del user** como intermediaria (en vez de un helper KMS
- * centralizado). Esto preserva la premisa no-custodial — el user firma las
- * 3 txs con la misma seed reconstruida por Shamir.
+ * **G-address bridge del user** como intermediaria. Backend devuelve solo
+ * tx1 + tx2 (NO tx3 — la G aún no tiene USDC y Soroban simula contra el
+ * ledger actual, no proyectado).
  *
- * Backend devuelve 3 paquetes unsigned:
- *   tx1 (Soroban, SA→G_user): material para firmar la auth entry biometric-tx.
- *   tx2 (Classic PathPayment, source=G_user): inner unsigned para firmar.
- *   tx3 (Soroban SAC.transfer G→SA, source=G_user): inner unsigned para firmar.
- *
- * Tx2 y tx3 las envuelve el backend en fee-bump pagada por channels-fund
- * al submit. La G del user no necesita XLM para fees.
+ * Flow del SDK (3 round-trips):
+ *   1. simulate → SDK firma tx1.auth + tx2.inner.
+ *   2. submit → backend ejecuta tx1+tx2, devuelve tx3 unsigned (con simulate
+ *      real ahora que G tiene USDC).
+ *   3. SDK firma tx3.inner con la misma seed reconstruida.
+ *   4. finalize → backend ejecuta tx3 fee-bumped, devuelve resultado final.
  */
 export interface SimulateSwapSdexResponse {
   /** tx1 (Soroban, SA → G_user). Mismo shape que SimulateTxResponse. */
   readonly tx1: SimulateTxResponse;
   /** tx2 (classic PathPaymentStrictSend, source=G_user). */
   readonly tx2: {
-    readonly innerUnsignedXdr: Base64String;
-    readonly innerTxHashBase64: Base64String;
-  };
-  /** tx3 (Soroban SAC.transfer G→SA, source=G_user). */
-  readonly tx3: {
     readonly innerUnsignedXdr: Base64String;
     readonly innerTxHashBase64: Base64String;
   };
@@ -240,7 +234,10 @@ export interface SimulateSwapSdexResponse {
 }
 
 /**
- * `POST /tx/swap-sdex/submit` — submitea las 3 txs firmadas por el user.
+ * `POST /tx/swap-sdex/submit` — Backend ejecuta tx1 + tx2 secuencialmente,
+ * lee el balance USDC real de la G post-tx2 (que puede ser mayor a destMin
+ * si SDEX entregó leftover), arma tx3 con simulate fresco, y devuelve tx3
+ * unsigned para que el SDK lo firme.
  */
 export interface SubmitSwapSdexRequest {
   readonly tx1: {
@@ -248,7 +245,6 @@ export interface SubmitSwapSdexRequest {
     readonly signedAuthEntryXdr: Base64String;
   };
   readonly tx2InnerSignedXdr: Base64String;
-  readonly tx3InnerSignedXdr: Base64String;
   readonly fromAsset: TransferAsset;
   readonly toAsset: TransferAsset;
   readonly amountIn: string;
@@ -256,6 +252,32 @@ export interface SubmitSwapSdexRequest {
 }
 
 export interface SubmitSwapSdexResponse {
+  readonly tx1Hash: string;
+  readonly tx2Hash: string;
+  /** Cantidad real que SDEX entregó a la G (>= destMin). */
+  readonly actualAmountOut: string;
+  /** tx3 (Soroban SAC.transfer G→SA) armada CON simulate real post-tx2. */
+  readonly tx3: {
+    readonly innerUnsignedXdr: Base64String;
+    readonly innerTxHashBase64: Base64String;
+  };
+}
+
+/**
+ * `POST /tx/swap-sdex/finalize` — paso 3. Backend ejecuta tx3 (G→SA)
+ * envuelta en fee-bump por channels-fund.
+ */
+export interface FinalizeSwapSdexRequest {
+  readonly tx3InnerSignedXdr: Base64String;
+  readonly tx1Hash: string;
+  readonly tx2Hash: string;
+  readonly fromAsset: TransferAsset;
+  readonly toAsset: TransferAsset;
+  readonly amountIn: string;
+  readonly actualAmountOut: string;
+}
+
+export interface FinalizeSwapSdexResponse {
   readonly tx1Hash: string;
   readonly tx2Hash: string;
   readonly tx3Hash: string;

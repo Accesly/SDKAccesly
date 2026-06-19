@@ -1903,39 +1903,52 @@ export function useAccesly(): AcceslyHook {
           expectedPublicKey: input.ownerPubkey,
         });
 
-        // 5c. tx3 — firma Soroban SAC.transfer con la seed (source-auth implícita).
-        const tx3Signed = await coreSignTransaction({
-          transactionXdr: sim.tx3.innerUnsignedXdr,
-          ed25519Seed: reconstructed.privateSeed,
-          networkPassphrase,
-          expectedPublicKey: input.ownerPubkey,
-        });
-
-        // 6. Submit — backend ejecuta tx1, fee-bumpea + submit tx2 y tx3.
+        // 6. Submit (paso 1) — backend ejecuta tx1+tx2 secuencial, lee balance
+        //    real de la G post-tx2, arma tx3 con simulate fresco. Devuelve
+        //    tx3 unsigned.
         const submit = await ctx.endpoints.swapSdexSubmit({
           tx1: {
             unsignedXdr: sim.tx1.unsignedXdr,
             signedAuthEntryXdr,
           },
           tx2InnerSignedXdr: tx2Signed.signedXdr,
-          tx3InnerSignedXdr: tx3Signed.signedXdr,
           fromAsset: input.fromAsset,
           toAsset: input.toAsset,
           amountIn: input.amountIn,
           destMinStroops: sim.quote.destMinStroops,
         });
 
-        return {
-          txHash: submit.tx1Hash,
+        // 7. tx3 — firma Soroban SAC.transfer G→SA con la misma seed (que
+        //    seguimos teniendo en memoria desde el unlock del paso 4).
+        const tx3Signed = await coreSignTransaction({
+          transactionXdr: submit.tx3.innerUnsignedXdr,
+          ed25519Seed: reconstructed.privateSeed,
+          networkPassphrase,
+          expectedPublicKey: input.ownerPubkey,
+        });
+
+        // 8. Finalize — backend ejecuta tx3 fee-bumped por channels-fund.
+        const finalized = await ctx.endpoints.swapSdexFinalize({
+          tx3InnerSignedXdr: tx3Signed.signedXdr,
           tx1Hash: submit.tx1Hash,
           tx2Hash: submit.tx2Hash,
-          tx3Hash: submit.tx3Hash,
-          explorerUrl: `${explorerBase}${submit.tx1Hash}`,
+          fromAsset: input.fromAsset,
+          toAsset: input.toAsset,
+          amountIn: input.amountIn,
+          actualAmountOut: submit.actualAmountOut,
+        });
+
+        return {
+          txHash: finalized.tx1Hash,
+          tx1Hash: finalized.tx1Hash,
+          tx2Hash: finalized.tx2Hash,
+          tx3Hash: finalized.tx3Hash,
+          explorerUrl: `${explorerBase}${finalized.tx1Hash}`,
           quote: {
             fromAsset: sim.quote.fromAsset,
             toAsset: sim.quote.toAsset,
             amountIn: sim.quote.amountIn,
-            amountOut: sim.quote.amountOut,
+            amountOut: finalized.actualAmountOut,
             destMinStroops: sim.quote.destMinStroops,
             effectivePrice: sim.quote.effectivePrice,
             priceImpactPct: sim.quote.priceImpactPct,

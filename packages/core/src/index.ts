@@ -120,6 +120,8 @@ export {
   type SimulateSwapSdexResponse,
   type SubmitSwapSdexRequest,
   type SubmitSwapSdexResponse,
+  type FinalizeSwapSdexRequest,
+  type FinalizeSwapSdexResponse,
   type TransferAsset,
   type WalletActivityEvent,
   type WalletActivityResponse,
