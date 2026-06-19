@@ -197,46 +197,58 @@ export interface SimulateSwapResponse extends SimulateTxResponse {
 }
 
 /**
- * `POST /tx/swap-sdex/simulate` — Fase H (SDK 1.9+). Fallback de
- * `/tx/swap/simulate` que va contra el SDEX classic vía una G-account helper
- * firmada por KMS. Útil cuando Soroswap devuelve "no path" (caso típico
- * testnet sin pools).
+ * `POST /tx/swap-sdex/simulate` — Fase IV (SDK 1.12+, 2026-06-18).
  *
- * El backend:
- *   1) Cotiza el orderbook SDEX directo (sin AMM).
- *   2) Construye tx1: `<from>_SAC.transfer(SA → helper_g, amountIn)`.
- *   3) Devuelve el material para que el SDK firme tx1.
+ * Fallback de `/tx/swap/simulate` que va contra SDEX classic con la
+ * **G-address bridge del user** como intermediaria (en vez de un helper KMS
+ * centralizado). Esto preserva la premisa no-custodial — el user firma las
+ * 3 txs con la misma seed reconstruida por Shamir.
  *
- * Tx2 (PathPaymentStrictSend) y tx3 (helper→SA SAC.transfer) las orquesta el
- * backend al hacer submit — el SDK NO firma esas.
+ * Backend devuelve 3 paquetes unsigned:
+ *   tx1 (Soroban, SA→G_user): material para firmar la auth entry biometric-tx.
+ *   tx2 (Classic PathPayment, source=G_user): inner unsigned para firmar.
+ *   tx3 (Soroban SAC.transfer G→SA, source=G_user): inner unsigned para firmar.
+ *
+ * Tx2 y tx3 las envuelve el backend en fee-bump pagada por channels-fund
+ * al submit. La G del user no necesita XLM para fees.
  */
-export interface SimulateSwapSdexResponse extends SimulateTxResponse {
-  /** G-address del swap-helper KMS — informativa para auditoría. */
-  readonly helperAddress: string;
+export interface SimulateSwapSdexResponse {
+  /** tx1 (Soroban, SA → G_user). Mismo shape que SimulateTxResponse. */
+  readonly tx1: SimulateTxResponse;
+  /** tx2 (classic PathPaymentStrictSend, source=G_user). */
+  readonly tx2: {
+    readonly innerUnsignedXdr: Base64String;
+    readonly innerTxHashBase64: Base64String;
+  };
+  /** tx3 (Soroban SAC.transfer G→SA, source=G_user). */
+  readonly tx3: {
+    readonly innerUnsignedXdr: Base64String;
+    readonly innerTxHashBase64: Base64String;
+  };
+  /** G-address del user (bridge bootstrapped en Fase I). */
+  readonly gAddress: string;
   readonly quote: {
     readonly fromAsset: TransferAsset;
     readonly toAsset: TransferAsset;
     readonly amountIn: string;
-    /** Stroops out proyectados según orderbook (sin slippage). */
     readonly amountOut: string;
-    /** Min stroops out con slippage — esto es lo que PathPayment enforça. */
     readonly destMinStroops: string;
-    /** "0.0001234" — precio output/input efectivo del trade simulado. */
     readonly effectivePrice: string;
-    /** "0.12" = 0.12% — diferencia vs top-of-book. */
     readonly priceImpactPct: string;
     readonly platform: 'sdex';
   };
 }
 
 /**
- * `POST /tx/swap-sdex/submit` — submitea el swap SDEX. El SDK manda el envelope
- * firmado de tx1 + meta del trade para que el backend pueda armar tx2/tx3 sin
- * tener que re-cotizar.
+ * `POST /tx/swap-sdex/submit` — submitea las 3 txs firmadas por el user.
  */
 export interface SubmitSwapSdexRequest {
-  readonly unsignedXdr: Base64String;
-  readonly signedAuthEntryXdr: Base64String;
+  readonly tx1: {
+    readonly unsignedXdr: Base64String;
+    readonly signedAuthEntryXdr: Base64String;
+  };
+  readonly tx2InnerSignedXdr: Base64String;
+  readonly tx3InnerSignedXdr: Base64String;
   readonly fromAsset: TransferAsset;
   readonly toAsset: TransferAsset;
   readonly amountIn: string;

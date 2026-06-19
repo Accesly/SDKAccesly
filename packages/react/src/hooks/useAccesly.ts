@@ -569,7 +569,12 @@ export interface SwapViaSdexResult {
     readonly effectivePrice: string;
     readonly priceImpactPct: string;
     readonly platform: 'sdex';
-    readonly helperAddress: string;
+    /**
+     * G-address bridge **del user** (Fase IV+, 1.12+). Hasta 1.11 era una
+     * G centralizada controlada por KMS (`swap-helper`); ahora cada user
+     * tiene la suya.
+     */
+    readonly gAddress: string;
   };
 }
 
@@ -1851,7 +1856,8 @@ export function useAccesly(): AcceslyHook {
             ? 'https://stellar.expert/explorer/public/tx/'
             : 'https://stellar.expert/explorer/testnet/tx/';
 
-        // 1. Simulate — backend cotiza SDEX y arma tx1 (SA→helper).
+        // 1. Simulate — backend cotiza SDEX y arma las 3 txs (tx1 SA→G,
+        //    tx2 PathPayment classic G→G, tx3 SAC.transfer G→SA).
         const sim = await ctx.endpoints.swapSdexSimulate({
           fromAsset: input.fromAsset,
           toAsset: input.toAsset,
@@ -1859,7 +1865,7 @@ export function useAccesly(): AcceslyHook {
           ...(input.slippageBps !== undefined ? { slippageBps: input.slippageBps } : {}),
         });
 
-        // 2-4. Mismo flow ECDH + Shamir + reconstruct que tx.send/swap.
+        // 2-4. Reconstruct seed (Shamir F1+F2). El SDK firma todo en una pasada.
         const ephemeral = generateX25519Keypair();
         const wrappedF2 = await ctx.endpoints.getFragment2({
           clientEphemeralPubkey: base64FromBytes(ephemeral.publicKey),
@@ -1879,21 +1885,40 @@ export function useAccesly(): AcceslyHook {
           fragmentF2: { envelope: fragmentF2Envelope, key: input.fragmentF2Key },
         });
 
-        // 5. Firma la auth entry de tx1 (transfer SA→helper) contra la regla
-        // biometric-tx del fromAsset. Tx2/tx3 las firma el KMS swap-helper.
+        // 5a. tx1 — firma la auth entry biometric-tx del SA (Soroban).
         const { signedAuthEntryXdr } = await signSorobanAuthEntry({
-          signaturePayloadHashBase64: sim.signaturePayloadHashBase64,
-          contextRuleIds: [...sim.contextRuleIds],
-          placeholderAuthEntryXdr: sim.placeholderAuthEntryXdr,
+          signaturePayloadHashBase64: sim.tx1.signaturePayloadHashBase64,
+          contextRuleIds: [...sim.tx1.contextRuleIds],
+          placeholderAuthEntryXdr: sim.tx1.placeholderAuthEntryXdr,
           ed25519Seed: reconstructed.privateSeed,
           ed25519VerifierAddress: verifierAddress,
           ownerPubkey: input.ownerPubkey,
         });
 
-        // 6. Submit — backend orquesta las 3 txs (puede tardar 30-60s).
+        // 5b. tx2 — firma classic PathPayment con la seed (= G's private key).
+        const tx2Signed = await coreSignTransaction({
+          transactionXdr: sim.tx2.innerUnsignedXdr,
+          ed25519Seed: reconstructed.privateSeed,
+          networkPassphrase,
+          expectedPublicKey: input.ownerPubkey,
+        });
+
+        // 5c. tx3 — firma Soroban SAC.transfer con la seed (source-auth implícita).
+        const tx3Signed = await coreSignTransaction({
+          transactionXdr: sim.tx3.innerUnsignedXdr,
+          ed25519Seed: reconstructed.privateSeed,
+          networkPassphrase,
+          expectedPublicKey: input.ownerPubkey,
+        });
+
+        // 6. Submit — backend ejecuta tx1, fee-bumpea + submit tx2 y tx3.
         const submit = await ctx.endpoints.swapSdexSubmit({
-          unsignedXdr: sim.unsignedXdr,
-          signedAuthEntryXdr,
+          tx1: {
+            unsignedXdr: sim.tx1.unsignedXdr,
+            signedAuthEntryXdr,
+          },
+          tx2InnerSignedXdr: tx2Signed.signedXdr,
+          tx3InnerSignedXdr: tx3Signed.signedXdr,
           fromAsset: input.fromAsset,
           toAsset: input.toAsset,
           amountIn: input.amountIn,
@@ -1915,7 +1940,7 @@ export function useAccesly(): AcceslyHook {
             effectivePrice: sim.quote.effectivePrice,
             priceImpactPct: sim.quote.priceImpactPct,
             platform: sim.quote.platform,
-            helperAddress: sim.helperAddress,
+            gAddress: sim.gAddress,
           },
         };
       },
