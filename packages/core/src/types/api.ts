@@ -347,6 +347,36 @@ export interface OrderResponse {
 /* ── Fiat — KYC + Bank Account registration (Fase E.2+) ──────────────────── */
 
 /**
+ * `POST /wallets/sweep-g/simulate` (Fase III, 1.11+) — backend chequea el
+ * balance USDC de la G del user en Horizon. Si > 0, arma una tx Soroban
+ * `USDC_SAC.transfer(from=G, to=SA, balance)` con source=G y devuelve el
+ * envelope sin firmar para que el SDK firme con la seed reconstruida.
+ *
+ * Si la G está vacía, `alreadyEmpty=true` y no devuelve XDR.
+ */
+export interface SweepGSimulateResponse {
+  readonly gAddress: string;
+  readonly alreadyEmpty: boolean;
+  /** Balance USDC en stroops disponible para barrer. Solo si !alreadyEmpty. */
+  readonly balanceStroops?: string;
+  /** Envelope inner sin firmar. Solo si !alreadyEmpty. */
+  readonly unsignedXdr?: Base64String;
+  /** Hash de 32 bytes (base64) que el SDK firma. */
+  readonly txHashBase64?: Base64String;
+  readonly resourceFeeStroops?: string;
+}
+
+export interface SweepGSubmitRequest {
+  /** Inner tx con la firma del user agregada. */
+  readonly innerSignedXdr: Base64String;
+}
+
+export interface SweepGSubmitResponse {
+  readonly txHash: string;
+  readonly status: 'SUCCESS';
+}
+
+/**
  * `POST /wallets/bootstrap-g/simulate` (Fase I, 1.10+) — backend deriva la
  * G-address bridge del user y arma una tx classic con CreateAccount +
  * ChangeTrust(USDC) sponsored por channels-fund. El SDK firma con la seed

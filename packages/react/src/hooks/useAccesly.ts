@@ -378,6 +378,33 @@ export interface WalletNamespace {
    * recuperables si la G se cierra (no son lost cost).
    */
   bootstrapG(input: BootstrapGInput): Promise<BootstrapGResult>;
+  /**
+   * **Fase III (1.11+):** mueve el balance USDC que vive en la G-address bridge
+   * del user (depositado allí por Etherfuse durante un onramp) de vuelta al
+   * Smart Account vía Soroban `USDC_SAC.transfer(G→SA)`.
+   *
+   * Idempotente — si la G está vacía, devuelve `{ alreadyEmpty: true }` sin
+   * tocar passkey. Si hay balance, pide la passkey, firma la inner tx con la
+   * seed reconstruida (= la del G-address), y el backend la envuelve en una
+   * fee-bump tx pagada por `channels-fund` (la G del user no necesita XLM para
+   * fees).
+   */
+  sweepGToSA(input: SweepGToSAInput): Promise<SweepGToSAResult>;
+}
+
+export interface SweepGToSAInput {
+  readonly fragmentF1Plain: Uint8Array;
+  readonly fragmentF2Key: Uint8Array;
+  readonly ownerPubkey: Uint8Array;
+}
+
+export interface SweepGToSAResult {
+  /** `true` si la G no tenía USDC al inicio — no se mandó tx. */
+  readonly alreadyEmpty: boolean;
+  /** Cantidad barrida en stroops. `'0'` si alreadyEmpty. */
+  readonly amountStroops: string;
+  /** Hash de la fee-bump tx. `null` si alreadyEmpty. */
+  readonly txHash: string | null;
 }
 
 export interface BootstrapGInput {
@@ -1421,6 +1448,65 @@ export function useAccesly(): AcceslyHook {
         return {
           gAddress: submit.gAddress,
           alreadyBootstrapped: false,
+          txHash: submit.txHash,
+        };
+      },
+
+      async sweepGToSA(input) {
+        const networkPassphrase = stellarConfig.networkPassphrase;
+
+        // 1. Backend simulate — lee balance USDC en Horizon. Si > 0, arma tx.
+        const sim = await ctx.endpoints.sweepGSimulate();
+        if (sim.alreadyEmpty) {
+          return {
+            alreadyEmpty: true,
+            amountStroops: '0',
+            txHash: null,
+          };
+        }
+        if (!sim.unsignedXdr) {
+          throw new Error(
+            'wallet.sweepGToSA: backend did not return unsignedXdr but alreadyEmpty=false',
+          );
+        }
+
+        // 2-4. Mismo flow ECDH + Shamir + reconstruct que tx.send.
+        const ephemeral = generateX25519Keypair();
+        const wrappedF2 = await ctx.endpoints.getFragment2({
+          clientEphemeralPubkey: base64FromBytes(ephemeral.publicKey),
+        });
+        const sessionPlaintext = unwrapSessionFragment2(wrappedF2, ephemeral.privateKey).plaintext;
+        const fragmentF2Wire = JSON.parse(new TextDecoder().decode(sessionPlaintext)) as {
+          ciphertext: string;
+          nonce: string;
+          algo: string;
+        };
+        const fragmentF2Envelope: EncryptedEnvelope = {
+          nonce: base64ToBytes(fragmentF2Wire.nonce),
+          ciphertext: base64ToBytes(fragmentF2Wire.ciphertext),
+        };
+        const reconstructed = reconstructFromPlainAndEncrypted({
+          fragmentF1Plain: input.fragmentF1Plain,
+          fragmentF2: { envelope: fragmentF2Envelope, key: input.fragmentF2Key },
+        });
+
+        // 5. Firma la inner tx Soroban con la seed (que también es la del
+        //    G-address ed25519). source-account auth se satisface con esto.
+        const { signedXdr } = await coreSignTransaction({
+          transactionXdr: sim.unsignedXdr,
+          ed25519Seed: reconstructed.privateSeed,
+          networkPassphrase,
+          expectedPublicKey: input.ownerPubkey,
+        });
+
+        // 6. Submit — backend envuelve en fee-bump por channels-fund + KMS.
+        const submit = await ctx.endpoints.sweepGSubmit({
+          innerSignedXdr: signedXdr,
+        });
+
+        return {
+          alreadyEmpty: false,
+          amountStroops: sim.balanceStroops ?? '0',
           txHash: submit.txHash,
         };
       },

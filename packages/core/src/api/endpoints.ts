@@ -31,6 +31,9 @@ import type {
   BootstrapGSimulateResponse,
   BootstrapGSubmitRequest,
   BootstrapGSubmitResponse,
+  SweepGSimulateResponse,
+  SweepGSubmitRequest,
+  SweepGSubmitResponse,
   SimulateSwapRequest,
   SimulateSwapResponse,
   SimulateSwapSdexResponse,
@@ -134,6 +137,23 @@ export class AccesslyEndpoints {
   bootstrapGSubmit(req: BootstrapGSubmitRequest): Promise<BootstrapGSubmitResponse> {
     return this.client.post<BootstrapGSubmitResponse>(
       '/wallets/bootstrap-g/submit',
+      req as unknown as Json,
+    );
+  }
+
+  /**
+   * Cognito-auth (Fase III, 1.11+). Chequea balance USDC en la G del user. Si
+   * hay, devuelve tx Soroban `USDC_SAC.transfer(G→SA)` sin firmar. El SDK
+   * firma con la seed reconstruida y submitea via `sweepGSubmit`.
+   */
+  sweepGSimulate(): Promise<SweepGSimulateResponse> {
+    return this.client.post<SweepGSimulateResponse>('/wallets/sweep-g/simulate', {});
+  }
+
+  /** Cognito-auth (Fase III). Submit del sweep firmado. */
+  sweepGSubmit(req: SweepGSubmitRequest): Promise<SweepGSubmitResponse> {
+    return this.client.post<SweepGSubmitResponse>(
+      '/wallets/sweep-g/submit',
       req as unknown as Json,
     );
   }

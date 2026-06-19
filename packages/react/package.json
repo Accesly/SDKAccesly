@@ -1,6 +1,6 @@
 {
   "name": "@accesly/react",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "description": "Accesly SDK React adapter — AcceslyProvider and useAccesly hook.",
   "license": "MIT",
   "author": "Accesly Core <acceslyoficial@gmail.com>",
