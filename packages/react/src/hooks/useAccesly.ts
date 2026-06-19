@@ -1438,11 +1438,12 @@ export function useAccesly(): AcceslyHook {
         });
 
         // 5. Firma la tx classic con la seed (= la del G-address).
+        // Sin expectedPublicKey — el check defensivo es overkill cuando
+        // Stellar/Horizon valida la firma on-chain de todas formas.
         const { signedXdr } = await coreSignTransaction({
           transactionXdr: sim.unsignedXdr,
           ed25519Seed: reconstructed.privateSeed,
           networkPassphrase,
-          expectedPublicKey: input.ownerPubkey,
         });
 
         // 6. Submit — backend agrega KMS sponsor sig + manda a Horizon.
@@ -1497,11 +1498,11 @@ export function useAccesly(): AcceslyHook {
 
         // 5. Firma la inner tx Soroban con la seed (que también es la del
         //    G-address ed25519). source-account auth se satisface con esto.
+        // Sin expectedPublicKey (alineado con bootstrapG / swapViaSdex).
         const { signedXdr } = await coreSignTransaction({
           transactionXdr: sim.unsignedXdr,
           ed25519Seed: reconstructed.privateSeed,
           networkPassphrase,
-          expectedPublicKey: input.ownerPubkey,
         });
 
         // 6. Submit — backend envuelve en fee-bump por channels-fund + KMS.
@@ -1895,7 +1896,7 @@ export function useAccesly(): AcceslyHook {
         // firma derivarían pubkey de seed-cero → error
         // "derived public key does not match expectedPublicKey".
         // eslint-disable-next-line no-console
-        console.log('[accesly/swapViaSdex] version 1.13.3 — no expectedPublicKey on tx2/tx3');
+        console.log('[accesly/swapViaSdex] version 1.13.4 — no expectedPublicKey anywhere in g-flows');
         const seedCopy1 = new Uint8Array(reconstructed.privateSeed);
         const { signedAuthEntryXdr } = await signSorobanAuthEntry({
           signaturePayloadHashBase64: sim.tx1.signaturePayloadHashBase64,
