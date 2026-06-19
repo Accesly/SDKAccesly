@@ -1886,19 +1886,29 @@ export function useAccesly(): AcceslyHook {
         });
 
         // 5a. tx1 — firma la auth entry biometric-tx del SA (Soroban).
+        //
+        // NOTA: signSorobanAuthEntry y coreSignTransaction ambos hacen
+        // `withZeroize` sobre el ed25519Seed que reciben — al terminar la
+        // función la buffer pasada queda en ceros. Como necesitamos firmar
+        // 3 cosas con la misma seed, pasamos UNA COPIA fresca a cada una.
+        // Si pasáramos `reconstructed.privateSeed` directo, la 2da y 3ra
+        // firma derivarían pubkey de seed-cero → error
+        // "derived public key does not match expectedPublicKey".
+        const seedCopy1 = new Uint8Array(reconstructed.privateSeed);
         const { signedAuthEntryXdr } = await signSorobanAuthEntry({
           signaturePayloadHashBase64: sim.tx1.signaturePayloadHashBase64,
           contextRuleIds: [...sim.tx1.contextRuleIds],
           placeholderAuthEntryXdr: sim.tx1.placeholderAuthEntryXdr,
-          ed25519Seed: reconstructed.privateSeed,
+          ed25519Seed: seedCopy1,
           ed25519VerifierAddress: verifierAddress,
           ownerPubkey: input.ownerPubkey,
         });
 
         // 5b. tx2 — firma classic PathPayment con la seed (= G's private key).
+        const seedCopy2 = new Uint8Array(reconstructed.privateSeed);
         const tx2Signed = await coreSignTransaction({
           transactionXdr: sim.tx2.innerUnsignedXdr,
-          ed25519Seed: reconstructed.privateSeed,
+          ed25519Seed: seedCopy2,
           networkPassphrase,
           expectedPublicKey: input.ownerPubkey,
         });
@@ -1918,14 +1928,16 @@ export function useAccesly(): AcceslyHook {
           destMinStroops: sim.quote.destMinStroops,
         });
 
-        // 7. tx3 — firma Soroban SAC.transfer G→SA con la misma seed (que
-        //    seguimos teniendo en memoria desde el unlock del paso 4).
+        // 7. tx3 — firma Soroban SAC.transfer G→SA con copia fresca de la seed.
+        const seedCopy3 = new Uint8Array(reconstructed.privateSeed);
         const tx3Signed = await coreSignTransaction({
           transactionXdr: submit.tx3.innerUnsignedXdr,
-          ed25519Seed: reconstructed.privateSeed,
+          ed25519Seed: seedCopy3,
           networkPassphrase,
           expectedPublicKey: input.ownerPubkey,
         });
+        // 7b. Cleanup — zeroize la seed master que tuvimos en memoria.
+        reconstructed.privateSeed.fill(0);
 
         // 8. Finalize — backend ejecuta tx3 fee-bumped por channels-fund.
         const finalized = await ctx.endpoints.swapSdexFinalize({
