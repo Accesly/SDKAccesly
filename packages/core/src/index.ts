@@ -129,6 +129,10 @@ export {
   type WalletHistoryItem,
   type WalletHistoryRequestOptions,
   type WalletHistoryResponse,
+  type WalletUpgradeSimulateRequest,
+  type WalletUpgradeSimulateResponse,
+  type WalletUpgradeSubmitRequest,
+  type WalletUpgradeSubmitResponse,
 } from './api/index.js';
 
 export {

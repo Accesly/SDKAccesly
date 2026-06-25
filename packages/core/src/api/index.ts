@@ -78,4 +78,8 @@ export type {
   WalletHistoryItem,
   WalletHistoryRequestOptions,
   WalletHistoryResponse,
+  WalletUpgradeSimulateRequest,
+  WalletUpgradeSimulateResponse,
+  WalletUpgradeSubmitRequest,
+  WalletUpgradeSubmitResponse,
 } from '../types/api.js';

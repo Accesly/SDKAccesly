@@ -50,4 +50,17 @@ export interface AuthClient {
    * clearing is the responsibility of the caller via `SessionStorage.clear`.
    */
   signOut(accessToken: string): Promise<void>;
+  /**
+   * Optional — federated sign-in via Google. Implementations sin Hosted UI
+   * pueden omitirlo. Devuelve la URL a la que el caller debe redirigir el
+   * browser; el SDK no fuerza window.location para mantener compat SSR.
+   */
+  getGoogleSignInUrl?(redirectUri: string): string;
+  /**
+   * Optional — intercambia el `code` retornado por la Hosted UI (post-redirect
+   * desde Google) por `AuthTokens`. Implementaciones sin OAuth pueden
+   * omitirlo. El `redirectUri` debe ser EXACTAMENTE el mismo pasado a
+   * `getGoogleSignInUrl()` (OAuth spec).
+   */
+  exchangeCodeForTokens?(code: string, redirectUri: string): Promise<AuthTokens>;
 }

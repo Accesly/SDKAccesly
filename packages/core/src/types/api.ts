@@ -147,11 +147,18 @@ export interface GetFragment2Response {
 /** Assets soportados por `tx.send` (1.4+). USDC requiere wallet con rule 1 activado. */
 export type TransferAsset = 'XLM' | 'USDC';
 
-/** Assets activables vía `wallet.activateAsset(...)` (Fase C). */
-export type ActivatableAsset = 'USDC';
+/**
+ * Assets activables vía `wallet.activateAsset(...)`.
+ * - 'USDC': Fase C original — agregar USDC a wallets pre-Fase-B sin USDC.
+ * - 'XLM' (Fase Q backend, 2026-06-24): tras el cap de byte-write de Soroban
+ *   protocol 27, las wallets nuevas se deployan con `tx_targets: []` (sin
+ *   biometric-tx en el constructor). El SDK llama activateAsset('XLM')
+ *   inmediatamente post-bootstrap para habilitar transfers de XLM.
+ */
+export type ActivatableAsset = 'XLM' | 'USDC';
 
 /**
- * `POST /tx/activate-asset/simulate` — primer paso del flow "Activar USDC".
+ * `POST /tx/activate-asset/simulate` — primer paso del flow "Activar asset".
  *
  * Devuelve un `SimulateTxResponse` con el envelope + payload a firmar. El SDK
  * firma contra la regla `admin-cfg` del Smart Account con el mismo passkey
@@ -159,6 +166,60 @@ export type ActivatableAsset = 'USDC';
  */
 export interface ActivateAssetSimulateRequest {
   readonly asset: ActivatableAsset;
+}
+
+/**
+ * `POST /wallets/upgrade/simulate` — Fase O backend (2026-06-24).
+ *
+ * Pide al backend que arme + simule la tx `smart_account.upgrade(wasm_hash,
+ * operator)` con el `wasm_hash` resuelto desde `contract-versions` DDB.
+ *
+ * El SDK firma la auth entry retornada con la ed25519 del owner contra la
+ * regla `admin-cfg` (mismo passkey que `activateAsset` y `rotate_signer`).
+ *
+ * Versiones registradas se promueven via `scripts/promote-version.ts` del
+ * backend (uploaded → canary → stable → deprecated/rolled-back). Solo
+ * versiones con `status ∈ {uploaded, canary, stable}` son deployables.
+ */
+export interface WalletUpgradeSimulateRequest {
+  /**
+   * Versión target (ej. `"v3.1.0"`, `"v3.2.0-canary"`). Backend mapea a
+   * `wasmHash` desde DDB `contract-versions[targetVersion].wasmHash`.
+   */
+  readonly targetVersion: string;
+}
+
+/**
+ * Response de `wallet/upgrade/simulate`. Extiende el shape estándar de
+ * `SimulateTxResponse` con metadata específica del upgrade.
+ */
+export interface WalletUpgradeSimulateResponse extends SimulateTxResponse {
+  /** Address del SA que se va a upgradear (echo de DDB user_fragments). */
+  readonly walletAddress: string;
+  /** Versión target solicitada. */
+  readonly targetVersion: string;
+  /** Hash del WASM target (hex, 64 chars). */
+  readonly targetWasmHash: string;
+}
+
+/**
+ * `POST /wallets/upgrade/submit` — submit del upgrade firmado por el SDK.
+ *
+ * Body: el `unsignedXdr` que devolvió simulate + la auth entry firmada
+ * + el `targetVersion` (para audit y para que el backend escriba el
+ * `contractVersion` actual en `user_fragments`).
+ */
+export interface WalletUpgradeSubmitRequest {
+  readonly unsignedXdr: string;
+  readonly signedAuthEntryXdr: string;
+  readonly targetVersion: string;
+}
+
+export interface WalletUpgradeSubmitResponse {
+  readonly txHash: string;
+  readonly status: string;
+  readonly walletAddress: string;
+  readonly version: string;
 }
 
 /**

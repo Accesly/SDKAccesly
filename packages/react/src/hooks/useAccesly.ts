@@ -56,6 +56,29 @@ export interface AuthNamespace {
   resendConfirmation(email: string): Promise<void>;
   signIn(email: string, password: string): Promise<void>;
   signOut(): Promise<void>;
+  /**
+   * Federated sign-in via Google (2026-06-25). Redirige el browser a la
+   * Cognito Hosted UI, que después de la autenticación con Google envía el
+   * user de vuelta a `redirectUri?code=xxx`. La página en `redirectUri`
+   * debe llamar `auth.handleAuthCallback(code, redirectUri)` para completar
+   * el flow y persistir la sesión.
+   *
+   * Si `redirectUri` se omite, usa `window.location.origin + '/auth/callback'`.
+   * El `redirectUri` DEBE estar en la lista `callbackUrls` del Cognito App
+   * Client (lo registra el developer en su dashboard).
+   *
+   * Throws si:
+   *  - `hostedUiDomain` no está configurado en el env del Provider.
+   *  - El SDK corre en un entorno sin `window` (SSR sin override).
+   */
+  signInWithGoogle(redirectUri?: string): void;
+  /**
+   * Completa el flow de Google: intercambia el `code` de la URL de callback
+   * por `AuthTokens` y los persiste vía el token manager + refresca el
+   * status. Llamar desde la ruta `/auth/callback` con el `code` extraído
+   * del query string.
+   */
+  handleAuthCallback(code: string, redirectUri?: string): Promise<void>;
 }
 
 export interface CreateWalletInput {
@@ -390,6 +413,58 @@ export interface WalletNamespace {
    * fees).
    */
   sweepGToSA(input: SweepGToSAInput): Promise<SweepGToSAResult>;
+  /**
+   * **Fase O (1.14+):** upgrade del WASM del Smart Account a una versión
+   * registrada en `contract_versions` del backend.
+   *
+   * Soroban contract upgrade es un swap de bytecode — la address del SA,
+   * sus signers, sus context rules, su email_commitment y TODOS los balances
+   * de tokens (que viven en los SACs, no en el SA) se preservan
+   * automáticamente. Lo único que cambia es qué código se ejecuta cuando
+   * alguien llama una función del SA.
+   *
+   * El SDK firma la auth entry con el owner ed25519 contra la regla
+   * `admin-cfg` — solo el propietario del wallet puede autorizar upgrades
+   * (premisa no-custodial intacta — el backend NO puede forzar upgrades).
+   *
+   * Versiones target válidas son las que estén en `contract_versions` con
+   * status ∈ {uploaded, canary, stable}. El backend rechaza con 409 si la
+   * versión es deprecated o rolled-back.
+   *
+   * Ejemplo:
+   *   const result = await wallet.upgrade({
+   *     targetVersion: 'v3.1.0',
+   *     fragmentF1Plain,
+   *     fragmentF2Key,
+   *     ownerPubkey,
+   *   });
+   *   console.log(`upgraded to ${result.version}, tx ${result.txHash}`);
+   */
+  upgrade(input: UpgradeWalletInput): Promise<UpgradeWalletResult>;
+}
+
+export interface UpgradeWalletInput {
+  /** Versión target registrada en contract_versions (ej. "v3.1.0"). */
+  readonly targetVersion: string;
+  /** F1 plaintext (Shamir share descifrado). */
+  readonly fragmentF1Plain: Uint8Array;
+  /** AES key para descifrar el envelope F2 que el backend devuelve. */
+  readonly fragmentF2Key: Uint8Array;
+  /** Pubkey ed25519 del owner del Smart Account (32 bytes). */
+  readonly ownerPubkey: Uint8Array;
+}
+
+export interface UpgradeWalletResult {
+  /** Hash de la tx Soroban del upgrade. */
+  readonly txHash: string;
+  /** Status del submit (PENDING, SUCCESS, etc.) — usar `walletStatus` hook para confirmar on-chain. */
+  readonly status: string;
+  /** Versión target tras el upgrade. */
+  readonly version: string;
+  /** Address del wallet upgradeado (no cambia — pero echo del backend). */
+  readonly walletAddress: string;
+  /** URL al explorer para mostrar la tx en la UI. */
+  readonly explorerUrl: string;
 }
 
 export interface SweepGToSAInput {
@@ -876,6 +951,20 @@ export interface AcceslyHook {
   readonly _internal: AcceslyContextValue;
 }
 
+/**
+ * Default callback URI cuando el caller omite el redirectUri en
+ * `signInWithGoogle()` / `handleAuthCallback()`. Usa el origin actual del
+ * browser + `/auth/callback`. SSR-safe: throw si no hay window.
+ */
+function defaultCallbackUri(): string {
+  if (typeof window === 'undefined') {
+    throw new Error(
+      'defaultCallbackUri: requires window (browser). Pass redirectUri explicitly for SSR.',
+    );
+  }
+  return `${window.location.origin}/auth/callback`;
+}
+
 export function useAccesly(): AcceslyHook {
   const ctx = useContext(AcceslyContext);
   if (!ctx) {
@@ -904,6 +993,33 @@ export function useAccesly(): AcceslyHook {
       },
       async signOut() {
         await ctx.tokenManager.signOut();
+        await ctx.refreshStatus();
+      },
+      signInWithGoogle(redirectUri) {
+        if (!ctx.authClient.getGoogleSignInUrl) {
+          throw new Error(
+            'auth.signInWithGoogle: configured authClient does not support federated Google sign-in.',
+          );
+        }
+        const target = redirectUri ?? defaultCallbackUri();
+        const url = ctx.authClient.getGoogleSignInUrl(target);
+        if (typeof window === 'undefined') {
+          throw new Error(
+            'auth.signInWithGoogle: requires a browser environment with window.location. ' +
+              'For SSR / RN, call ctx.authClient.getGoogleSignInUrl(...) directly.',
+          );
+        }
+        window.location.assign(url);
+      },
+      async handleAuthCallback(code, redirectUri) {
+        if (!ctx.authClient.exchangeCodeForTokens) {
+          throw new Error(
+            'auth.handleAuthCallback: configured authClient does not support federated Google sign-in.',
+          );
+        }
+        const target = redirectUri ?? defaultCallbackUri();
+        const tokens = await ctx.authClient.exchangeCodeForTokens(code, target);
+        await ctx.tokenManager.setTokens(tokens);
         await ctx.refreshStatus();
       },
     }),
@@ -1397,6 +1513,76 @@ export function useAccesly(): AcceslyHook {
           status: submit.status,
           explorerUrl: `${explorerBase}${submit.txHash}`,
         };
+      },
+
+      async upgrade(input) {
+        const networkPassphrase = stellarConfig.networkPassphrase;
+        const verifierAddress = stellarConfig.ed25519VerifierAddress;
+        const explorerBase =
+          networkPassphrase === 'Public Global Stellar Network ; September 2015'
+            ? 'https://stellar.expert/explorer/public/tx/'
+            : 'https://stellar.expert/explorer/testnet/tx/';
+
+        // 1. Backend simulate del invoke(SA, "upgrade", [wasm_hash, operator])
+        // con el wasm_hash resuelto desde DDB contract-versions[targetVersion].
+        const sim = await ctx.endpoints.walletUpgradeSimulate({
+          targetVersion: input.targetVersion,
+        });
+
+        // 2. ECDH para wrappear F2 con session key per-request.
+        const ephemeral = generateX25519Keypair();
+        const wrappedF2 = await ctx.endpoints.getFragment2({
+          clientEphemeralPubkey: base64FromBytes(ephemeral.publicKey),
+        });
+        const sessionPlaintext = unwrapSessionFragment2(wrappedF2, ephemeral.privateKey).plaintext;
+        const fragmentF2Wire = JSON.parse(new TextDecoder().decode(sessionPlaintext)) as {
+          ciphertext: string;
+          nonce: string;
+          algo: string;
+        };
+        const fragmentF2Envelope: EncryptedEnvelope = {
+          nonce: base64ToBytes(fragmentF2Wire.nonce),
+          ciphertext: base64ToBytes(fragmentF2Wire.ciphertext),
+        };
+
+        // 3. Reconstruct seed (Shamir F1 plain + F2 envelope+key).
+        const reconstructed = reconstructFromPlainAndEncrypted({
+          fragmentF1Plain: input.fragmentF1Plain,
+          fragmentF2: { envelope: fragmentF2Envelope, key: input.fragmentF2Key },
+        });
+
+        try {
+          // 4. Firma la auth entry contra admin-cfg (slot que el backend
+          // resolvió via findContextRuleIdByName y devolvió en contextRuleIds).
+          const { signedAuthEntryXdr } = await signSorobanAuthEntry({
+            signaturePayloadHashBase64: sim.signaturePayloadHashBase64,
+            contextRuleIds: [...sim.contextRuleIds],
+            placeholderAuthEntryXdr: sim.placeholderAuthEntryXdr,
+            ed25519Seed: reconstructed.privateSeed,
+            ed25519VerifierAddress: verifierAddress,
+            ownerPubkey: input.ownerPubkey,
+          });
+
+          // 5. Submit. El backend KMS-firma con channels-fund y actualiza
+          // user_fragments.contractVersion post-éxito (rollback-friendly).
+          const submit = await ctx.endpoints.walletUpgradeSubmit({
+            unsignedXdr: sim.unsignedXdr,
+            signedAuthEntryXdr,
+            targetVersion: input.targetVersion,
+          });
+
+          return {
+            txHash: submit.txHash,
+            status: submit.status,
+            version: submit.version,
+            walletAddress: submit.walletAddress,
+            explorerUrl: `${explorerBase}${submit.txHash}`,
+          };
+        } finally {
+          // Defense-in-depth: zeroizar la seed reconstruida sin importar
+          // success/error path. tx.send y otros métodos hacen lo mismo.
+          zeroize(reconstructed.privateSeed);
+        }
       },
 
       async bootstrapG(input) {

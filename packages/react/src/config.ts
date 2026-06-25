@@ -45,6 +45,11 @@ export const ENVIRONMENT_DEFAULTS: Record<Environment, EnvironmentDefaults> = {
       region: 'us-east-1',
       userPoolId: 'us-east-1_K2Nag1tB1',
       userPoolClientId: '6r64diep7pne50sender4557jt',
+      // Cognito Hosted UI domain (Fase Google OAuth, 2026-06-25). Necesario
+      // para auth.signInWithGoogle(). Cuando se migre a custom domain
+      // (auth.accesly.xyz) cambiar aquí — el cambio es no-breaking siempre
+      // que el callback URLs sigan registrados en el App Client.
+      hostedUiDomain: 'https://accesly-dev.auth.us-east-1.amazoncognito.com',
     },
     stellar: {
       networkPassphrase: 'Test SDF Network ; September 2015',

@@ -49,6 +49,10 @@ import type {
   WalletBalanceResponse,
   WalletHistoryRequestOptions,
   WalletHistoryResponse,
+  WalletUpgradeSimulateRequest,
+  WalletUpgradeSimulateResponse,
+  WalletUpgradeSubmitRequest,
+  WalletUpgradeSubmitResponse,
 } from '../types/api.js';
 import { NotFoundError } from './errors.js';
 import type { AccesslyApiClient, Json } from './client.js';
@@ -164,6 +168,38 @@ export class AccesslyEndpoints {
   activateAssetSubmit(req: SubmitTxRequest): Promise<SubmitTxResponse> {
     return this.client.post<SubmitTxResponse>(
       '/tx/activate-asset/submit',
+      req as unknown as Json,
+    );
+  }
+
+  /**
+   * Cognito-auth (Fase O backend, 2026-06-24). Simula
+   * `smart_account.upgrade(wasm_hash, operator)` con el WASM hash resuelto
+   * desde DDB `contract-versions[targetVersion]`. El SDK firma la auth entry
+   * con admin-cfg.
+   *
+   * Errores típicos:
+   *  - 404 `unknown-target-version` si `targetVersion` no está registrada.
+   *  - 409 `version-not-deployable` si el status es deprecated/rolled-back.
+   *  - 502 `wasm-not-on-chain` si la entry DDB miente vs el ledger.
+   */
+  walletUpgradeSimulate(
+    req: WalletUpgradeSimulateRequest,
+  ): Promise<WalletUpgradeSimulateResponse> {
+    return this.client.post<WalletUpgradeSimulateResponse>(
+      '/wallets/upgrade/simulate',
+      req as unknown as Json,
+    );
+  }
+
+  /**
+   * Cognito-auth. Submit del upgrade firmado. Backend KMS-firma el envelope
+   * con channels-fund y actualiza `user_fragments.contractVersion` post-éxito
+   * (con `previousContractVersion` para rollback). Idempotency-Key dedup 24h.
+   */
+  walletUpgradeSubmit(req: WalletUpgradeSubmitRequest): Promise<WalletUpgradeSubmitResponse> {
+    return this.client.post<WalletUpgradeSubmitResponse>(
+      '/wallets/upgrade/submit',
       req as unknown as Json,
     );
   }
