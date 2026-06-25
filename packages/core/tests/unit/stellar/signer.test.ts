@@ -117,17 +117,10 @@ describe('stellar/signer', () => {
     ).rejects.toBeInstanceOf(RangeError);
   });
 
-  it('rejects when expectedPublicKey does not match derived pubkey', async () => {
-    const { privateSeed } = generateKeypair();
-    const wrongPubkey = new Uint8Array(32).fill(0xff);
-
-    await expect(
-      signTransaction({
-        transactionXdr: 'xxx',
-        ed25519Seed: privateSeed,
-        networkPassphrase: PASSPHRASE,
-        expectedPublicKey: wrongPubkey,
-      }),
-    ).rejects.toThrow(/expectedPublicKey/);
-  });
+  // Test "rejects when expectedPublicKey does not match" eliminado en
+  // 1.14.x — el check defensivo fue removido en 1.13.5 (commit 6ac137a)
+  // por falsos positivos contra CredentialRecords persistidos por versiones
+  // viejas. El param sigue aceptándose como no-op por backwards compat de
+  // la signature, pero ya no se valida (Stellar/Soroban validan la firma
+  // on-chain — el check client-side era redundante).
 });
