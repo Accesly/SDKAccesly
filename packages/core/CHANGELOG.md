@@ -1,5 +1,13 @@
 # @accesly/core
 
+## 1.16.0
+
+### Minor Changes
+
+- feat(api): new `GMissingTrustlineError extends AccesslyApiError` with `asset: 'USDC' | 'EURC'`. Constructed when the backend returns 409 with `code: 'G_MISSING_TRUSTLINE'` — the G-address bridge exists but doesn't trust the asset the caller is trying to move through it (only relevant once a dev enables EURC). The React adapter uses this in `withAutoAddTrustlineG` to dispatch `wallet.addTrustlineG(asset)` and retry the original call.
+- feat(api): `endpoints.addTrustlineGSimulate` / `addTrustlineGSubmit` for the new `POST /trustlines/g/add/{simulate,submit}` endpoints. Both Cognito-authenticated. Asset allowlist (Circle USDC + EURC) enforced by the backend; the SDK simply forwards the asset code.
+- feat(api): `errorForResponse` now also maps `G_MISSING_TRUSTLINE` to the new error.
+
 ## 1.15.0
 
 ### Minor Changes

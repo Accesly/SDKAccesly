@@ -7,6 +7,10 @@
  */
 
 import type {
+  AddTrustlineGSimulateRequest,
+  AddTrustlineGSimulateResponse,
+  AddTrustlineGSubmitRequest,
+  AddTrustlineGSubmitResponse,
   CreateWalletRequest,
   CreateWalletResponse,
   FinalizeRecoveryRequest,
@@ -152,6 +156,26 @@ export class AccesslyEndpoints {
   bootstrapGSubmit(req: BootstrapGSubmitRequest): Promise<BootstrapGSubmitResponse> {
     return this.client.post<BootstrapGSubmitResponse>(
       '/wallets/bootstrap-g/submit',
+      req as unknown as Json,
+    );
+  }
+
+  /**
+   * Cognito-auth (Fase 2, v1.16+). Sponsor a ChangeTrust(asset) on the
+   * user's already-bootstrapped G-address. Backend validates the asset
+   * against the TRUSTLINE_ALLOWLIST (USDC + EURC only).
+   */
+  addTrustlineGSimulate(req: AddTrustlineGSimulateRequest): Promise<AddTrustlineGSimulateResponse> {
+    return this.client.post<AddTrustlineGSimulateResponse>(
+      '/trustlines/g/add/simulate',
+      req as unknown as Json,
+    );
+  }
+
+  /** Cognito-auth (Fase 2). Submit del add-trustline firmado por el user. */
+  addTrustlineGSubmit(req: AddTrustlineGSubmitRequest): Promise<AddTrustlineGSubmitResponse> {
+    return this.client.post<AddTrustlineGSubmitResponse>(
+      '/trustlines/g/add/submit',
       req as unknown as Json,
     );
   }

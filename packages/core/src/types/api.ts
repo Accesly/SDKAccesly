@@ -502,6 +502,37 @@ export interface BootstrapGSubmitResponse {
 }
 
 /**
+ * `POST /trustlines/g/add/simulate` — sponsor a ChangeTrust(asset) on the
+ * user's already-bootstrapped G-address. Allowlist enforced server-side
+ * (USDC or EURC). Returns the unsigned envelope so the SDK signs with the
+ * reconstructed ed25519 seed (the G's secret = the owner's seed).
+ */
+export interface AddTrustlineGSimulateRequest {
+  readonly asset: 'USDC' | 'EURC';
+}
+
+export interface AddTrustlineGSimulateResponse {
+  readonly unsignedXdr: Base64String;
+  readonly txHashBase64: Base64String;
+  readonly gAddress: string;
+  readonly sponsorAddress: string;
+  readonly assetCode: 'USDC' | 'EURC';
+  readonly issuer: string;
+}
+
+export interface AddTrustlineGSubmitRequest {
+  readonly userSignedXdr: Base64String;
+  readonly asset: 'USDC' | 'EURC';
+}
+
+export interface AddTrustlineGSubmitResponse {
+  readonly txHash: string;
+  readonly successful: boolean;
+  readonly gAddress: string;
+  readonly asset: 'USDC' | 'EURC';
+}
+
+/**
  * `POST /kyc/bank-accounts` body — registra CLABE mexicana para offramp.
  *
  * Etherfuse v2 (2026-06): pide los apellidos separados + fecha de

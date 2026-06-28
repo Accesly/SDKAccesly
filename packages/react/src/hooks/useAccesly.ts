@@ -33,6 +33,7 @@ import {
   unwrapSessionFragment2,
   zeroize,
   GAddressNotBootstrappedError,
+  GMissingTrustlineError,
   WalletNotEnrolledError,
   type ActivatableAsset,
   type AuthStatus,
@@ -404,6 +405,21 @@ export interface WalletNamespace {
    */
   bootstrapG(input: BootstrapGInput): Promise<BootstrapGResult>;
   /**
+   * **Fase 2 (1.16+):** sponsor a `ChangeTrust(asset)` on the user's existing
+   * G-address. Used when the dev enables EURC (or any future allowlisted
+   * asset) and an SDK call routes through the G with that asset.
+   *
+   * Idempotent — if the G already trusts the asset, the backend can short-
+   * circuit (current MVP still submits to keep things simple). The cost is
+   * ~0.5 XLM extra reserve paid by `channels-fund`.
+   *
+   * The SDK auto-triggers this via `withAutoAddTrustlineG` whenever
+   * `tx.swapViaSdex` returns `GMissingTrustlineError`. Callers can also
+   * invoke it explicitly to pre-warm the trustline (lower latency on the
+   * first swap).
+   */
+  addTrustlineG(input: AddTrustlineGInput): Promise<AddTrustlineGResult>;
+  /**
    * **Fase III (1.11+):** mueve el balance USDC que vive en la G-address bridge
    * del user (depositado allí por Etherfuse durante un onramp) de vuelta al
    * Smart Account vía Soroban `USDC_SAC.transfer(G→SA)`.
@@ -473,6 +489,20 @@ export interface SweepGToSAInput {
   readonly fragmentF1Plain: Uint8Array;
   readonly fragmentF2Key: Uint8Array;
   readonly ownerPubkey: Uint8Array;
+}
+
+export interface AddTrustlineGInput {
+  readonly asset: 'USDC' | 'EURC';
+  readonly fragmentF1Plain: Uint8Array;
+  readonly fragmentF2Key: Uint8Array;
+  readonly ownerPubkey: Uint8Array;
+}
+
+export interface AddTrustlineGResult {
+  readonly txHash: string;
+  readonly successful: boolean;
+  readonly gAddress: string;
+  readonly asset: 'USDC' | 'EURC';
 }
 
 export interface SweepGToSAResult {
@@ -1234,6 +1264,55 @@ export function useAccesly(): AcceslyHook {
       };
     };
 
+    /**
+     * Phase 2 — sponsor a ChangeTrust(asset) on the user's existing G.
+     * Mirrors the simulate/submit shape of doBootstrapG. Exposed as
+     * `wallet.addTrustlineG` and invoked by the auto-recovery wrapper
+     * `withAutoAddTrustlineG` in the tx namespace.
+     */
+    const doAddTrustlineG = async (input: AddTrustlineGInput): Promise<AddTrustlineGResult> => {
+      const networkPassphrase = stellarConfig.networkPassphrase;
+
+      const sim = await ctx.endpoints.addTrustlineGSimulate({ asset: input.asset });
+
+      const ephemeral = generateX25519Keypair();
+      const wrappedF2 = await ctx.endpoints.getFragment2({
+        clientEphemeralPubkey: base64FromBytes(ephemeral.publicKey),
+      });
+      const sessionPlaintext = unwrapSessionFragment2(wrappedF2, ephemeral.privateKey).plaintext;
+      const fragmentF2Wire = JSON.parse(new TextDecoder().decode(sessionPlaintext)) as {
+        ciphertext: string;
+        nonce: string;
+        algo: string;
+      };
+      const fragmentF2Envelope: EncryptedEnvelope = {
+        nonce: base64ToBytes(fragmentF2Wire.nonce),
+        ciphertext: base64ToBytes(fragmentF2Wire.ciphertext),
+      };
+      const reconstructed = reconstructFromPlainAndEncrypted({
+        fragmentF1Plain: input.fragmentF1Plain,
+        fragmentF2: { envelope: fragmentF2Envelope, key: input.fragmentF2Key },
+      });
+
+      const { signedXdr } = await coreSignTransaction({
+        transactionXdr: sim.unsignedXdr,
+        ed25519Seed: reconstructed.privateSeed,
+        networkPassphrase,
+      });
+
+      const submit = await ctx.endpoints.addTrustlineGSubmit({
+        userSignedXdr: signedXdr,
+        asset: input.asset,
+      });
+
+      return {
+        txHash: submit.txHash,
+        successful: submit.successful,
+        gAddress: submit.gAddress,
+        asset: submit.asset,
+      };
+    };
+
     return {
       async computeAddress(ownerPubkey) {
         return computeSmartAccountAddress({
@@ -1647,6 +1726,7 @@ export function useAccesly(): AcceslyHook {
       },
 
       bootstrapG: doBootstrapG,
+      addTrustlineG: doAddTrustlineG,
 
       async sweepGToSA(input) {
         const networkPassphrase = stellarConfig.networkPassphrase;
@@ -1944,6 +2024,37 @@ export function useAccesly(): AcceslyHook {
       }
     }
 
+    /**
+     * Auto-add-trustline-G wrapper (Phase 2). When a backend op returns
+     * `GMissingTrustlineError { asset }`, sponsor a ChangeTrust on the user's
+     * G with the same unlocked material and retry. Only triggers for assets
+     * in the allowlist (USDC + EURC) — the backend rejects anything else.
+     *
+     * The user pays the round-trip cost of one extra classic tx, but sees
+     * no extra passkey prompt because the material is already in memory.
+     */
+    async function withAutoAddTrustlineG<T>(
+      material: {
+        readonly fragmentF1Plain: Uint8Array;
+        readonly fragmentF2Key: Uint8Array;
+        readonly ownerPubkey: Uint8Array;
+      },
+      op: () => Promise<T>,
+    ): Promise<T> {
+      try {
+        return await op();
+      } catch (err) {
+        if (!(err instanceof GMissingTrustlineError)) throw err;
+        await wallet.addTrustlineG({
+          asset: err.asset,
+          fragmentF1Plain: material.fragmentF1Plain,
+          fragmentF2Key: material.fragmentF2Key,
+          ownerPubkey: material.ownerPubkey,
+        });
+        return await op();
+      }
+    }
+
     return {
       async send(input) {
         const networkPassphrase = stellarConfig.networkPassphrase;
@@ -2126,18 +2237,21 @@ export function useAccesly(): AcceslyHook {
 
         // 1. Simulate — backend cotiza SDEX y arma las 3 txs (tx1 SA→G,
         //    tx2 PathPayment classic G→G, tx3 SAC.transfer G→SA).
-        //    Doble auto-recover: si falta la rule biometric-tx del fromAsset
-        //    (WalletNotEnrolledError) o la G no está creada
-        //    (GAddressNotBootstrappedError), el SDK resuelve la pre-condición
+        //    Triple auto-recover: si falta la rule biometric-tx del fromAsset
+        //    (WalletNotEnrolledError), la G no existe (GAddressNotBootstrappedError),
+        //    o la G existe pero no tiene la trustline del asset
+        //    (GMissingTrustlineError, Fase 2), el SDK resuelve la pre-condición
         //    y reintenta. El user ve un solo prompt de passkey.
         const sim = await withAutoBootstrapG(input, () =>
-          withAutoEnroll(input, () =>
-            ctx.endpoints.swapSdexSimulate({
-              fromAsset: input.fromAsset,
-              toAsset: input.toAsset,
-              amountIn: input.amountIn,
-              ...(input.slippageBps !== undefined ? { slippageBps: input.slippageBps } : {}),
-            }),
+          withAutoAddTrustlineG(input, () =>
+            withAutoEnroll(input, () =>
+              ctx.endpoints.swapSdexSimulate({
+                fromAsset: input.fromAsset,
+                toAsset: input.toAsset,
+                amountIn: input.amountIn,
+                ...(input.slippageBps !== undefined ? { slippageBps: input.slippageBps } : {}),
+              }),
+            ),
           ),
         );
 

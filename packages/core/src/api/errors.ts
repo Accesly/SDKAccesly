@@ -87,6 +87,26 @@ export class GAddressNotBootstrappedError extends AccesslyApiError {
   }
 }
 
+/**
+ * 409 with code `G_MISSING_TRUSTLINE` — the G-address is bootstrapped but
+ * doesn't trust the asset the caller is trying to move through it. Flows that
+ * route via the G (swap-sdex with EURC, future fiat ramps on non-USDC, etc.)
+ * tell the SDK to add the trustline first.
+ *
+ * The React adapter auto-handles this for `tx.swapViaSdex` via the
+ * `withAutoAddTrustlineG` wrapper — `wallet.addTrustlineG` runs with the same
+ * unlocked material and then the original call retries.
+ */
+export class GMissingTrustlineError extends AccesslyApiError {
+  readonly asset: 'USDC' | 'EURC';
+
+  constructor(message: string, opts: AccesslyApiErrorOptions & { asset: 'USDC' | 'EURC' }) {
+    super(message, opts);
+    this.name = 'GMissingTrustlineError';
+    this.asset = opts.asset;
+  }
+}
+
 /** 404 — resource does not exist. */
 export class NotFoundError extends AccesslyApiError {
   constructor(message: string, opts: AccesslyApiErrorOptions) {
@@ -146,10 +166,18 @@ export function errorForResponse(
   }
   if (status === 409 && code === 'WALLET_NOT_ENROLLED') {
     const asset = extractAsset(body);
-    if (asset) return new WalletNotEnrolledError(message, { ...opts, asset });
+    if (asset === 'XLM' || asset === 'USDC') {
+      return new WalletNotEnrolledError(message, { ...opts, asset });
+    }
   }
   if (status === 409 && code === 'G_NOT_BOOTSTRAPPED') {
     return new GAddressNotBootstrappedError(message, opts);
+  }
+  if (status === 409 && code === 'G_MISSING_TRUSTLINE') {
+    const asset = extractAsset(body);
+    if (asset === 'USDC' || asset === 'EURC') {
+      return new GMissingTrustlineError(message, { ...opts, asset });
+    }
   }
   if (status >= 400 && status < 500) return new ValidationError(message, opts);
   if (status >= 500) return new ServerError(message, opts);
@@ -181,10 +209,10 @@ function extractRetryAfter(body: unknown): number | undefined {
   return undefined;
 }
 
-function extractAsset(body: unknown): 'XLM' | 'USDC' | undefined {
+function extractAsset(body: unknown): 'XLM' | 'USDC' | 'EURC' | undefined {
   if (body && typeof body === 'object') {
     const b = body as { asset?: unknown };
-    if (b.asset === 'XLM' || b.asset === 'USDC') return b.asset;
+    if (b.asset === 'XLM' || b.asset === 'USDC' || b.asset === 'EURC') return b.asset;
   }
   return undefined;
 }

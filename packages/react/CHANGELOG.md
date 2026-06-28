@@ -1,5 +1,13 @@
 # @accesly/react
 
+## 1.16.0
+
+### Minor Changes
+
+- feat(wallet): `wallet.addTrustlineG({ asset, fragmentF1Plain, fragmentF2Key, ownerPubkey })` sponsors a `ChangeTrust(asset)` on the user's existing G-address. Returns `{ txHash, successful, gAddress, asset }`. Currently allowlisted to Circle USDC + EURC; backend rejects anything else with 400. Channels-fund covers the 0.5 XLM reserve.
+- feat(tx): `tx.swapViaSdex` adds a third auto-recovery layer — `withAutoAddTrustlineG` wraps the existing `withAutoBootstrapG(withAutoEnroll(...))` stack. If the backend returns `GMissingTrustlineError`, the SDK calls `wallet.addTrustlineG(err.asset)` with the same unlocked material and retries the swap. No extra passkey prompts.
+- chore(internal): extracted `doAddTrustlineG` as a closure shared between the public `wallet.addTrustlineG` method and the auto-recovery wrapper, mirroring the `doBootstrapG` pattern.
+
 ## 1.15.0
 
 ### Minor Changes
