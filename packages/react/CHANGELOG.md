@@ -1,5 +1,31 @@
 # @accesly/react
 
+## 1.15.0
+
+### Minor Changes
+
+- feat(hooks): `useAppConfig()` — fetches `endpoints.appConfig(appId)` at mount, refetches every 60s (matches the backend `Cache-Control: max-age=60`), and on `visibilitychange:visible` so toggling a setting on `dev.accesly.xyz` propagates to running clients within the minute. Returns `{ config, isLoading, error, refresh }`. On error the previous good config is kept so the UI doesn't flicker — integrators fall back to their own defaults via derived `useMemo`.
+
+## 1.14.2
+
+### Patch Changes
+
+- feat(tx,wallet): `tx.swapViaSdex` y `wallet.sweepGToSA` ahora auto-disparan `wallet.bootstrapG()` cuando el backend reporta `GAddressNotBootstrappedError`. El SDK reusa el `material` ya unlocked (fragmentF1Plain, fragmentF2Key, ownerPubkey) — un solo prompt de passkey cubre bootstrap + operación. El primer uso paga ~10s extra (sponsor + ChangeTrust + EndSponsoring) pero queda transparente al caller.
+- refactor(wallet): extraído `doBootstrapG` como closure compartido. `wallet.bootstrapG` y la auto-recovery en `wallet.sweepGToSA` apuntan a la misma implementación; cero duplicación.
+
+## 1.14.1
+
+### Patch Changes
+
+- feat(tx): `tx.send`, `tx.swap` y `tx.swapViaSdex` ahora auto-disparan `wallet.activateAsset(asset)` cuando el backend devuelve `WalletNotEnrolledError`. El caller no ve el error — el SDK detecta el 409, llama el activate con el mismo `material` (fragmentF1Plain, fragmentF2Key, ownerPubkey) ya unlocked, y reintenta la operación original. Cero passkey prompts extra.
+- chore: las wallets sin la rule `biometric-tx` de XLM (cuyo constructor se topó con el cap de byte-write Soroban) ahora se enroll-an de forma transparente al primer `tx.send({ asset: 'XLM' })` / swap. La UI de la app integradora ya no necesita exponer un botón "Activar XLM" en el flujo end-user — los botones manuales solo tienen sentido como herramienta de developer.
+
+## 1.14.0
+
+### Minor Changes
+
+- feat: expone `wallet.upgrade`, `auth.signInWithGoogle`, `auth.handleAuthCallback` y `activateAsset('XLM')` desde el hook `useAccesly`. Ver CHANGELOG de `@accesly/core` para detalle.
+
 ## 1.0.0
 
 ### Minor Changes

@@ -69,31 +69,23 @@ describe('stellar/format', () => {
   describe('isValidStellarAddress', () => {
     it('accepts well-formed G-addresses', () => {
       expect(
-        isValidStellarAddress(
-          'GDRHSVLY3VCEHCHCSR5MZR2ALYLCERDDFT3ULCUIELGFVYHTZFCMNU4E',
-        ),
+        isValidStellarAddress('GDRHSVLY3VCEHCHCSR5MZR2ALYLCERDDFT3ULCUIELGFVYHTZFCMNU4E'),
       ).toBe(true);
     });
 
     it('accepts well-formed C-addresses', () => {
       expect(
-        isValidStellarAddress(
-          'CDAGBAFG7XXBX34OCTR4LBDLMMWPPXJIXI4XT2SPOCYMHX7FJ5WCH557',
-        ),
+        isValidStellarAddress('CDAGBAFG7XXBX34OCTR4LBDLMMWPPXJIXI4XT2SPOCYMHX7FJ5WCH557'),
       ).toBe(true);
     });
 
     it('rejects too-short / too-long / wrong prefix / lowercase', () => {
       expect(isValidStellarAddress('GDRHSVLY')).toBe(false);
       expect(
-        isValidStellarAddress(
-          'gdrhsvly3vcehchcsr5mzr2alylcerddft3ulcuielgfvyhtzfcmnu4e',
-        ),
+        isValidStellarAddress('gdrhsvly3vcehchcsr5mzr2alylcerddft3ulcuielgfvyhtzfcmnu4e'),
       ).toBe(false);
       expect(
-        isValidStellarAddress(
-          'XDRHSVLY3VCEHCHCSR5MZR2ALYLCERDDFT3ULCUIELGFVYHTZFCMNU4E',
-        ),
+        isValidStellarAddress('XDRHSVLY3VCEHCHCSR5MZR2ALYLCERDDFT3ULCUIELGFVYHTZFCMNU4E'),
       ).toBe(false);
     });
   });
@@ -104,9 +96,9 @@ describe('stellar/format', () => {
     });
 
     it('shortens with default head=6 tail=4', () => {
-      expect(
-        shortAddress('CDAGBAFG7XXBX34OCTR4LBDLMMWPPXJIXI4XT2SPOCYMHX7FJ5WCH557'),
-      ).toBe('CDAGBA…H557');
+      expect(shortAddress('CDAGBAFG7XXBX34OCTR4LBDLMMWPPXJIXI4XT2SPOCYMHX7FJ5WCH557')).toBe(
+        'CDAGBA…H557',
+      );
     });
   });
 
@@ -118,9 +110,7 @@ describe('stellar/format', () => {
     });
 
     it('respects mainnet selection', () => {
-      expect(walletExplorerUrl('CABC', 'mainnet')).toContain(
-        '/mainnet/contract/CABC',
-      );
+      expect(walletExplorerUrl('CABC', 'mainnet')).toContain('/mainnet/contract/CABC');
     });
   });
 

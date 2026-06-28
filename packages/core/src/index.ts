@@ -83,11 +83,7 @@ export {
   type TokenManagerOptions,
 } from './auth/index.js';
 
-export {
-  formatError,
-  type FormatErrorLocale,
-  type FormatErrorOptions,
-} from './errors/index.js';
+export { formatError, type FormatErrorLocale, type FormatErrorOptions } from './errors/index.js';
 
 export {
   AccesslyApiClient,
@@ -98,7 +94,9 @@ export {
   NotFoundError,
   RateLimitError,
   ServerError,
+  GAddressNotBootstrappedError,
   ValidationError,
+  WalletNotEnrolledError,
   type AccesslyApiClientOptions,
   type IdTokenProvider,
   type TelemetryEvent,
@@ -134,6 +132,29 @@ export {
   type WalletUpgradeSubmitRequest,
   type WalletUpgradeSubmitResponse,
 } from './api/index.js';
+
+// Phase 1 (2026-06-28): appConfig — read by the SDK at boot.
+export type {
+  AppConfigResponse,
+  AppConfigBranding,
+  AppConfigAuth,
+  AppConfigNetworks,
+  AppConfigTrustline,
+  AppConfigWallet,
+  AppConfigPolicies,
+  AppConfigWebhook,
+  AppConfigFeatures,
+  AppEnvironment,
+  AuthProvider,
+  TrustlineCode,
+  RolloutStrategy,
+  RolloutCohort,
+  FeeStrategy,
+  AppPlan,
+  AppStatus,
+  KycLevel,
+  FiatOnrampMethod,
+} from './types/app-config.js';
 
 export {
   IndexedDbDeviceStore,

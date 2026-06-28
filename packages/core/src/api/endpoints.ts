@@ -54,6 +54,7 @@ import type {
   WalletUpgradeSubmitRequest,
   WalletUpgradeSubmitResponse,
 } from '../types/api.js';
+import type { AppConfigResponse } from '../types/app-config.js';
 import { NotFoundError } from './errors.js';
 import type { AccesslyApiClient, Json } from './client.js';
 
@@ -63,6 +64,16 @@ export class AccesslyEndpoints {
   /** Public liveness check. No auth header sent. */
   health(): Promise<HealthResponse> {
     return this.client.get<HealthResponse>('/health');
+  }
+
+  /**
+   * Public (no auth). Fetches the appConfig that the developer authored from
+   * the `dev.accesly.xyz` dashboard. Cacheable 60s edge — the SDK reads this
+   * at boot to pick supported trustlines, branding, auth providers and
+   * policies.
+   */
+  appConfig(appId: string): Promise<AppConfigResponse> {
+    return this.client.get<AppConfigResponse>(`/app-config/${encodeURIComponent(appId)}`);
   }
 
   /** Cognito-auth. Deploys the user's Smart Account on Soroban. */
@@ -120,9 +131,7 @@ export class AccesslyEndpoints {
    * Response shape idéntico a `simulateTx` — el SDK firma el `auth_digest` con
    * el mismo passkey contra la regla admin-cfg.
    */
-  activateAssetSimulate(
-    req: ActivateAssetSimulateRequest,
-  ): Promise<SimulateTxResponse> {
+  activateAssetSimulate(req: ActivateAssetSimulateRequest): Promise<SimulateTxResponse> {
     return this.client.post<SimulateTxResponse>(
       '/tx/activate-asset/simulate',
       req as unknown as Json,
@@ -166,10 +175,7 @@ export class AccesslyEndpoints {
 
   /** Cognito-auth. Submit del add_context_rule firmado (mismo shape que submitTx). */
   activateAssetSubmit(req: SubmitTxRequest): Promise<SubmitTxResponse> {
-    return this.client.post<SubmitTxResponse>(
-      '/tx/activate-asset/submit',
-      req as unknown as Json,
-    );
+    return this.client.post<SubmitTxResponse>('/tx/activate-asset/submit', req as unknown as Json);
   }
 
   /**
@@ -183,9 +189,7 @@ export class AccesslyEndpoints {
    *  - 409 `version-not-deployable` si el status es deprecated/rolled-back.
    *  - 502 `wasm-not-on-chain` si la entry DDB miente vs el ledger.
    */
-  walletUpgradeSimulate(
-    req: WalletUpgradeSimulateRequest,
-  ): Promise<WalletUpgradeSimulateResponse> {
+  walletUpgradeSimulate(req: WalletUpgradeSimulateRequest): Promise<WalletUpgradeSimulateResponse> {
     return this.client.post<WalletUpgradeSimulateResponse>(
       '/wallets/upgrade/simulate',
       req as unknown as Json,
@@ -210,18 +214,12 @@ export class AccesslyEndpoints {
    * biometric-tx del asset de entrada.
    */
   swapSimulate(req: SimulateSwapRequest): Promise<SimulateSwapResponse> {
-    return this.client.post<SimulateSwapResponse>(
-      '/tx/swap/simulate',
-      req as unknown as Json,
-    );
+    return this.client.post<SimulateSwapResponse>('/tx/swap/simulate', req as unknown as Json);
   }
 
   /** Cognito-auth. Submit del swap firmado (mismo shape que submitTx). */
   swapSubmit(req: SubmitTxRequest): Promise<SubmitTxResponse> {
-    return this.client.post<SubmitTxResponse>(
-      '/tx/swap/submit',
-      req as unknown as Json,
-    );
+    return this.client.post<SubmitTxResponse>('/tx/swap/submit', req as unknown as Json);
   }
 
   /**
@@ -243,10 +241,7 @@ export class AccesslyEndpoints {
    * KMS). Devuelve los 3 hashes para auditoría / explorer linking.
    */
   swapSdexSubmit(req: SubmitSwapSdexRequest): Promise<SubmitSwapSdexResponse> {
-    return this.client.post<SubmitSwapSdexResponse>(
-      '/tx/swap-sdex/submit',
-      req as unknown as Json,
-    );
+    return this.client.post<SubmitSwapSdexResponse>('/tx/swap-sdex/submit', req as unknown as Json);
   }
 
   /**

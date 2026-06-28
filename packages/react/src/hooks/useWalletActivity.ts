@@ -13,10 +13,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAccesly } from './useAccesly.js';
 import { ENVIRONMENT_DEFAULTS } from '../config.js';
-import {
-  subscribeToWalletEvent,
-  type WalletActivityItem,
-} from './walletSubscription.js';
+import { subscribeToWalletEvent, type WalletActivityItem } from './walletSubscription.js';
 
 const POLL_FALLBACK_MS = 25_000;
 const DEFAULT_LIMIT = 20;
@@ -48,9 +45,7 @@ export function useWalletActivity(
   const username = _internal.username;
   const limit = Math.min(opts.limit ?? DEFAULT_LIMIT, 50);
 
-  const [resolvedAddress, setResolvedAddress] = useState<string | null>(
-    walletAddress ?? null,
-  );
+  const [resolvedAddress, setResolvedAddress] = useState<string | null>(walletAddress ?? null);
   const [events, setEvents] = useState<readonly WalletActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -112,16 +107,11 @@ export function useWalletActivity(
       return undefined;
     }
 
-    const unsubscribe = subscribeToWalletEvent(
-      streamUrl,
-      resolvedAddress,
-      'activity',
-      (data) => {
-        setEvents(data.events.slice(0, limit));
-        setError(null);
-        setIsLoading(false);
-      },
-    );
+    const unsubscribe = subscribeToWalletEvent(streamUrl, resolvedAddress, 'activity', (data) => {
+      setEvents(data.events.slice(0, limit));
+      setError(null);
+      setIsLoading(false);
+    });
 
     if (unsubscribe) {
       void doFetchRef.current();

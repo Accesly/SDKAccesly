@@ -243,14 +243,12 @@ function usernameFromIdToken(idToken: string): string {
   if (parts.length !== 3) throw new Error('id_token is not a valid JWT (no 3 parts)');
   const payloadB64 = parts[1]!;
   // base64url → base64
-  const padded = payloadB64.replace(/-/g, '+').replace(/_/g, '/').padEnd(
-    Math.ceil(payloadB64.length / 4) * 4,
-    '=',
-  );
+  const padded = payloadB64
+    .replace(/-/g, '+')
+    .replace(/_/g, '/')
+    .padEnd(Math.ceil(payloadB64.length / 4) * 4, '=');
   const jsonStr =
-    typeof atob === 'function'
-      ? atob(padded)
-      : Buffer.from(padded, 'base64').toString('utf-8');
+    typeof atob === 'function' ? atob(padded) : Buffer.from(padded, 'base64').toString('utf-8');
   const claims = JSON.parse(jsonStr) as { email?: string; 'cognito:username'?: string };
   const username = claims.email ?? claims['cognito:username'];
   if (!username || typeof username !== 'string') {

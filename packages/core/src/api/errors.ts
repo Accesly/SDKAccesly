@@ -49,6 +49,44 @@ export class ValidationError extends AccesslyApiError {
   }
 }
 
+/**
+ * 409 with code `WALLET_NOT_ENROLLED` — the wallet does not have the
+ * `biometric-tx` context rule for the asset the caller is trying to use.
+ *
+ * The SDK auto-handles this by calling `wallet.activateAsset(asset)` and
+ * retrying the original operation. Callers don't normally see this error
+ * surface to the UI; it's only thrown if the auto-retry itself fails (e.g.
+ * the unlock-for-signing material expired, or the backend rejected the
+ * activate). See `withAutoEnroll` in the React hook.
+ */
+export class WalletNotEnrolledError extends AccesslyApiError {
+  readonly asset: 'XLM' | 'USDC';
+
+  constructor(message: string, opts: AccesslyApiErrorOptions & { asset: 'XLM' | 'USDC' }) {
+    super(message, opts);
+    this.name = 'WalletNotEnrolledError';
+    this.asset = opts.asset;
+  }
+}
+
+/**
+ * 409 with code `G_NOT_BOOTSTRAPPED` — the user's G-address bridge (classic
+ * Stellar account derived from the same owner ed25519) has not been created
+ * on-chain yet. Flows that need the G as helper (swap-sdex, sweep, fiat
+ * onramp/KYC) tell the SDK to call `wallet.bootstrapG()` first.
+ *
+ * The React adapter auto-handles this for `tx.swapViaSdex` and
+ * `wallet.sweepGToSA` (both receive the unlocked material). For `fiat.*` and
+ * `kyc.*` the caller still has to bootstrap explicitly because those methods
+ * don't take key material.
+ */
+export class GAddressNotBootstrappedError extends AccesslyApiError {
+  constructor(message: string, opts: AccesslyApiErrorOptions) {
+    super(message, opts);
+    this.name = 'GAddressNotBootstrappedError';
+  }
+}
+
 /** 404 — resource does not exist. */
 export class NotFoundError extends AccesslyApiError {
   constructor(message: string, opts: AccesslyApiErrorOptions) {
@@ -96,7 +134,8 @@ export function errorForResponse(
   requestId: string | undefined,
 ): AccesslyApiError {
   const message = extractMessage(body) ?? `HTTP ${status}`;
-  const opts: AccesslyApiErrorOptions = { status, code: extractCode(body), requestId };
+  const code = extractCode(body);
+  const opts: AccesslyApiErrorOptions = { status, code, requestId };
   if (status === 401 || status === 403) return new AuthError(message, opts);
   if (status === 404) return new NotFoundError(message, opts);
   if (status === 429) {
@@ -104,6 +143,13 @@ export function errorForResponse(
       ...opts,
       retryAfterSeconds: extractRetryAfter(body),
     });
+  }
+  if (status === 409 && code === 'WALLET_NOT_ENROLLED') {
+    const asset = extractAsset(body);
+    if (asset) return new WalletNotEnrolledError(message, { ...opts, asset });
+  }
+  if (status === 409 && code === 'G_NOT_BOOTSTRAPPED') {
+    return new GAddressNotBootstrappedError(message, opts);
   }
   if (status >= 400 && status < 500) return new ValidationError(message, opts);
   if (status >= 500) return new ServerError(message, opts);
@@ -131,6 +177,14 @@ function extractRetryAfter(body: unknown): number | undefined {
   if (body && typeof body === 'object') {
     const b = body as { retryAfter?: unknown };
     if (typeof b.retryAfter === 'number' && b.retryAfter >= 0) return b.retryAfter;
+  }
+  return undefined;
+}
+
+function extractAsset(body: unknown): 'XLM' | 'USDC' | undefined {
+  if (body && typeof body === 'object') {
+    const b = body as { asset?: unknown };
+    if (b.asset === 'XLM' || b.asset === 'USDC') return b.asset;
   }
   return undefined;
 }

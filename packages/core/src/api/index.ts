@@ -18,11 +18,13 @@ export { AccesslyEndpoints } from './endpoints.js';
 export {
   AccesslyApiError,
   AuthError,
+  GAddressNotBootstrappedError,
   NetworkError,
   NotFoundError,
   RateLimitError,
   ServerError,
   ValidationError,
+  WalletNotEnrolledError,
   errorForResponse,
   type AccesslyApiErrorOptions,
 } from './errors.js';

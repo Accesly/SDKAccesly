@@ -32,6 +32,8 @@ import {
   unlockPasskey,
   unwrapSessionFragment2,
   zeroize,
+  GAddressNotBootstrappedError,
+  WalletNotEnrolledError,
   type ActivatableAsset,
   type AuthStatus,
   type CredentialRecord,
@@ -761,10 +763,7 @@ export interface FiatNamespace {
    */
   submitOnramp(input: { quoteId: string }): Promise<OrderResponse>;
   /** Cotiza offramp USDC→MXN contra una bank account ya registrada. */
-  quoteOfframp(input: {
-    amountUsdc: string;
-    bankAccountId: string;
-  }): Promise<OrderResponse>;
+  quoteOfframp(input: { amountUsdc: string; bankAccountId: string }): Promise<OrderResponse>;
   /** Ejecuta el offramp (USDC sale del SA, MXN llega a la CLABE registrada). */
   submitOfframp(input: { quoteId: string }): Promise<OrderResponse>;
 }
@@ -1170,6 +1169,68 @@ export function useAccesly(): AcceslyHook {
         funded,
         alreadyFunded,
         reason: funded ? 'funded-now' : 'already-funded',
+      };
+    };
+
+    /**
+     * Crea la G-address bridge classic del user on-chain. Expuesta como
+     * `wallet.bootstrapG` y usada internamente por `wallet.sweepGToSA` para
+     * auto-recovery cuando la G no existe todavía.
+     */
+    const doBootstrapG = async (input: BootstrapGInput): Promise<BootstrapGResult> => {
+      const networkPassphrase = stellarConfig.networkPassphrase;
+
+      // 1. Backend simulate — deriva G, chequea si ya está on-chain.
+      const sim = await ctx.endpoints.bootstrapGSimulate();
+      if (sim.alreadyBootstrapped) {
+        return {
+          gAddress: sim.gAddress,
+          alreadyBootstrapped: true,
+          txHash: null,
+        };
+      }
+      if (!sim.unsignedXdr) {
+        throw new Error(
+          'wallet.bootstrapG: backend did not return unsignedXdr but alreadyBootstrapped=false',
+        );
+      }
+
+      // 2-4. Mismo flow ECDH + Shamir + reconstruct que tx.send.
+      const ephemeral = generateX25519Keypair();
+      const wrappedF2 = await ctx.endpoints.getFragment2({
+        clientEphemeralPubkey: base64FromBytes(ephemeral.publicKey),
+      });
+      const sessionPlaintext = unwrapSessionFragment2(wrappedF2, ephemeral.privateKey).plaintext;
+      const fragmentF2Wire = JSON.parse(new TextDecoder().decode(sessionPlaintext)) as {
+        ciphertext: string;
+        nonce: string;
+        algo: string;
+      };
+      const fragmentF2Envelope: EncryptedEnvelope = {
+        nonce: base64ToBytes(fragmentF2Wire.nonce),
+        ciphertext: base64ToBytes(fragmentF2Wire.ciphertext),
+      };
+      const reconstructed = reconstructFromPlainAndEncrypted({
+        fragmentF1Plain: input.fragmentF1Plain,
+        fragmentF2: { envelope: fragmentF2Envelope, key: input.fragmentF2Key },
+      });
+
+      // 5. Firma la tx classic con la seed (= la del G-address).
+      const { signedXdr } = await coreSignTransaction({
+        transactionXdr: sim.unsignedXdr,
+        ed25519Seed: reconstructed.privateSeed,
+        networkPassphrase,
+      });
+
+      // 6. Submit — backend agrega KMS sponsor sig + manda a Horizon.
+      const submit = await ctx.endpoints.bootstrapGSubmit({
+        userSignedXdr: signedXdr,
+      });
+
+      return {
+        gAddress: submit.gAddress,
+        alreadyBootstrapped: false,
+        txHash: submit.txHash,
       };
     };
 
@@ -1585,70 +1646,23 @@ export function useAccesly(): AcceslyHook {
         }
       },
 
-      async bootstrapG(input) {
-        const networkPassphrase = stellarConfig.networkPassphrase;
-
-        // 1. Backend simulate — deriva G, chequea si ya está on-chain.
-        const sim = await ctx.endpoints.bootstrapGSimulate();
-        if (sim.alreadyBootstrapped) {
-          return {
-            gAddress: sim.gAddress,
-            alreadyBootstrapped: true,
-            txHash: null,
-          };
-        }
-        if (!sim.unsignedXdr) {
-          throw new Error(
-            'wallet.bootstrapG: backend did not return unsignedXdr but alreadyBootstrapped=false',
-          );
-        }
-
-        // 2-4. Mismo flow ECDH + Shamir + reconstruct que tx.send.
-        const ephemeral = generateX25519Keypair();
-        const wrappedF2 = await ctx.endpoints.getFragment2({
-          clientEphemeralPubkey: base64FromBytes(ephemeral.publicKey),
-        });
-        const sessionPlaintext = unwrapSessionFragment2(wrappedF2, ephemeral.privateKey).plaintext;
-        const fragmentF2Wire = JSON.parse(new TextDecoder().decode(sessionPlaintext)) as {
-          ciphertext: string;
-          nonce: string;
-          algo: string;
-        };
-        const fragmentF2Envelope: EncryptedEnvelope = {
-          nonce: base64ToBytes(fragmentF2Wire.nonce),
-          ciphertext: base64ToBytes(fragmentF2Wire.ciphertext),
-        };
-        const reconstructed = reconstructFromPlainAndEncrypted({
-          fragmentF1Plain: input.fragmentF1Plain,
-          fragmentF2: { envelope: fragmentF2Envelope, key: input.fragmentF2Key },
-        });
-
-        // 5. Firma la tx classic con la seed (= la del G-address).
-        // Sin expectedPublicKey — el check defensivo es overkill cuando
-        // Stellar/Horizon valida la firma on-chain de todas formas.
-        const { signedXdr } = await coreSignTransaction({
-          transactionXdr: sim.unsignedXdr,
-          ed25519Seed: reconstructed.privateSeed,
-          networkPassphrase,
-        });
-
-        // 6. Submit — backend agrega KMS sponsor sig + manda a Horizon.
-        const submit = await ctx.endpoints.bootstrapGSubmit({
-          userSignedXdr: signedXdr,
-        });
-
-        return {
-          gAddress: submit.gAddress,
-          alreadyBootstrapped: false,
-          txHash: submit.txHash,
-        };
-      },
+      bootstrapG: doBootstrapG,
 
       async sweepGToSA(input) {
         const networkPassphrase = stellarConfig.networkPassphrase;
 
         // 1. Backend simulate — lee balance USDC en Horizon. Si > 0, arma tx.
-        const sim = await ctx.endpoints.sweepGSimulate();
+        //    Auto-bootstrap G si el backend reporta que aún no existe (el
+        //    sweep no tiene sentido sin G). Reusa el mismo `material` ya
+        //    unlocked — UN solo passkey prompt cubre bootstrap + sweep.
+        let sim;
+        try {
+          sim = await ctx.endpoints.sweepGSimulate();
+        } catch (err) {
+          if (!(err instanceof GAddressNotBootstrappedError)) throw err;
+          await doBootstrapG(input);
+          sim = await ctx.endpoints.sweepGSimulate();
+        }
         if (sim.alreadyEmpty) {
           return {
             alreadyEmpty: true,
@@ -1816,8 +1830,7 @@ export function useAccesly(): AcceslyHook {
         }
 
         const challenge = getRandomBytes(32);
-        const rpId =
-          typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+        const rpId = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
         const unlock = await unlockPasskey({
           rpId,
           credentialId: record.credentialId,
@@ -1838,12 +1851,7 @@ export function useAccesly(): AcceslyHook {
         // encryptionSalt, así que este path solo aplica a wallets viejas.
         const salt = record.encryptionSalt ?? record.prfSalt;
         const enc = new TextEncoder();
-        const f1Key = hkdfSha256(
-          unlock.prfOutput,
-          salt,
-          enc.encode('accesly-f1-encryption'),
-          32,
-        );
+        const f1Key = hkdfSha256(unlock.prfOutput, salt, enc.encode('accesly-f1-encryption'), 32);
         const fragmentF2Key = hkdfSha256(
           unlock.prfOutput,
           salt,
@@ -1870,8 +1878,73 @@ export function useAccesly(): AcceslyHook {
     };
   }, [ctx, hexFromBytes, stellarConfig]);
 
-  const tx = useMemo<TxNamespace>(
-    () => ({
+  const tx = useMemo<TxNamespace>(() => {
+    /**
+     * Auto-enroll wrapper: si la primera llamada al backend tira
+     * `WalletNotEnrolledError`, dispara `wallet.activateAsset(err.asset)`
+     * usando el mismo `material` ya unlocked (sin re-prompt de passkey),
+     * y reintenta la llamada original.
+     *
+     * Reusa la firma del owner contra la rule `admin-cfg` — premisa
+     * no-custodial intacta. El user ve 0 prompts extra; el activate ocurre
+     * en background dentro del mismo flujo de send/swap.
+     */
+    async function withAutoEnroll<T>(
+      material: {
+        readonly fragmentF1Plain: Uint8Array;
+        readonly fragmentF2Key: Uint8Array;
+        readonly ownerPubkey: Uint8Array;
+      },
+      op: () => Promise<T>,
+    ): Promise<T> {
+      try {
+        return await op();
+      } catch (err) {
+        if (!(err instanceof WalletNotEnrolledError)) throw err;
+        await wallet.activateAsset({
+          asset: err.asset,
+          fragmentF1Plain: material.fragmentF1Plain,
+          fragmentF2Key: material.fragmentF2Key,
+          ownerPubkey: material.ownerPubkey,
+        });
+        return await op();
+      }
+    }
+
+    /**
+     * Auto-bootstrap-G wrapper: si la primera llamada al backend tira
+     * `GAddressNotBootstrappedError`, dispara `wallet.bootstrapG()` con el
+     * mismo `material` ya unlocked y reintenta la operación original.
+     *
+     * Aplica a flujos que usan la G classic como helper (swap-sdex). El user
+     * paga ~10s extra en el primer uso (sponsor + ChangeTrust + end-sponsoring),
+     * pero ve UN solo passkey prompt.
+     *
+     * No-custodia intacta: bootstrapG firma ChangeTrust + EndSponsoring con la
+     * seed reconstruida client-side, igual que swap o send.
+     */
+    async function withAutoBootstrapG<T>(
+      material: {
+        readonly fragmentF1Plain: Uint8Array;
+        readonly fragmentF2Key: Uint8Array;
+        readonly ownerPubkey: Uint8Array;
+      },
+      op: () => Promise<T>,
+    ): Promise<T> {
+      try {
+        return await op();
+      } catch (err) {
+        if (!(err instanceof GAddressNotBootstrappedError)) throw err;
+        await wallet.bootstrapG({
+          fragmentF1Plain: material.fragmentF1Plain,
+          fragmentF2Key: material.fragmentF2Key,
+          ownerPubkey: material.ownerPubkey,
+        });
+        return await op();
+      }
+    }
+
+    return {
       async send(input) {
         const networkPassphrase = stellarConfig.networkPassphrase;
         const verifierAddress = stellarConfig.ed25519VerifierAddress;
@@ -1882,11 +1955,16 @@ export function useAccesly(): AcceslyHook {
 
         // 1. Backend simulate → returns the placeholder envelope + payload to sign.
         //    `asset` default 'XLM' para backwards compat con apps que no migraron a 1.4.
-        const sim = await ctx.endpoints.simulateTx({
-          amountStroops: input.amountStroops,
-          destinationAddress: input.destinationAddress,
-          ...(input.asset ? { asset: input.asset } : {}),
-        });
+        //    Auto-enroll: si la wallet no tiene la rule biometric-tx del asset,
+        //    el backend devuelve 409 WALLET_NOT_ENROLLED; el wrapper dispara
+        //    activateAsset(asset) y reintenta — transparente al caller.
+        const sim = await withAutoEnroll(input, () =>
+          ctx.endpoints.simulateTx({
+            amountStroops: input.amountStroops,
+            destinationAddress: input.destinationAddress,
+            ...(input.asset ? { asset: input.asset } : {}),
+          }),
+        );
 
         // 2. ECDH key exchange → backend re-wraps F2 with a per-request key.
         const ephemeral = generateX25519Keypair();
@@ -1984,12 +2062,15 @@ export function useAccesly(): AcceslyHook {
             : 'https://stellar.expert/explorer/testnet/tx/';
 
         // 1. Backend simulate (hits Soroswap /quote + /quote/build internamente).
-        const sim = await ctx.endpoints.swapSimulate({
-          fromAsset: input.fromAsset,
-          toAsset: input.toAsset,
-          amountIn: input.amountIn,
-          ...(input.slippageBps !== undefined ? { slippageBps: input.slippageBps } : {}),
-        });
+        //    Auto-enroll si la wallet no tiene la rule biometric-tx del fromAsset.
+        const sim = await withAutoEnroll(input, () =>
+          ctx.endpoints.swapSimulate({
+            fromAsset: input.fromAsset,
+            toAsset: input.toAsset,
+            amountIn: input.amountIn,
+            ...(input.slippageBps !== undefined ? { slippageBps: input.slippageBps } : {}),
+          }),
+        );
 
         // 2-4. Mismo flow ECDH + Shamir + reconstruct que tx.send.
         const ephemeral = generateX25519Keypair();
@@ -2045,12 +2126,20 @@ export function useAccesly(): AcceslyHook {
 
         // 1. Simulate — backend cotiza SDEX y arma las 3 txs (tx1 SA→G,
         //    tx2 PathPayment classic G→G, tx3 SAC.transfer G→SA).
-        const sim = await ctx.endpoints.swapSdexSimulate({
-          fromAsset: input.fromAsset,
-          toAsset: input.toAsset,
-          amountIn: input.amountIn,
-          ...(input.slippageBps !== undefined ? { slippageBps: input.slippageBps } : {}),
-        });
+        //    Doble auto-recover: si falta la rule biometric-tx del fromAsset
+        //    (WalletNotEnrolledError) o la G no está creada
+        //    (GAddressNotBootstrappedError), el SDK resuelve la pre-condición
+        //    y reintenta. El user ve un solo prompt de passkey.
+        const sim = await withAutoBootstrapG(input, () =>
+          withAutoEnroll(input, () =>
+            ctx.endpoints.swapSdexSimulate({
+              fromAsset: input.fromAsset,
+              toAsset: input.toAsset,
+              amountIn: input.amountIn,
+              ...(input.slippageBps !== undefined ? { slippageBps: input.slippageBps } : {}),
+            }),
+          ),
+        );
 
         // 2-4. Reconstruct seed (Shamir F1+F2). El SDK firma todo en una pasada.
         const ephemeral = generateX25519Keypair();
@@ -2081,8 +2170,6 @@ export function useAccesly(): AcceslyHook {
         // Si pasáramos `reconstructed.privateSeed` directo, la 2da y 3ra
         // firma derivarían pubkey de seed-cero → error
         // "derived public key does not match expectedPublicKey".
-        // eslint-disable-next-line no-console
-        console.log('[accesly/swapViaSdex] version 1.13.5 — check eliminated in core');
         const seedCopy1 = new Uint8Array(reconstructed.privateSeed);
         const { signedAuthEntryXdr } = await signSorobanAuthEntry({
           signaturePayloadHashBase64: sim.tx1.signaturePayloadHashBase64,
@@ -2160,9 +2247,8 @@ export function useAccesly(): AcceslyHook {
           },
         };
       },
-    }),
-    [ctx, stellarConfig],
-  );
+    };
+  }, [ctx, stellarConfig, wallet]);
 
   const kyc = useMemo<KycNamespace>(
     () => ({
@@ -2177,72 +2263,69 @@ export function useAccesly(): AcceslyHook {
   );
 
   // ── Fiat (Etherfuse onramp/offramp/bank-accounts) ─────────────────────────
-  const fiat = useMemo<FiatNamespace>(
-    () => {
-      const c = ctx;
-      // Resuelve walletAddress del DeviceStore o tira con mensaje claro.
-      async function resolveWalletAddress(): Promise<string> {
-        if (!c.username) throw new Error('fiat: no authenticated user');
-        const stored = await c.deviceStore.loadCredential(c.username);
-        if (!stored?.walletAddress) {
-          throw new Error('fiat: no wallet for current user (run wallet.bootstrap first)');
-        }
-        return stored.walletAddress;
+  const fiat = useMemo<FiatNamespace>(() => {
+    const c = ctx;
+    // Resuelve walletAddress del DeviceStore o tira con mensaje claro.
+    async function resolveWalletAddress(): Promise<string> {
+      if (!c.username) throw new Error('fiat: no authenticated user');
+      const stored = await c.deviceStore.loadCredential(c.username);
+      if (!stored?.walletAddress) {
+        throw new Error('fiat: no wallet for current user (run wallet.bootstrap first)');
       }
+      return stored.walletAddress;
+    }
 
-      return {
-        async startKyc() {
-          return c.endpoints.kycStart();
-        },
-        async kycStatus() {
-          return c.endpoints.kycStatus();
-        },
-        async registerBankAccount(input) {
-          return c.endpoints.registerBankAccount(input);
-        },
-        async quoteOnramp(input) {
-          const walletAddress = await resolveWalletAddress();
-          return c.endpoints.onramp({
-            action: 'quote',
-            amount: input.amountMxn,
-            walletAddress,
-            appId: c.appId,
-          });
-        },
-        async submitOnramp(input) {
-          const walletAddress = await resolveWalletAddress();
-          return c.endpoints.onramp({
-            action: 'submit',
-            amount: '0', // ignorado en submit, el quote dicta
-            quoteId: input.quoteId,
-            walletAddress,
-            appId: c.appId,
-          });
-        },
-        async quoteOfframp(input) {
-          const walletAddress = await resolveWalletAddress();
-          return c.endpoints.offramp({
-            action: 'quote',
-            amount: input.amountUsdc,
-            bankAccountId: input.bankAccountId,
-            walletAddress,
-            appId: c.appId,
-          });
-        },
-        async submitOfframp(input) {
-          const walletAddress = await resolveWalletAddress();
-          return c.endpoints.offramp({
-            action: 'submit',
-            amount: '0',
-            quoteId: input.quoteId,
-            walletAddress,
-            appId: c.appId,
-          });
-        },
-      };
-    },
-    [ctx],
-  );
+    return {
+      async startKyc() {
+        return c.endpoints.kycStart();
+      },
+      async kycStatus() {
+        return c.endpoints.kycStatus();
+      },
+      async registerBankAccount(input) {
+        return c.endpoints.registerBankAccount(input);
+      },
+      async quoteOnramp(input) {
+        const walletAddress = await resolveWalletAddress();
+        return c.endpoints.onramp({
+          action: 'quote',
+          amount: input.amountMxn,
+          walletAddress,
+          appId: c.appId,
+        });
+      },
+      async submitOnramp(input) {
+        const walletAddress = await resolveWalletAddress();
+        return c.endpoints.onramp({
+          action: 'submit',
+          amount: '0', // ignorado en submit, el quote dicta
+          quoteId: input.quoteId,
+          walletAddress,
+          appId: c.appId,
+        });
+      },
+      async quoteOfframp(input) {
+        const walletAddress = await resolveWalletAddress();
+        return c.endpoints.offramp({
+          action: 'quote',
+          amount: input.amountUsdc,
+          bankAccountId: input.bankAccountId,
+          walletAddress,
+          appId: c.appId,
+        });
+      },
+      async submitOfframp(input) {
+        const walletAddress = await resolveWalletAddress();
+        return c.endpoints.offramp({
+          action: 'submit',
+          amount: '0',
+          quoteId: input.quoteId,
+          walletAddress,
+          appId: c.appId,
+        });
+      },
+    };
+  }, [ctx]);
 
   // ── Recovery v2 (Fase 1, 2026-06-15) ──────────────────────────────────────
   // Esta primera versión expone los wrappers thin de los 3 endpoints públicos

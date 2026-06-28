@@ -1,5 +1,37 @@
 # @accesly/core
 
+## 1.15.0
+
+### Minor Changes
+
+- feat(api): `endpoints.appConfig(appId)` — public GET `/app-config/{appId}` for the configuration the developer authored from `dev.accesly.xyz`. Returns the full `AppConfigResponse` shape (branding, auth providers, trustlines, wallet rollout, policies, webhooks, features). Cacheable 60s edge. Read by `useAppConfig` from `@accesly/react` and consumed at runtime by integrators to drive branding, supported assets, KYC policy, etc.
+- feat(types): full TypeScript surface for the appConfig schema v1 — `AppConfigResponse`, `AppConfigBranding`, `AppConfigAuth`, `AppConfigNetworks`, `AppConfigTrustline`, `AppConfigWallet`, `AppConfigPolicies`, `AppConfigWebhook`, `AppConfigFeatures` plus the supporting unions (`AppEnvironment`, `AuthProvider`, `TrustlineCode`, `RolloutStrategy`, `RolloutCohort`, `FeeStrategy`, `AppPlan`, `AppStatus`, `KycLevel`, `FiatOnrampMethod`). All optional fields are `readonly` so consumers can use them in derived `useMemo`.
+
+## 1.14.2
+
+### Patch Changes
+
+- feat(api): new `GAddressNotBootstrappedError extends AccesslyApiError`. Se construye cuando el backend devuelve 409 con `code: 'G_NOT_BOOTSTRAPPED'` — flows que usan la G-address bridge classic (swap-sdex, sweep, fiat) reportan así que el user aún no llamó `wallet.bootstrapG()`. El React adapter usa esta clase para auto-disparar bootstrap en `tx.swapViaSdex` y `wallet.sweepGToSA`. Para `fiat.*` y `kyc.*` (que no reciben material), el caller sigue siendo responsable de bootstrapear explícitamente.
+
+## 1.14.1
+
+### Patch Changes
+
+- feat(api): new `WalletNotEnrolledError extends AccesslyApiError` con campo `asset: 'XLM' | 'USDC'`. Se construye cuando el backend devuelve 409 con `code: 'WALLET_NOT_ENROLLED'` y `asset` en el body. Permite al React adapter detectar el caso de forma typada y reintentar tras `activateAsset(asset)` automáticamente (ver CHANGELOG de `@accesly/react`).
+- chore(api): `errorForResponse` ahora extrae `code` del body y mapea `WALLET_NOT_ENROLLED` antes del fallback genérico `ValidationError`. Backwards-compatible — callers que no usen `code` siguen viendo `ValidationError` para otros 409.
+
+## 1.14.0
+
+### Minor Changes
+
+- feat(wallet): `wallet.upgrade(targetVersion)` — Soroban contract upgrade del Smart Account preservando address, signers, context rules y balances. Firma admin-cfg con owner ed25519 (no-custodia intacta).
+- feat(auth): `auth.signInWithGoogle(redirectUri?)` + `auth.handleAuthCallback(code, redirectUri?)` — federated sign-in via Cognito Hosted UI.
+- feat(wallet): `activateAsset('XLM')` además de `'USDC'` — necesario para wallets cuyo constructor no instaló la rule biometric-tx de XLM (cap de byte-write Soroban en deploy).
+
+### Patch Changes
+
+- `signTransaction` ya no acepta `expectedPublicKey` (los falsos positivos contra CredentialRecords legados lo hacían inservible; backend valida la firma on-chain de todas formas).
+
 ## 1.0.0
 
 ### Minor Changes

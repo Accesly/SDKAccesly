@@ -165,7 +165,6 @@ export function useWalletStatus(): UseWalletStatusResult {
         document.removeEventListener('visibilitychange', onVisibilityChange);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username, streamUrl, walletAddress]);
 
   const refresh = useCallback(async () => {

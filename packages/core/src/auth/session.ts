@@ -67,10 +67,7 @@ export class LocalStorageSessionStorage implements SessionStorage {
       const raw = globalThis.localStorage?.getItem(this.key);
       if (!raw) return null;
       const parsed = JSON.parse(raw) as Partial<AuthTokens>;
-      if (
-        typeof parsed.idToken !== 'string' ||
-        typeof parsed.expiresAt !== 'number'
-      ) {
+      if (typeof parsed.idToken !== 'string' || typeof parsed.expiresAt !== 'number') {
         return null;
       }
       return parsed as AuthTokens;

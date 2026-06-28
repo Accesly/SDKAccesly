@@ -101,10 +101,7 @@ function localize(key: MessageKey, locale: FormatErrorLocale): string {
  *   try { await wallet.bootstrap({ email, password }); }
  *   catch (e) { setError(formatError(e)); }
  */
-export function formatError(
-  err: unknown,
-  opts: FormatErrorOptions = {},
-): string {
+export function formatError(err: unknown, opts: FormatErrorOptions = {}): string {
   const locale = opts.locale ?? 'es';
   const t = (k: MessageKey) => localize(k, locale);
 

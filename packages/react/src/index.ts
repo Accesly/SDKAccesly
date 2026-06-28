@@ -53,8 +53,13 @@ export {
   type YieldNamespace,
 } from './hooks/useAccesly.js';
 
-export { useWalletStatus, type UseWalletStatusResult, type WalletStatusValue } from './hooks/useWalletStatus.js';
+export {
+  useWalletStatus,
+  type UseWalletStatusResult,
+  type WalletStatusValue,
+} from './hooks/useWalletStatus.js';
 export { useBalance, type UseBalanceResult } from './hooks/useBalance.js';
+export { useAppConfig, type UseAppConfigResult } from './hooks/useAppConfig.js';
 export {
   useWalletActivity,
   type UseWalletActivityOptions,

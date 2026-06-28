@@ -31,15 +31,11 @@ export const XLM_DECIMALS = 7;
 export function xlmToStroops(xlm: string): string {
   const s = xlm.trim();
   if (!/^\d+(\.\d+)?$/.test(s)) {
-    throw new Error(
-      `xlmToStroops: invalid number "${xlm}" — expected positive decimal`,
-    );
+    throw new Error(`xlmToStroops: invalid number "${xlm}" — expected positive decimal`);
   }
   const [whole, frac = ''] = s.split('.');
   if (frac.length > XLM_DECIMALS) {
-    throw new Error(
-      `xlmToStroops: ${xlm} exceeds 7 decimals (1 stroop = 0.0000001 XLM)`,
-    );
+    throw new Error(`xlmToStroops: ${xlm} exceeds 7 decimals (1 stroop = 0.0000001 XLM)`);
   }
   const fracPadded = (frac + '0'.repeat(XLM_DECIMALS)).slice(0, XLM_DECIMALS);
   const combined = `${whole}${fracPadded}`.replace(/^0+(?=\d)/, '');
@@ -96,29 +92,20 @@ export function shortAddress(address: string, head = 6, tail = 4): string {
 /**
  * Link al explorer de Stellar Expert para un contrato (C-address) en la red dada.
  */
-export function walletExplorerUrl(
-  address: string,
-  network: StellarNetwork = 'testnet',
-): string {
+export function walletExplorerUrl(address: string, network: StellarNetwork = 'testnet'): string {
   return `https://stellar.expert/explorer/${network}/contract/${address}`;
 }
 
 /**
  * Link al explorer de Stellar Expert para una tx en la red dada.
  */
-export function txExplorerUrl(
-  txHash: string,
-  network: StellarNetwork = 'testnet',
-): string {
+export function txExplorerUrl(txHash: string, network: StellarNetwork = 'testnet'): string {
   return `https://stellar.expert/explorer/${network}/tx/${txHash}`;
 }
 
 /**
  * Link al explorer de Stellar Expert para una G-address clásica.
  */
-export function accountExplorerUrl(
-  address: string,
-  network: StellarNetwork = 'testnet',
-): string {
+export function accountExplorerUrl(address: string, network: StellarNetwork = 'testnet'): string {
   return `https://stellar.expert/explorer/${network}/account/${address}`;
 }

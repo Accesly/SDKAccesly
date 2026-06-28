@@ -49,9 +49,7 @@ export function useBalance(walletAddress?: string | null): UseBalanceResult {
   const { wallet, _internal } = useAccesly();
   const username = _internal.username;
 
-  const [resolvedAddress, setResolvedAddress] = useState<string | null>(
-    walletAddress ?? null,
-  );
+  const [resolvedAddress, setResolvedAddress] = useState<string | null>(walletAddress ?? null);
   const [stroops, setStroops] = useState<string | null>(null);
   const [xlm, setXlm] = useState<string | null>(null);
   const [usdc, setUsdc] = useState<string | null>(null);
