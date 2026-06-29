@@ -1,5 +1,18 @@
 # @accesly/react
 
+## 1.20.0
+
+### Minor Changes
+
+- feat(kit): nuevo subpath `@accesly/react/kit` con componentes prebuilt para los flujos del end-user. Todo se monta encima del `<AcceslyProvider>` y consume el appConfig + branding automáticamente.
+  - `<AuthForm>` — login / sign-up que respeta `useAuthProviders()` (email + google + phone). Maneja confirmación post-signup con OTP.
+  - `<BalanceCard>` — saldo grande con primary asset (USDC default), secondary asset abajo, branding aplicado vía CSS variables.
+  - `<MovementsList>` — feed de actividad de la wallet usando `useWalletActivity` (SSE + fallback). Devuelve `transfer-in/transfer-out/signer-rotated/wallet-created` con íconos + tiempo relativo.
+  - `<ReceiveFlow>` — QR + wallet address + copy button. Permite override de `renderQr` para apps que prefieren su propia librería.
+  - `<SendFlow>` — wizard con form → policy check (`checkTransferPolicy`) → passkey unlock → `tx.send` → success. Bloquea blacklist + per-tx cap antes de pegarle al backend.
+  - `<AddFundsFlow>` — onramp MXN→USDC vía Etherfuse SPEI. Gate por KYC si el dev lo habilitó (`useKycPolicy`).
+  - `<WalletHome>` — bundle del mockup: balance + 3 acciones + upgrade banner + movements. Compone los anteriores en un layout único.
+
 ## 1.19.0
 
 ### Minor Changes
