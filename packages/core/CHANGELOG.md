@@ -1,5 +1,11 @@
 # @accesly/core
 
+## 1.20.0
+
+### Minor Changes
+
+- feat(api): `AcceslyRestClient` — cliente server-to-server para los endpoints `/v1/*` del RestApi stack (Fase 11). Usa `X-Accesly-Api-Key` header. Métodos: `getWallet(address)`, `getTransactions(address)`, `testWebhook(input)`. Diseñado para Node 18+, Bun, edge runtimes — recibe `fetch` override + `timeoutMs`. Lanza `AcceslyRestError` con `status` + `code` machine-readable.
+
 ## 1.19.0
 
 ### Minor Changes

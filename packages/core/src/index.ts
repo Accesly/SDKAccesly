@@ -88,6 +88,15 @@ export { formatError, type FormatErrorLocale, type FormatErrorOptions } from './
 export type { ContactInput, ContactRecord } from './api/endpoints.js';
 
 export {
+  AcceslyRestClient,
+  AcceslyRestError,
+  type AcceslyRestClientOptions,
+  type ServerTransactionsResponse,
+  type ServerWalletInfo,
+  type TestWebhookInput,
+} from './api/rest-client.js';
+
+export {
   AccesslyApiClient,
   AccesslyApiError,
   AccesslyEndpoints,
