@@ -53,3 +53,4 @@ docs/
 # Smoke test artifacts
 .smoke-test-results/
 .gstack/
+packages/react/*.tgz
