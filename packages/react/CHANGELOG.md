@@ -1,5 +1,11 @@
 # @accesly/react
 
+## 1.19.0
+
+### Minor Changes
+
+- feat(hooks): `useStatus()` — reads the public `GET /status` endpoint and returns `{ status: 'ok' | 'warn' | 'down', checks: [{ service, status, latencyMs, detail }], checkedAt, tookMs }`. Refreshes every 30s. The endpoint pings 6 services (Accesly API, Soroban RPC testnet/mainnet, Etherfuse, Amazon SES, Channels-fund) and aggregates. Pre-login safe — the developer dashboard uses it for the Status page, but apps can also surface a "degraded mode" banner when Soroban RPC is down.
+
 ## 1.18.0
 
 ### Minor Changes

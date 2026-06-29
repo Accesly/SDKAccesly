@@ -77,6 +77,13 @@ export {
   type UseUpgradeRecommendationResult,
 } from './hooks/useUpgradeRecommendation.js';
 export {
+  useStatus,
+  type PlatformStatus,
+  type ServiceCheck,
+  type StatusHealth,
+  type UseStatusResult,
+} from './hooks/useStatus.js';
+export {
   useWalletActivity,
   type UseWalletActivityOptions,
   type UseWalletActivityResult,
