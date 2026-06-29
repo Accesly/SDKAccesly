@@ -1,5 +1,12 @@
 # @accesly/react
 
+## 1.20.1
+
+### Patch Changes
+
+- feat(kit): `<AddFundsFlow>` ahora lee `appConfig.features.fiatOnramp.methods` y pinta un picker entre SPEI / Card / OXXO cuando hay más de un método habilitado. Si solo hay uno, se salta el picker directo a la pantalla de monto. La pantalla de instrucciones cambia el header según el método (transferencia SPEI / checkout / pago OXXO).
+- chore(kit): tests con `happy-dom` cubriendo `AuthForm` (render condicional según providers + signIn con valores del form), `BalanceCard` (renderiza primary asset configurable), `MovementsList` (empty state + override) y `ReceiveFlow` (renderQr override). 9 specs en `tests/kit.test.tsx`.
+
 ## 1.20.0
 
 ### Minor Changes

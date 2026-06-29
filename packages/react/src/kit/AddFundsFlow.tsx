@@ -1,38 +1,83 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { useAccesly } from '../hooks/useAccesly.js';
+import { useAppConfig } from '../hooks/useAppConfig.js';
 import { useKycPolicy } from '../hooks/usePolicies.js';
 
 /**
- * `<AddFundsFlow>` — wizard de fondeo MXN → USDC vía Etherfuse SPEI.
+ * `<AddFundsFlow>` — wizard de fondeo MXN → USDC.
  *
  * Pasos:
- *   1) Si KYC habilitado en el appConfig y `requiredFor.includes('onramp')`:
- *      pinta status + ofrece abrir el hosted form (Etherfuse). Bloquea hasta
- *      KYC OK.
- *   2) Form de monto MXN → `fiat.quoteOnramp` → muestra `amountUsdc` + fxRate.
- *   3) `fiat.submitOnramp` → muestra los datos SPEI que el user debe transferir
- *      (CLABE + concepto + beneficiario).
+ *   1) Picker del método de pago: SPEI / Card / OXXO. Los métodos visibles
+ *      vienen de `appConfig.features.fiatOnramp.methods` que el dev edita en
+ *      el dashboard. Si solo hay uno, se salta el picker.
+ *   2) Si KYC habilitado y `requiredFor.includes('onramp')`: pinta status +
+ *      ofrece abrir el hosted form (Etherfuse). Bloquea hasta KYC OK.
+ *   3) Form de monto MXN → `fiat.quoteOnramp` → muestra `amountUsdc` + fxRate.
+ *   4) `fiat.submitOnramp` → muestra las instrucciones de pago (CLABE para
+ *      SPEI, link a checkout para Card, código de pago para OXXO).
  *
- * Para card / OXXO el flow es similar pero por ahora solo SPEI está implementado
- * (siguiendo el mockup `sSpei`).
+ * Card y OXXO usan el mismo backend `submitOnramp` por ahora — el routing
+ * por método queda en el backend Etherfuse. La UI ya respeta el toggle del
+ * dev para mostrar/ocultar la opción.
  */
+export type FiatMethod = 'spei' | 'card' | 'oxxo';
+
 export interface AddFundsFlowProps {
   readonly onSuccess?: () => void;
   readonly onCancel?: () => void;
   readonly className?: string;
+  /** Override del método pre-seleccionado. Si se omite, se pinta el picker. */
+  readonly defaultMethod?: FiatMethod;
 }
 
-type Step = 'kyc' | 'amount' | 'quote' | 'instructions' | 'error';
+type Step = 'pickMethod' | 'kyc' | 'amount' | 'quote' | 'instructions' | 'error';
+
+const METHOD_LABEL: Record<FiatMethod, string> = {
+  spei: 'SPEI',
+  card: 'Tarjeta',
+  oxxo: 'OXXO',
+};
+
+const METHOD_BLURB: Record<FiatMethod, string> = {
+  spei: 'Transferencia bancaria, &lt;10 min',
+  card: 'Débito o crédito, inmediato',
+  oxxo: 'Pago en efectivo, hasta 24 h',
+};
+
+const METHOD_ICON: Record<FiatMethod, string> = {
+  spei: '⚡',
+  card: '💳',
+  oxxo: '🏪',
+};
 
 export function AddFundsFlow(props: AddFundsFlowProps): JSX.Element {
   const { fiat } = useAccesly();
   const kycPolicy = useKycPolicy();
+  const { config } = useAppConfig();
+
+  const enabledMethods = useMemo<ReadonlyArray<FiatMethod>>(() => {
+    const f = config?.features?.fiatOnramp;
+    if (!f?.enabled) return ['spei']; // safe default
+    const methods = (f.methods ?? ['spei']) as ReadonlyArray<FiatMethod>;
+    return methods.length > 0 ? methods : ['spei'];
+  }, [config]);
 
   const requiresKyc = kycPolicy.enabled && kycPolicy.requiredFor.includes('onramp');
 
-  const [step, setStep] = useState<Step>(requiresKyc ? 'kyc' : 'amount');
+  // Pre-seleccionar: prop > único método disponible > picker
+  const initialMethod: FiatMethod | null =
+    props.defaultMethod && enabledMethods.includes(props.defaultMethod)
+      ? props.defaultMethod
+      : enabledMethods.length === 1
+      ? enabledMethods[0]!
+      : null;
+
+  const [method, setMethod] = useState<FiatMethod | null>(initialMethod);
+  const [step, setStep] = useState<Step>(
+    initialMethod ? (requiresKyc ? 'kyc' : 'amount') : 'pickMethod',
+  );
   const [kycStatus, setKycStatus] = useState<string | null>(null);
   const [kycUrl, setKycUrl] = useState<string | null>(null);
   const [amountMxn, setAmountMxn] = useState('');
@@ -104,8 +149,42 @@ export function AddFundsFlow(props: AddFundsFlowProps): JSX.Element {
     <div className={props.className ?? 'w-full max-w-sm space-y-4'}>
       <header>
         <h2 className="text-lg font-semibold">Agregar fondos</h2>
-        <p className="text-sm text-neutral-500 mt-1">SPEI mexicano → USDC en tu wallet</p>
+        <p className="text-sm text-neutral-500 mt-1">
+          {method ? `${METHOD_LABEL[method]} → USDC en tu wallet` : 'Elige un método'}
+        </p>
       </header>
+
+      {step === 'pickMethod' && (
+        <div className="space-y-2">
+          {enabledMethods.map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => {
+                setMethod(m);
+                setStep(requiresKyc ? 'kyc' : 'amount');
+              }}
+              className="w-full flex items-center gap-3 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 text-left"
+            >
+              <span className="text-2xl">{METHOD_ICON[m]}</span>
+              <div className="flex-1">
+                <div className="font-medium">{METHOD_LABEL[m]}</div>
+                <div className="text-xs text-neutral-500" dangerouslySetInnerHTML={{ __html: METHOD_BLURB[m] }} />
+              </div>
+              <span className="text-neutral-300">→</span>
+            </button>
+          ))}
+          {props.onCancel && (
+            <button
+              type="button"
+              onClick={props.onCancel}
+              className="w-full py-3 text-sm text-neutral-500"
+            >
+              Cancelar
+            </button>
+          )}
+        </div>
+      )}
 
       {step === 'kyc' && (
         <div className="space-y-3">
@@ -200,7 +279,13 @@ export function AddFundsFlow(props: AddFundsFlowProps): JSX.Element {
       {step === 'instructions' && order && (
         <div className="space-y-3">
           <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 space-y-2 text-sm">
-            <p className="font-medium">Transfiere por SPEI</p>
+            <p className="font-medium">
+              {method === 'card'
+                ? 'Sigue el checkout'
+                : method === 'oxxo'
+                ? 'Paga en OXXO'
+                : 'Transfiere por SPEI'}
+            </p>
             <div className="text-xs text-neutral-500 space-y-1">
               {Object.entries(order)
                 .filter(([k, v]) => typeof v !== 'object' && v !== null && v !== undefined)
