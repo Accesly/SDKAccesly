@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAccesly } from '../hooks/useAccesly.js';
 import { useBranding } from '../hooks/useBranding.js';
+import { HandleShareCard } from './HandleShareCard.js';
 
 /**
  * `<ReceiveFlow>` — pantalla de "Recibir", con QR del wallet address
@@ -82,6 +83,8 @@ export function ReceiveFlow(props: ReceiveFlowProps): JSX.Element {
           Comparte tu dirección — solo {branding.displayName ?? 'esta app'} sabe interpretarla.
         </p>
       </header>
+
+      <HandleShareCard walletAddress={resolved} />
 
       <div className="flex justify-center">{qr ?? <div className="w-60 h-60 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse" />}</div>
 

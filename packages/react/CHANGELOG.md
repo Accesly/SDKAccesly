@@ -1,5 +1,15 @@
 # @accesly/react
 
+## 1.21.0
+
+### Minor Changes
+
+- feat(hooks): `useContacts()` — CRUD del address book del end-user (`add` / `remove` / `refresh`). Cache local con updates optimistas. Backed por `GET/POST/DELETE /contacts` (Cognito-auth).
+- feat(hooks): `useHandle()` — devuelve el handle de la wallet actual (vía `GET /handles/by-wallet/{walletAddress}` público + cacheable) y expone `reserve(handle)` para reservar uno nuevo. Lanza error tagged 409 si el handle ya está tomado.
+- feat(kit): `<ContactPicker>` — picker compacto de contactos con avatares hashed, embebible en `<SendFlow>`. Filtro por substring opcional.
+- feat(kit): `<HandleShareCard>` — UI auto-detect: si el wallet tiene handle muestra `@handle` + botón copiar; si no, ofrece input para reservar uno. Se auto-oculta si el dev desactivó `features.handles`. Integrado por default en `<ReceiveFlow>`.
+- feat(kit): `<SendFlow>` ahora acepta `@handle` en el campo destino. Resuelve vía `endpoints.resolveHandle` antes de validar policy / firmar. ContactPicker pinta arriba del input para tap-to-fill.
+
 ## 1.20.1
 
 ### Patch Changes

@@ -83,6 +83,9 @@ export {
   type StatusHealth,
   type UseStatusResult,
 } from './hooks/useStatus.js';
+export { useContacts, type UseContactsResult } from './hooks/useContacts.js';
+export { useHandle, type UseHandleResult } from './hooks/useHandle.js';
+export type { ContactInput, ContactRecord } from '@accesly/core';
 export {
   useWalletActivity,
   type UseWalletActivityOptions,

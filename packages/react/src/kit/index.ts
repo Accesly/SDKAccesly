@@ -27,5 +27,7 @@ export { BalanceCard, type BalanceCardProps } from './BalanceCard.js';
 export { MovementsList, type MovementsListProps } from './MovementsList.js';
 export { ReceiveFlow, type ReceiveFlowProps } from './ReceiveFlow.js';
 export { SendFlow, type SendFlowProps } from './SendFlow.js';
-export { AddFundsFlow, type AddFundsFlowProps } from './AddFundsFlow.js';
+export { AddFundsFlow, type AddFundsFlowProps, type FiatMethod } from './AddFundsFlow.js';
 export { WalletHome, type WalletHomeProps } from './WalletHome.js';
+export { ContactPicker, type ContactPickerProps } from './ContactPicker.js';
+export { HandleShareCard, type HandleShareCardProps } from './HandleShareCard.js';

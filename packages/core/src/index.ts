@@ -85,6 +85,8 @@ export {
 
 export { formatError, type FormatErrorLocale, type FormatErrorOptions } from './errors/index.js';
 
+export type { ContactInput, ContactRecord } from './api/endpoints.js';
+
 export {
   AccesslyApiClient,
   AccesslyApiError,

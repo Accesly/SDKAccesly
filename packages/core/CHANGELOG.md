@@ -1,5 +1,16 @@
 # @accesly/core
 
+## 1.19.0
+
+### Minor Changes
+
+- feat(api): nuevos endpoints Fase 10 en `AccesslyEndpoints`:
+  - `listContacts()` / `createContact(input)` / `deleteContact(id)` — CRUD del address book per-user, Cognito-auth.
+  - `reserveHandle({ handle, walletAddress })` — registra handle global FCFS (lanza 409 si tomado).
+  - `resolveHandle(handle)` — público + cacheable 5min, devuelve `walletAddress` o `null` si no existe (404 → null).
+  - `lookupHandleByWallet(walletAddress)` — reverse lookup público.
+- feat(types): nuevos tipos públicos `ContactInput` y `ContactRecord`.
+
 ## 1.16.1
 
 ### Patch Changes

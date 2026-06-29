@@ -2,19 +2,25 @@
 
 import { useState, type FormEvent } from 'react';
 import { useAccesly } from '../hooks/useAccesly.js';
+import { useAppConfig } from '../hooks/useAppConfig.js';
 import { useBalance } from '../hooks/useBalance.js';
 import { useSpendingPolicy, checkTransferPolicy } from '../hooks/usePolicies.js';
+import { ContactPicker } from './ContactPicker.js';
+import type { ContactRecord } from '@accesly/core';
 
 /**
  * `<SendFlow>` — wizard de envío de USDC / XLM.
  *
  * Pasos:
- *   1) Form de destino + monto + asset.
- *   2) Validación contra `useSpendingPolicy` (blacklist + per-tx cap) —
+ *   1) Form de destino (address C…/G… o `@handle`) + monto + asset, con
+ *      `<ContactPicker>` arriba para tap-to-fill.
+ *   2) Si destino empieza con '@', resolve vía `endpoints.resolveHandle`
+ *      antes de continuar.
+ *   3) Validación contra `useSpendingPolicy` (blacklist + per-tx cap) —
  *      cliente lo rechaza antes de pegarle al backend.
- *   3) `wallet.unlockForSigning(username)` → passkey prompt.
- *   4) `tx.send(...)` con la material desbloqueada.
- *   5) Confirmación con txHash + link al explorer.
+ *   4) `wallet.unlockForSigning(username)` → passkey prompt.
+ *   5) `tx.send(...)` con la material desbloqueada.
+ *   6) Confirmación con txHash + link al explorer.
  *
  * Props:
  *   - `onSuccess(txHash)`: callback.
@@ -31,9 +37,11 @@ export interface SendFlowProps {
 type Step = 'form' | 'signing' | 'success' | 'error';
 
 export function SendFlow(props: SendFlowProps): JSX.Element {
-  const { tx, wallet, auth } = useAccesly();
+  const { tx, wallet, auth, _internal } = useAccesly();
   const balance = useBalance();
   const policy = useSpendingPolicy();
+  const { config } = useAppConfig();
+  const handlesEnabled = config?.features?.handles !== false;
 
   const [destination, setDestination] = useState('');
   const [amount, setAmount] = useState('');
@@ -42,6 +50,11 @@ export function SendFlow(props: SendFlowProps): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [explorerUrl, setExplorerUrl] = useState<string | null>(null);
+
+  function pickContact(c: ContactRecord) {
+    if (c.handle) setDestination(`@${c.handle}`);
+    else if (c.address) setDestination(c.address);
+  }
 
   function toStroops(human: string): string {
     const n = Number(human);
@@ -61,13 +74,29 @@ export function SendFlow(props: SendFlowProps): JSX.Element {
       return;
     }
 
-    if (!destination.match(/^[GC][A-Z0-9]{55}$/)) {
-      setError('La dirección debe ser un Stellar address (G… o C…) válido.');
+    // Resolve `@handle` antes de validar policy / firmar.
+    let destAddress = destination;
+    if (destination.startsWith('@')) {
+      try {
+        const resolved = await _internal.endpoints.resolveHandle(destination);
+        if (!resolved) {
+          setError(`No encontramos ${destination}. Confirma que existe.`);
+          return;
+        }
+        destAddress = resolved;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'No se pudo resolver el handle.');
+        return;
+      }
+    }
+
+    if (!destAddress.match(/^[GC][A-Z0-9]{55}$/)) {
+      setError('La dirección debe ser un Stellar address (G… o C…) válido o @handle.');
       return;
     }
 
     const check = checkTransferPolicy(policy, {
-      destinationAddress: destination,
+      destinationAddress: destAddress,
       asset,
       amountStroops,
     });
@@ -89,7 +118,7 @@ export function SendFlow(props: SendFlowProps): JSX.Element {
     try {
       const material = await wallet.unlockForSigning(auth.username);
       const result = await tx.send({
-        destinationAddress: destination,
+        destinationAddress: destAddress,
         amountStroops,
         asset,
         fragmentF1Plain: material.fragmentF1Plain,
@@ -167,12 +196,13 @@ export function SendFlow(props: SendFlowProps): JSX.Element {
 
       <div className="space-y-1">
         <label className="text-xs uppercase tracking-wider text-neutral-500">Para</label>
+        <ContactPicker onPick={pickContact} />
         <input
           type="text"
           required
           value={destination}
           onChange={(e) => setDestination(e.target.value.trim())}
-          placeholder="GBV2…XBQU o CCG3…ZF7E"
+          placeholder={handlesEnabled ? '@ana.mtz o GBV2…XBQU o CCG3…ZF7E' : 'GBV2…XBQU o CCG3…ZF7E'}
           className="w-full rounded-xl border border-neutral-200 dark:border-neutral-700 px-4 py-3 bg-transparent font-mono text-sm"
         />
       </div>

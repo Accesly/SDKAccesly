@@ -435,4 +435,79 @@ export class AccesslyEndpoints {
       },
     );
   }
+
+  // ─── Fase 10 (2026-06-29) — contacts + handles ──────────────────────────
+
+  /** Cognito-auth. Lista contactos del end-user actual. */
+  listContacts(): Promise<{ contacts: ContactRecord[] }> {
+    return this.client.get<{ contacts: ContactRecord[] }>('/contacts');
+  }
+
+  /** Cognito-auth. Crea un contacto. */
+  createContact(req: ContactInput): Promise<ContactRecord> {
+    return this.client.post<ContactRecord>('/contacts', req as unknown as Json);
+  }
+
+  /** Cognito-auth. Borra un contacto del end-user actual. */
+  async deleteContact(contactId: string): Promise<void> {
+    await this.client.delete<{ ok: true }>(`/contacts/${encodeURIComponent(contactId)}`);
+  }
+
+  /**
+   * Cognito-auth. Reserva un handle global (FCFS). Falla 409 si está tomado.
+   */
+  reserveHandle(req: { handle: string; walletAddress: string }): Promise<{
+    handle: string;
+    walletAddress: string;
+  }> {
+    return this.client.post<{ handle: string; walletAddress: string }>(
+      '/handles',
+      req as unknown as Json,
+    );
+  }
+
+  /**
+   * Público + cacheable 5 min. Resuelve `@handle` → `walletAddress`.
+   * Devuelve `null` si no existe (HTTP 404 → caught).
+   */
+  async resolveHandle(handle: string): Promise<string | null> {
+    const cleaned = handle.replace(/^@/, '').toLowerCase();
+    try {
+      const r = await this.client.get<{ walletAddress: string }>(
+        `/resolve/${encodeURIComponent(cleaned)}`,
+      );
+      return r.walletAddress;
+    } catch (err) {
+      if (err instanceof NotFoundError) return null;
+      throw err;
+    }
+  }
+
+  /** Público. Devuelve el handle reservado por el `walletAddress`, o null. */
+  async lookupHandleByWallet(walletAddress: string): Promise<string | null> {
+    const r = await this.client.get<{ walletAddress: string; handle: string | null }>(
+      `/handles/by-wallet/${encodeURIComponent(walletAddress)}`,
+    );
+    return r.handle;
+  }
+}
+
+// ─── Fase 10 types ──────────────────────────────────────────────────────────
+
+export interface ContactInput {
+  readonly name: string;
+  readonly address?: string;
+  readonly handle?: string;
+  readonly init?: string;
+}
+
+export interface ContactRecord {
+  readonly userId: string;
+  readonly contactId: string;
+  readonly name: string;
+  readonly address?: string;
+  readonly handle?: string;
+  readonly init?: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
 }
