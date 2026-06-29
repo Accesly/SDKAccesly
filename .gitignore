@@ -52,3 +52,4 @@ docs/
 
 # Smoke test artifacts
 .smoke-test-results/
+.gstack/

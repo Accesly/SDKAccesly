@@ -39,8 +39,8 @@ export interface EnvironmentDefaults {
 
 export const ENVIRONMENT_DEFAULTS: Record<Environment, EnvironmentDefaults> = {
   dev: {
-    apiUrl: 'https://3fki7eiio5.execute-api.us-east-1.amazonaws.com/dev',
-    walletStreamUrl: 'https://ajlmn37thw7fxen3oyykbfmlrm0eecue.lambda-url.us-east-1.on.aws/',
+    apiUrl: 'https://b5r2d1zmbj.execute-api.us-east-1.amazonaws.com/dev',
+    walletStreamUrl: 'https://5lsjrekpbw6nmmkf3tewmo5ci40oyghx.lambda-url.us-east-1.on.aws/',
     cognito: {
       region: 'us-east-1',
       userPoolId: 'us-east-1_K2Nag1tB1',
