@@ -1,5 +1,15 @@
 # @accesly/react
 
+## 1.22.0
+
+### Minor Changes
+
+- feat(kit): 4 nuevos componentes que cubren los flows que antes el integrador tenía que escribir a mano (Cognito-specific pero el kit ya lo era):
+  - `<AuthCallback>` — handler de `/auth/callback` post-Google. Extrae el code del URL y llama `auth.handleAuthCallback`. Props: `onSuccess` / `onError` / `redirectUri` / copy overrides.
+  - `<CreateWalletFlow>` — pantalla one-shot post-signup que dispara `wallet.bootstrap()` (passkey + Shamir + deploy del Smart Account). 3 estados visuales (intro / working / success / error). Props: `email` + `password` (requeridos por el SDK para derivar la recovery key).
+  - `<RecoveryFlow>` — wizard recovery v2 de 3 pasos (email → OTP+password → finalize) que orquesta `recovery.requestOtp` → `recovery.verifyOtp` → `recovery.finalize`. La passkey nueva se registra dentro del finalize. Maneja cooldown del rate-limit del backend.
+  - `<SwapFlow>` — XLM ↔ USDC con `tx.swap()` (auto-fallback Soroswap → SDEX vía wrappers). Form con from/to/amount/slippage (default 50 bps), passkey unlock, success con `amountOut` + `priceImpact` + link al explorer.
+
 ## 1.21.0
 
 ### Minor Changes

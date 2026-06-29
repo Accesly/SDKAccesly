@@ -31,3 +31,7 @@ export { AddFundsFlow, type AddFundsFlowProps, type FiatMethod } from './AddFund
 export { WalletHome, type WalletHomeProps } from './WalletHome.js';
 export { ContactPicker, type ContactPickerProps } from './ContactPicker.js';
 export { HandleShareCard, type HandleShareCardProps } from './HandleShareCard.js';
+export { AuthCallback, type AuthCallbackProps } from './AuthCallback.js';
+export { CreateWalletFlow, type CreateWalletFlowProps } from './CreateWalletFlow.js';
+export { RecoveryFlow, type RecoveryFlowProps } from './RecoveryFlow.js';
+export { SwapFlow, type SwapFlowProps } from './SwapFlow.js';
