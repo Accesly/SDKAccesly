@@ -1,5 +1,15 @@
 # @accesly/react
 
+## 1.17.0
+
+### Minor Changes
+
+- feat(hooks): three policy readers over the appConfig.
+  - `useAuthProviders()` returns the auth providers the dev enabled (`providers`, `phoneRegion`, `webauthnEnabled`). The host AuthForm branches on these to render only the allowed sign-in buttons.
+  - `useKycPolicy()` returns `{ enabled, requiredFor, thresholdUsd, minLevel }`. Fiat onramp/offramp flows check this before opening the verification UI; the backend re-enforces it on every order.
+  - `useSpendingPolicy()` returns `{ perTxStroops, perTxAsset, txPerDayCount, blacklist }`. Used by the host UI to render the right hints and pre-disable the Send button if the amount exceeds the cap.
+- feat(api): `checkTransferPolicy(policy, params)` — pure function that maps `(blacklist, perTx cap, destinationAddress, asset, amountStroops)` to either `{ ok: true }` or a typed reason (`destination-blacklisted` / `per-tx-cap-exceeded`). Host UIs can call this before `tx.send` to render a meaningful error instead of letting the backend reject with HTTP 403. The backend still re-validates on submit — this is purely a UX optimisation.
+
 ## 1.16.2
 
 ### Patch Changes

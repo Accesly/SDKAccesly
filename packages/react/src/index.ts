@@ -62,6 +62,16 @@ export { useBalance, type UseBalanceResult } from './hooks/useBalance.js';
 export { useAppConfig, type UseAppConfigResult } from './hooks/useAppConfig.js';
 export { useBranding, type UseBrandingResult } from './hooks/useBranding.js';
 export {
+  useAuthProviders,
+  useKycPolicy,
+  useSpendingPolicy,
+  checkTransferPolicy,
+  type UseAuthProvidersResult,
+  type UseKycPolicyResult,
+  type UseSpendingPolicyResult,
+  type PolicyCheckResult,
+} from './hooks/usePolicies.js';
+export {
   useWalletActivity,
   type UseWalletActivityOptions,
   type UseWalletActivityResult,
