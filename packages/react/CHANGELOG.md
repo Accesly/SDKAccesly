@@ -1,5 +1,17 @@
 # @accesly/react
 
+## 1.16.2
+
+### Patch Changes
+
+- chore: republish — 1.16.1's tarball was packed before the react dist was rebuilt, so `useBranding` was missing from the bundle. 1.16.2 has the same code with the export actually present.
+
+## 1.16.1
+
+### Patch Changes
+
+- feat(hooks): `useBranding()` — reads the appConfig branding tokens and writes them to `document.documentElement` as CSS custom properties (`--accesly-primary`, `--accesly-secondary`, `--accesly-accent`, `--accesly-ink`, `--accesly-danger`, `--accesly-success`, `--accesly-font-family`). The integrator's Tailwind / CSS can reference those vars and re-paint automatically when the developer flips a colour from `dev.accesly.xyz`. Returns `{ hasBranding, displayName, logoUrl }` so the host UI can render the brand chrome (logo, header text) too. Falls back to the legacy `branding.primaryColor` field for apps created pre-schema-v1.
+
 ## 1.16.0
 
 ### Minor Changes

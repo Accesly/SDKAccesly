@@ -60,6 +60,7 @@ export {
 } from './hooks/useWalletStatus.js';
 export { useBalance, type UseBalanceResult } from './hooks/useBalance.js';
 export { useAppConfig, type UseAppConfigResult } from './hooks/useAppConfig.js';
+export { useBranding, type UseBrandingResult } from './hooks/useBranding.js';
 export {
   useWalletActivity,
   type UseWalletActivityOptions,

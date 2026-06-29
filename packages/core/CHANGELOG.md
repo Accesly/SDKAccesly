@@ -1,5 +1,11 @@
 # @accesly/core
 
+## 1.16.1
+
+### Patch Changes
+
+- chore: matches @accesly/react@1.16.1 for the `useBranding` hook release. No core API changes.
+
 ## 1.16.0
 
 ### Minor Changes
