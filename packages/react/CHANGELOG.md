@@ -1,5 +1,11 @@
 # @accesly/react
 
+## 1.18.0
+
+### Minor Changes
+
+- feat(hooks): `useUpgradeRecommendation()` — fetches `GET /wallets/upgrade-recommendation` (Cognito-auth) and returns `{ walletAddress, currentVersion, targetVersion, rolloutStrategy, upgradeAvailable }`. Refreshes every 60s. The host UI consumes this to render an "Update available" banner / modal when the developer flips a new target version on the dashboard. The hook never auto-triggers `wallet.upgrade` — the integrator picks the prompting moment based on `rolloutStrategy` ('opt-in' / 'auto-propose' / 'force').
+
 ## 1.17.0
 
 ### Minor Changes

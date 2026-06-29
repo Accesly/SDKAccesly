@@ -72,6 +72,11 @@ export {
   type PolicyCheckResult,
 } from './hooks/usePolicies.js';
 export {
+  useUpgradeRecommendation,
+  type UpgradeRecommendation,
+  type UseUpgradeRecommendationResult,
+} from './hooks/useUpgradeRecommendation.js';
+export {
   useWalletActivity,
   type UseWalletActivityOptions,
   type UseWalletActivityResult,
