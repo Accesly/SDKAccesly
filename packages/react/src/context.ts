@@ -30,6 +30,20 @@ export interface AcceslyContextValue {
   readonly username: string | null;
   /** Force a re-read of `tokenManager.getStatus()`. */
   readonly refreshStatus: () => Promise<void>;
+  /**
+   * Path absoluto (con leading `/`) que el SDK usa para construir el
+   * callback URI del OAuth con Cognito. Si el integrador no lo seteó en
+   * `<AcceslyProvider authCallbackPath="...">`, queda `undefined` y los
+   * defaults del SDK caen al legacy `${origin}/auth/callback`.
+   *
+   * Cuando está seteado, todas las llamadas del SDK (`auth.signInWithGoogle()`,
+   * `auth.handleAuthCallback()` sin args, `<AuthCallback>` sin
+   * `redirectUri`, `<RecoveryFlow>` Google path) usan
+   * `${window.location.origin}${authCallbackPath}` como redirect URI por
+   * default. El integrador puede seguir overrideando per-call si necesita
+   * routing distinto en algún flow específico.
+   */
+  readonly authCallbackPath?: string;
 }
 
 export const AcceslyContext = createContext<AcceslyContextValue | null>(null);

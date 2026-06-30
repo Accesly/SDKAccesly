@@ -68,6 +68,25 @@ export interface AcceslyProviderProps {
   readonly loadingFallback?: ReactNode;
   /** Custom UI cuando el appConfig falta `cognito.clientId`. */
   readonly errorFallback?: (err: Error) => ReactNode;
+  /**
+   * Path del callback de OAuth (Google) DENTRO de la app del integrador.
+   * Debe empezar con `/` y matchear EXACTAMENTE una de las
+   * `CallbackURLs` registradas en el Cognito User Pool Client del app
+   * (`POST /apps/:id/redirect-uris` desde el dashboard).
+   *
+   * Cuando el integrador lo setea, el SDK lo combina con
+   * `window.location.origin` y lo usa como default tanto en
+   * `auth.signInWithGoogle()` como en `auth.handleAuthCallback()`. Esto
+   * evita tener que pasar `redirectUri` en cada call site cuando la app
+   * vive bajo un sub-path (ej. `/demo/auth/callback` en una Astro/Next
+   * landing con la wallet embedded).
+   *
+   * Default: undefined → SDK usa el legacy `${origin}/auth/callback`.
+   *
+   * Per-call override sigue funcionando — `auth.signInWithGoogle(uri)` o
+   * `<AuthCallback redirectUri={uri}>` mandan sobre este default.
+   */
+  readonly authCallbackPath?: string;
 }
 
 interface CognitoSourceConfig {
@@ -153,6 +172,7 @@ export function AcceslyProvider(props: AcceslyProviderProps): JSX.Element {
       env={props.env}
       apiUrl={apiUrl}
       cognitoConfig={resolvedCognito}
+      {...(props.authCallbackPath ? { authCallbackPath: props.authCallbackPath } : {})}
       {...(props.overrides ? { overrides: props.overrides } : {})}
       {...(telemetry ? { telemetry } : {})}
     >
@@ -172,6 +192,7 @@ interface BootstrappedProviderProps {
     readonly deviceStore?: DeviceStore;
   };
   readonly telemetry?: TelemetrySink;
+  readonly authCallbackPath?: string;
   readonly children: ReactNode;
 }
 
@@ -253,6 +274,7 @@ function BootstrappedProvider(props: BootstrappedProviderProps): JSX.Element {
       status,
       username,
       refreshStatus,
+      ...(props.authCallbackPath ? { authCallbackPath: props.authCallbackPath } : {}),
     }),
     [
       props.appId,
@@ -262,6 +284,7 @@ function BootstrappedProvider(props: BootstrappedProviderProps): JSX.Element {
       props.cognitoConfig.userPoolId,
       props.cognitoConfig.userPoolClientId,
       props.cognitoConfig.hostedUiDomain,
+      props.authCallbackPath,
       instances,
       status,
       username,

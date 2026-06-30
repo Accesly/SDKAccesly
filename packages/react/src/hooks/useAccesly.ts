@@ -992,14 +992,31 @@ export interface AcceslyHook {
 
 /**
  * Default callback URI cuando el caller omite el redirectUri en
- * `signInWithGoogle()` / `handleAuthCallback()`. Usa el origin actual del
- * browser + `/auth/callback`. SSR-safe: throw si no hay window.
+ * `signInWithGoogle()` / `handleAuthCallback()`.
+ *
+ * Resolution order:
+ *  1. Si `<AcceslyProvider authCallbackPath="/x/auth/callback">` está
+ *     seteado en el context → `${origin}${authCallbackPath}`. Casos
+ *     típicos: la wallet embedded bajo un sub-path (e.g. `/demo` en una
+ *     landing Astro o `/wallet` en una Next.js app multi-page).
+ *  2. Sino → legacy `${origin}/auth/callback`. Compat con apps que ya
+ *     tenían esa URL registrada en Cognito y no usan sub-path.
+ *
+ * SSR-safe: throw si no hay window — el caller debe pasar `redirectUri`
+ * explícito en environments sin window.
  */
-function defaultCallbackUri(): string {
+function defaultCallbackUri(authCallbackPath: string | undefined): string {
   if (typeof window === 'undefined') {
     throw new Error(
       'defaultCallbackUri: requires window (browser). Pass redirectUri explicitly for SSR.',
     );
+  }
+  if (authCallbackPath) {
+    // Defensa contra typos del integrador: si no empieza con `/`, lo agregamos.
+    const normalized = authCallbackPath.startsWith('/')
+      ? authCallbackPath
+      : `/${authCallbackPath}`;
+    return `${window.location.origin}${normalized}`;
   }
   return `${window.location.origin}/auth/callback`;
 }
@@ -1040,7 +1057,7 @@ export function useAccesly(): AcceslyHook {
             'auth.signInWithGoogle: configured authClient does not support federated Google sign-in.',
           );
         }
-        const target = redirectUri ?? defaultCallbackUri();
+        const target = redirectUri ?? defaultCallbackUri(ctx.authCallbackPath);
         const url = ctx.authClient.getGoogleSignInUrl(target);
         if (typeof window === 'undefined') {
           throw new Error(
@@ -1056,7 +1073,7 @@ export function useAccesly(): AcceslyHook {
             'auth.handleAuthCallback: configured authClient does not support federated Google sign-in.',
           );
         }
-        const target = redirectUri ?? defaultCallbackUri();
+        const target = redirectUri ?? defaultCallbackUri(ctx.authCallbackPath);
         const tokens = await ctx.authClient.exchangeCodeForTokens(code, target);
         await ctx.tokenManager.setTokens(tokens);
         await ctx.refreshStatus();

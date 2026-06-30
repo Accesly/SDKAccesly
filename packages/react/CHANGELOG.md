@@ -1,5 +1,12 @@
 # @accesly/react
 
+## 2.5.4
+
+### Features
+
+- **`<AcceslyProvider authCallbackPath="/foo/auth/callback">`** — nuevo prop opcional para configurar la callback path del OAuth (Google) UNA sola vez al nivel del provider. Antes, integradores con wallet bajo un sub-path (e.g. `/demo` en una landing Astro/Next) tenían que pasar `redirectUri` en CADA call site (`auth.signInWithGoogle(uri)` + `<AuthCallback redirectUri={uri}>` + per-call en componentes kit). Ahora pasás `authCallbackPath="/demo/auth/callback"` al provider y todos los componentes consumen el override vía context. Per-call sigue funcionando si necesitás routing distinto en algún flow específico.
+- `defaultCallbackUri` ahora resuelve `${origin}${authCallbackPath}` cuando el provider tiene el override, sino cae al legacy `${origin}/auth/callback`. Cero breaking change para apps existentes sin sub-path.
+
 ## 2.5.3
 
 ### Bug fixes
