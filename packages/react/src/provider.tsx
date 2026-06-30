@@ -1,14 +1,21 @@
 /**
- * `AcceslyProvider` — top-level React provider that creates the SDK instances
- * once and exposes them through context. All hooks consume this.
+ * `AcceslyProvider` — top-level React provider que construye los SDK
+ * instances y los expone vía context.
  *
  * Apps wrap their tree:
- *   <AcceslyProvider appId="myapp" env="dev">
+ *   <AcceslyProvider appId="app_d_xxx" env="dev">
  *     <App />
  *   </AcceslyProvider>
  *
- * For advanced cases (custom IdP, custom storage), pass `overrides` to inject
- * your own `AuthClient`, `SessionStorage`, or `DeviceStore`.
+ * Fase 11.5 (2026-06-29) — Opción B (Cognito client per-app):
+ * El Provider fetchea `/app-config/:appId` (público) al mount y usa
+ * `appConfig.cognito.{userPoolId,clientId}` para instanciar el
+ * `CognitoAuthClient`. Si la app no tiene esos campos (apps creadas
+ * pre-Fase-11.5) el Provider lanza una pantalla de error explicando
+ * que el dev tiene que actualizar.
+ *
+ * Para tests / custom backends, pasar `cognitoConfig` directo skipea
+ * el bootstrap fetch.
  */
 
 import {
@@ -26,7 +33,14 @@ import {
   type SessionStorage,
   type TelemetrySink,
 } from '@accesly/core';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { AcceslyContext, type AcceslyContextValue } from './context.js';
 import { ENVIRONMENT_DEFAULTS } from './config.js';
 
@@ -36,7 +50,11 @@ export interface AcceslyProviderProps {
   readonly children: ReactNode;
   /** Override the resolved API URL. */
   readonly apiUrl?: string;
-  /** Override the resolved Cognito config. */
+  /**
+   * Override del Cognito config. Si se pasa, skipea el bootstrap fetch del
+   * appConfig — útil para tests o setups custom donde el integrador maneja
+   * Cognito por su cuenta. Default: leer del appConfig en runtime.
+   */
   readonly cognitoConfig?: CognitoConfig;
   /** Override SDK pieces — for tests or custom backends. */
   readonly overrides?: {
@@ -46,56 +64,157 @@ export interface AcceslyProviderProps {
   };
   /** Optional telemetry sink — surfaces every API request/response/retry. */
   readonly telemetry?: TelemetrySink;
+  /** Custom UI mientras el provider hace bootstrap del appConfig. */
+  readonly loadingFallback?: ReactNode;
+  /** Custom UI cuando el appConfig falta `cognito.clientId`. */
+  readonly errorFallback?: (err: Error) => ReactNode;
+}
+
+interface CognitoSourceConfig {
+  readonly region: string;
+  readonly userPoolId: string;
+  readonly userPoolClientId: string;
+  readonly hostedUiDomain?: string;
 }
 
 export function AcceslyProvider(props: AcceslyProviderProps): JSX.Element {
   const defaults = ENVIRONMENT_DEFAULTS[props.env];
   const apiUrl = props.apiUrl ?? defaults.apiUrl;
-  const cognitoConfig = props.cognitoConfig ?? defaults.cognito;
   const telemetry = props.telemetry;
 
-  // Build the SDK pieces once. The dependency array is intentionally only the
-  // identity inputs — we don't want to rebuild on every render.
+  // Estado del bootstrap del Cognito config. Si el integrador pasó
+  // `cognitoConfig` skipeamos el fetch — útil para tests.
+  const [resolvedCognito, setResolvedCognito] = useState<CognitoSourceConfig | null>(
+    props.cognitoConfig
+      ? {
+          region: props.cognitoConfig.region,
+          userPoolId: props.cognitoConfig.userPoolId,
+          userPoolClientId: props.cognitoConfig.userPoolClientId,
+          ...(props.cognitoConfig.hostedUiDomain
+            ? { hostedUiDomain: props.cognitoConfig.hostedUiDomain }
+            : {}),
+        }
+      : null,
+  );
+  const [bootstrapError, setBootstrapError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    if (props.cognitoConfig) return; // override wins
+    let cancelled = false;
+    void (async () => {
+      try {
+        const r = await fetch(
+          `${apiUrl.replace(/\/+$/, '')}/app-config/${encodeURIComponent(props.appId)}`,
+        );
+        if (!r.ok) throw new Error(`appConfig fetch failed: HTTP ${r.status}`);
+        const cfg = (await r.json()) as {
+          cognito?: { userPoolId?: string; clientId?: string };
+        };
+        if (!cfg.cognito?.clientId || !cfg.cognito.userPoolId) {
+          throw new Error(
+            `appConfig.cognito missing — register this app on dev.accesly.xyz so it provisions its own Cognito client.`,
+          );
+        }
+        if (cancelled) return;
+        setResolvedCognito({
+          region: defaults.cognito.region,
+          userPoolId: cfg.cognito.userPoolId,
+          userPoolClientId: cfg.cognito.clientId,
+          ...(defaults.cognito.hostedUiDomain
+            ? { hostedUiDomain: defaults.cognito.hostedUiDomain }
+            : {}),
+        });
+      } catch (err) {
+        if (cancelled) return;
+        setBootstrapError(err instanceof Error ? err : new Error(String(err)));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [apiUrl, props.appId, props.cognitoConfig, defaults.cognito.region, defaults.cognito.hostedUiDomain]);
+
+  if (bootstrapError) {
+    return (
+      <>
+        {props.errorFallback?.(bootstrapError) ?? (
+          <DefaultErrorFallback err={bootstrapError} />
+        )}
+      </>
+    );
+  }
+  if (!resolvedCognito) {
+    return <>{props.loadingFallback ?? <DefaultLoadingFallback />}</>;
+  }
+
+  return (
+    <BootstrappedProvider
+      appId={props.appId}
+      env={props.env}
+      apiUrl={apiUrl}
+      cognitoConfig={resolvedCognito}
+      {...(props.overrides ? { overrides: props.overrides } : {})}
+      {...(telemetry ? { telemetry } : {})}
+    >
+      {props.children}
+    </BootstrappedProvider>
+  );
+}
+
+interface BootstrappedProviderProps {
+  readonly appId: string;
+  readonly env: Environment;
+  readonly apiUrl: string;
+  readonly cognitoConfig: CognitoSourceConfig;
+  readonly overrides?: {
+    readonly authClient?: AuthClient;
+    readonly sessionStorage?: SessionStorage;
+    readonly deviceStore?: DeviceStore;
+  };
+  readonly telemetry?: TelemetrySink;
+  readonly children: ReactNode;
+}
+
+function BootstrappedProvider(props: BootstrappedProviderProps): JSX.Element {
   const instances = useMemo(() => {
     const authClient: AuthClient =
-      props.overrides?.authClient ?? new CognitoAuthClient(cognitoConfig);
-    // Default: LocalStorageSessionStorage en browsers (sobrevive reload),
-    // InMemorySessionStorage en Node/SSR. Override solo si tu app necesita
-    // un backend distinto (httpOnly cookie, Electron safeStorage, etc.).
+      props.overrides?.authClient ??
+      new CognitoAuthClient({
+        region: props.cognitoConfig.region,
+        userPoolId: props.cognitoConfig.userPoolId,
+        userPoolClientId: props.cognitoConfig.userPoolClientId,
+        ...(props.cognitoConfig.hostedUiDomain
+          ? { hostedUiDomain: props.cognitoConfig.hostedUiDomain }
+          : {}),
+      });
     const sessionStorage: SessionStorage =
       props.overrides?.sessionStorage ?? defaultSessionStorage();
     const deviceStore: DeviceStore = props.overrides?.deviceStore ?? new InMemoryDeviceStore();
     const tokenManager = new TokenManager({ authClient, storage: sessionStorage });
     const apiClient = new AccesslyApiClient({
-      baseUrl: apiUrl,
+      baseUrl: props.apiUrl,
       getIdToken: () => tokenManager.getValidIdToken(),
-      ...(telemetry ? { telemetry } : {}),
+      ...(props.telemetry ? { telemetry: props.telemetry } : {}),
     });
     const endpoints = new AccesslyEndpoints(apiClient);
     return { authClient, sessionStorage, deviceStore, tokenManager, endpoints };
   }, [
-    apiUrl,
-    cognitoConfig.region,
-    cognitoConfig.userPoolId,
-    cognitoConfig.userPoolClientId,
+    props.apiUrl,
+    props.cognitoConfig.region,
+    props.cognitoConfig.userPoolId,
+    props.cognitoConfig.userPoolClientId,
     props.overrides?.authClient,
     props.overrides?.sessionStorage,
     props.overrides?.deviceStore,
+    props.telemetry,
   ]);
 
-  // Compute the initial status synchronously from storage when possible. If
-  // storage.load returns a Promise (custom async storage), fall back to
-  // 'anonymous' and let the mount effect upgrade it.
   const [status, setStatus] = useState<AuthStatus>(() => initialStatus(instances.sessionStorage));
   const [username, setUsername] = useState<string | null>(() =>
     initialUsername(instances.sessionStorage),
   );
   const mountedRef = useRef(true);
 
-  // refreshStatus tiene que ser estable entre renders, si no el ctx value
-  // cambia siempre y los hooks consumers (useBalance, useWalletActivity,
-  // useWalletStatus) se re-disparan en loop infinito porque sus effects
-  // dependen de `_internal.endpoints` que viene del ctx.
   const refreshStatus = useCallback(async (): Promise<void> => {
     const next = await instances.tokenManager.getStatus();
     const tokens = await Promise.resolve(instances.sessionStorage.load());
@@ -117,8 +236,15 @@ export function AcceslyProvider(props: AcceslyProviderProps): JSX.Element {
     () => ({
       appId: props.appId,
       env: props.env,
-      apiUrl,
-      cognitoConfig,
+      apiUrl: props.apiUrl,
+      cognitoConfig: {
+        region: props.cognitoConfig.region,
+        userPoolId: props.cognitoConfig.userPoolId,
+        userPoolClientId: props.cognitoConfig.userPoolClientId,
+        ...(props.cognitoConfig.hostedUiDomain
+          ? { hostedUiDomain: props.cognitoConfig.hostedUiDomain }
+          : {}),
+      },
       authClient: instances.authClient,
       sessionStorage: instances.sessionStorage,
       tokenManager: instances.tokenManager,
@@ -128,24 +254,24 @@ export function AcceslyProvider(props: AcceslyProviderProps): JSX.Element {
       username,
       refreshStatus,
     }),
-    [props.appId, props.env, apiUrl, cognitoConfig, instances, status, username, refreshStatus],
+    [
+      props.appId,
+      props.env,
+      props.apiUrl,
+      props.cognitoConfig.region,
+      props.cognitoConfig.userPoolId,
+      props.cognitoConfig.userPoolClientId,
+      props.cognitoConfig.hostedUiDomain,
+      instances,
+      status,
+      username,
+      refreshStatus,
+    ],
   );
 
   return <AcceslyContext.Provider value={value}>{props.children}</AcceslyContext.Provider>;
 }
 
-/**
- * Estado inicial — antes de que el effect del provider corra `refreshStatus()`.
- *
- *  - Si el `SessionStorage` devuelve sync con tokens válidos → arrancamos directo
- *    en `'authenticated'` / `'expired'`. Aplica al `LocalStorageSessionStorage`
- *    default; el primer paint del browser ya conoce el status real → cero race
- *    para `AuthGuard`.
- *  - Si el `SessionStorage` devuelve sync con `null` → directo a `'anonymous'`.
- *  - Si el `SessionStorage` es async (devuelve Promise) → `'bootstrapping'`,
- *    para que `<AuthGuard>` muestre un loader en vez de redirigir a `/signin`
- *    prematuramente. El effect lo flippa al estado real apenas resuelve.
- */
 function initialStatus(storage: SessionStorage): AuthStatus {
   const tokens = storage.load();
   if (tokens instanceof Promise) return 'bootstrapping';
@@ -157,4 +283,44 @@ function initialUsername(storage: SessionStorage): string | null {
   const tokens = storage.load();
   if (tokens instanceof Promise) return null;
   return tokens?.username ?? null;
+}
+
+function DefaultLoadingFallback(): JSX.Element {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '3rem',
+        color: '#9ca3af',
+        fontFamily: 'system-ui, sans-serif',
+        fontSize: '14px',
+      }}
+    >
+      Cargando configuración…
+    </div>
+  );
+}
+
+function DefaultErrorFallback({ err }: { err: Error }): JSX.Element {
+  return (
+    <div
+      style={{
+        padding: '2rem',
+        margin: '2rem auto',
+        maxWidth: '32rem',
+        borderRadius: '12px',
+        border: '1px solid #fecaca',
+        background: '#fef2f2',
+        color: '#991b1b',
+        fontFamily: 'system-ui, sans-serif',
+      }}
+    >
+      <h2 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>
+        Accesly: configuración incompleta
+      </h2>
+      <p style={{ fontSize: '14px', lineHeight: 1.5 }}>{err.message}</p>
+    </div>
+  );
 }

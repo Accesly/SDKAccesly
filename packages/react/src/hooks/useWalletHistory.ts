@@ -266,10 +266,31 @@ export function useWalletHistory(
           transferScanLimit,
         });
         setEvents((prev) => mergeAndDedup(prev, result.events as WalletHistoryItem[]));
-        // Limpiar optimistics ya confirmados.
-        const realTxHashes = new Set(result.events.map((it) => it.eventToid));
+
+        // Limpiar optimistics ya confirmados. El item optimistic tiene `txHash`
+        // (el Stellar tx hash que devolvió `/tx/submit`), mientras que los items
+        // reales del backend traen `eventToid` (toid de SE, distinto al hash) +
+        // `explorerUrl` que termina en el tx hash. Cruzamos por txHash extraído
+        // del explorerUrl — match exacto sin tocar el shape de la API.
+        //
+        // Safety net: items optimistic con más de 5min (300_000ms) se descartan
+        // sin importar si llegaron al feed real. Cubre casos donde SE no
+        // indexea (failed tx, network error, etc.) y evita dups infinitos.
+        const realHashes = new Set<string>();
+        for (const it of result.events) {
+          const m = it.explorerUrl?.match(/\/tx\/([0-9a-fA-F]{64})/);
+          if (m && m[1]) realHashes.add(m[1].toLowerCase());
+        }
+        const now = Date.now();
         const current = optimisticItems.get(resolvedAddress) ?? [];
-        const remaining = current.filter((it) => !realTxHashes.has(it.eventToid));
+        const remaining = current.filter((it) => {
+          if (realHashes.has(((it as { txHash?: string }).txHash ?? '').toLowerCase())) {
+            return false;
+          }
+          const ts = it.timestamp ? Date.parse(it.timestamp) : 0;
+          if (ts > 0 && now - ts > 300_000) return false;
+          return true;
+        });
         if (remaining.length !== current.length) {
           optimisticItems.set(resolvedAddress, remaining);
           const listeners = optimisticListeners.get(resolvedAddress);
@@ -327,8 +348,19 @@ export function useWalletHistory(
     }
   }, [resolvedAddress, transferScanLimit, endpointsRef]);
 
-  // Combinar optimistic items con events reales.
-  const combined = [...optimistic, ...events];
+  // Combinar optimistic items con events reales. Dedupe defensivo: si la tx
+  // ya está confirmada en `events` (mismo txHash que el item optimistic),
+  // suprimimos la versión optimistic en el render — cubre la ventana entre el
+  // primer fetch que la trae y el polling que la limpia del store.
+  const realHashesSet = new Set<string>();
+  for (const it of events) {
+    const m = (it as { explorerUrl?: string }).explorerUrl?.match(/\/tx\/([0-9a-fA-F]{64})/);
+    if (m && m[1]) realHashesSet.add(m[1].toLowerCase());
+  }
+  const filteredOptimistic = optimistic.filter(
+    (it) => !realHashesSet.has(((it as { txHash?: string }).txHash ?? '').toLowerCase()),
+  );
+  const combined = [...filteredOptimistic, ...events];
 
   return {
     events: combined,

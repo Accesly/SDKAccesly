@@ -39,16 +39,16 @@ export interface EnvironmentDefaults {
 
 export const ENVIRONMENT_DEFAULTS: Record<Environment, EnvironmentDefaults> = {
   dev: {
-    apiUrl: 'https://b5r2d1zmbj.execute-api.us-east-1.amazonaws.com/dev',
-    walletStreamUrl: 'https://5lsjrekpbw6nmmkf3tewmo5ci40oyghx.lambda-url.us-east-1.on.aws/',
+    apiUrl: 'https://w4kwws8fa6.execute-api.us-east-1.amazonaws.com/dev',
+    walletStreamUrl: 'https://gg7bjuhugaviy44okbsxpuxhwa0zxleg.lambda-url.us-east-1.on.aws/',
     cognito: {
+      // Fase 11.5 (2026-06-29) — Opción B: userPoolId + userPoolClientId se
+      // leen del appConfig en runtime vía el Provider. Cada app tiene su
+      // propio client. Estos defaults sólo aplican cuando el integrador pasa
+      // un `cognitoConfig` override explícito (tests/custom setups).
       region: 'us-east-1',
-      userPoolId: 'us-east-1_K2Nag1tB1',
-      userPoolClientId: '6r64diep7pne50sender4557jt',
-      // Cognito Hosted UI domain (Fase Google OAuth, 2026-06-25). Necesario
-      // para auth.signInWithGoogle(). Cuando se migre a custom domain
-      // (auth.accesly.xyz) cambiar aquí — el cambio es no-breaking siempre
-      // que el callback URLs sigan registrados en el App Client.
+      userPoolId: 'us-east-1_dVwWwpCos',
+      userPoolClientId: '457lp8tpj3d1shrj9bh3k2131g',
       hostedUiDomain: 'https://accesly-dev.auth.us-east-1.amazoncognito.com',
     },
     stellar: {

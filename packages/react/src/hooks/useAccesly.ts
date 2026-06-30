@@ -46,6 +46,7 @@ import {
 } from '@accesly/core';
 import { AcceslyContext, type AcceslyContextValue } from '../context.js';
 import { ENVIRONMENT_DEFAULTS } from '../config.js';
+import { WalletAlreadyExistsError } from '../errors.js';
 
 // Recovery (ZK email) se removió en 1.0.0-pre.0 (2026-06-15). El nuevo modelo
 // OTP-email + password de Cognito se introduce en 1.0.0 como un namespace
@@ -924,8 +925,17 @@ export interface RecoveryNamespace {
     cooldownSeconds: number;
     expiresInSeconds: number;
   }>;
-  /** Verifica OTP. Devuelve `recoveryJwt` con TTL 5min. */
-  verifyOtp(input: { email: string; code: string }): Promise<{
+  /**
+   * Verifica OTP. Devuelve `recoveryJwt` con TTL 5min.
+   *
+   * El SDK auto-inyecta `idToken` desde la sesión Cognito actual si la hay
+   * (típicamente flow Google recovery). El backend lo decodifica y mete
+   * `sub` al recoveryJwt para que finalize/simulate-rotate hagan GetItem
+   * por sub en vez del Query GSI by-email-hash (evita el "lottery bug" con
+   * 2+ Cognito users compartiendo email). Pasar `idToken` explícito sólo
+   * si querés override del auto-inject.
+   */
+  verifyOtp(input: { email: string; code: string; idToken?: string }): Promise<{
     recoveryJwt: string;
     expiresAt: number;
   }>;
@@ -1876,6 +1886,35 @@ export function useAccesly(): AcceslyHook {
             cognitoPassword: cognitoPasswordBytes,
             encryptionSalt,
           });
+
+          // Post-bootstrap validation: si el backend ya tenía wallet
+          // (createdNow === false) Y no quedó un CredentialRecord local con
+          // los fragments que acabamos de generar, entonces el nuevo passkey
+          // está huérfano: no puede firmar para la wallet existente (sus
+          // signers on-chain están atados al passkey ORIGINAL). El user
+          // tiene que recovery — no podemos seguir como si "bootstrap"
+          // hubiera funcionado.
+          //
+          // Reason: `ensureWallet` solo persiste `fragmentF1Encrypted` /
+          // `prfSalt` / `encryptionSalt` cuando arma una wallet nueva (`POST
+          // /wallets`). En la rama "wallet already exists" (línea ~1494) sólo
+          // actualiza `walletAddress` + `onChain` si ya había local — y si no
+          // había local, no escribe nada. Sin ese fix downstream el flow
+          // muestra ✓ pero el próximo `unlockForSigning` truena.
+          if (!result.createdNow) {
+            const local = await ctx.deviceStore.loadCredential(input.email);
+            if (!local || !local.fragmentF1Encrypted || !local.prfSalt) {
+              throw new WalletAlreadyExistsError(
+                'wallet.bootstrap: el backend ya tiene una wallet registrada ' +
+                  'para este usuario, pero este dispositivo no tiene el ' +
+                  'CredentialRecord local. El nuevo passkey que registraste ' +
+                  'no puede firmar para la wallet existente (los signers ' +
+                  'on-chain están atados al passkey original). Usa el flow ' +
+                  'de recovery para restaurar la wallet en este dispositivo.',
+                result.walletAddress,
+              );
+            }
+          }
           return result;
         } finally {
           zeroize(f1Key);
@@ -1987,7 +2026,21 @@ export function useAccesly(): AcceslyHook {
           fragmentF2Key: material.fragmentF2Key,
           ownerPubkey: material.ownerPubkey,
         });
-        return await op();
+        // Stellar RPC indexing del add_context_rule puede tardar 5-10s
+        // después de que Horizon confirma la tx. Si el retry inmediato
+        // sigue tirando WALLET_NOT_ENROLLED, dormimos y reintentamos
+        // 3 veces (3s, 6s, 9s) antes de propagar el error.
+        for (let attempt = 0; attempt < 4; attempt++) {
+          try {
+            return await op();
+          } catch (retryErr) {
+            if (!(retryErr instanceof WalletNotEnrolledError)) throw retryErr;
+            if (attempt === 3) throw retryErr;
+            await new Promise((r) => setTimeout(r, 3000 * (attempt + 1)));
+          }
+        }
+        // Unreachable — el loop siempre return o throw.
+        throw new Error('unreachable');
       }
     }
 
@@ -2459,7 +2512,19 @@ export function useAccesly(): AcceslyHook {
         return ctx.endpoints.requestRecoveryOtp(input);
       },
       async verifyOtp(input) {
-        return ctx.endpoints.verifyRecoveryOtp(input);
+        // Auto-pasa el idToken si hay sesión Cognito activa (flow Google
+        // recovery típicamente). Backend usa el `sub` decodificado para
+        // que finalize/simulate-rotate hagan GetItem({userId: sub}) en vez
+        // del Query GSI lottery. Sin sesión (email-path forgot-password),
+        // se omite y el backend cae al fallback GSI legacy.
+        if (input.idToken !== undefined) {
+          return ctx.endpoints.verifyRecoveryOtp(input);
+        }
+        const idToken = await ctx.tokenManager.getValidIdToken().catch(() => null);
+        return ctx.endpoints.verifyRecoveryOtp({
+          ...input,
+          ...(idToken ? { idToken } : {}),
+        });
       },
       async reconstructSeed(input) {
         // 1. Trae F2_recovery + F3 + recoverySalt del backend.

@@ -1,5 +1,58 @@
 # @accesly/react
 
+## 2.5.3
+
+### Bug fixes
+
+- **`wallet.bootstrap` ahora detecta wallet huérfana en backend.** Cuando el backend ya tiene una wallet registrada para el usuario Cognito actual pero este device no tiene `CredentialRecord` local (e.g. browser nuevo, IDB borrada, otro dispositivo), `bootstrap()` ahora tira `WalletAlreadyExistsError` en vez de retornar `success` silenciosamente con un credential local incompleto. Sin este fix el flow mostraba ✓ pero el próximo `unlockForSigning` tronaba con "no local CredentialRecord" o `aes/gcm: invalid ghash tag`.
+- **`<CreateWalletFlow>` captura `WalletAlreadyExistsError`** y muestra el step `wallet-exists` con CTA "Recuperar mi wallet" (si el integrador pasa `onRecoverInstead`). Ya no se gasta un passkey enroll para un flow que no puede completar.
+
+### UI polish
+
+- AuthForm + RecoveryFlow: removí padding doble (`px-6 py-2` outer) que junto con el padding del shell del integrador hacía que los flows se vieran cramped. Layout ahora respeta el container del integrador.
+- `<CreateWalletFlow>` rewrite con el mismo design system que AuthForm/RecoveryFlow: tile gradient + Spinner real + Tile/Title/Subtitle/PrimaryButton helpers consistentes. Sin más emojis 🔐⏳✨⚠️.
+
+## 2.5.2
+
+### UI polish
+
+- **`<AuthForm>` rewrite** — branded gradient mark icon en el header, inputs con focus ring (primary color soft), Google button con el logo SVG en color completo, divider "o" uppercase + tracking. Toda la paleta cae a `var(--accesly-X, var(--X, hardcoded))` para que se vea idéntica al Landing del integrador y respete dark mode sin clases Tailwind hardcoded.
+- **`<RecoveryFlow>` method picker rewrite** — los 2 botones email/Google ahora son cards con icon tile prominente (40×40 con bg soft), título + subtítulo descriptivo, hover state que tinta el borde con el primary color. Steps subsecuentes (email-input, OTP, working, success, error) reescritos con el mismo design system: gradient mark icons, FieldInput compartido, PrimaryButton con shadow, Spinner real (en vez de emoji ⏳).
+- Sin más estilos hardcoded `bg-white` o `text-neutral-900` que rompían el dark mode.
+
+## 2.5.1
+
+### Bug fixes
+
+- **Recovery: fix `aes/gcm: invalid ghash tag` after Google-path rotation.** Cuando había 2+ Cognito users compartiendo el mismo email (típicamente: user nativo email-password + user federated Google), el lookup del backend por `Query GSI by-email-hash + Limit:1` era no-determinístico y podía rotar la wallet del usuario equivocado. Después el swap fallaba al descifrar el F2 backend con la nueva F2Key local. Fix: `recovery.verifyOtp` ahora auto-inyecta el `idToken` de la sesión Cognito activa; el backend lo decodifica para meter `sub` al `recoveryJwt`; `finalize`/`simulate-rotate-signer`/`get-fragment-3` hacen `GetItem({userId: sub})` en vez del GSI lottery. Email-path (sin sesión, "forgot password") sigue funcionando vía fallback GSI legacy.
+
+## 2.0.0
+
+### Breaking Changes
+
+- **Phase 11.5 — Cognito client per-app (Option B).** Each app now has its own Cognito App Client, isolated per integrator. Tokens carry `aud = clientId` so the backend can identify the calling app from the JWT alone (no more trusting the appId from the frontend).
+- `<AcceslyProvider>` now fetches `/app-config/:appId` at mount and uses `appConfig.cognito.{userPoolId, clientId}` to instantiate `CognitoAuthClient`. Apps must be registered via `dev.accesly.xyz` so the dashboard provisions the Cognito client. **Apps without `appConfig.cognito` will render the `errorFallback` and refuse to mount.**
+- Pass `cognitoConfig` prop to skip the bootstrap fetch (useful for tests).
+- New `<AcceslyProvider>` props:
+  - `loadingFallback?: ReactNode` — custom UI while the appConfig is loading.
+  - `errorFallback?: (err: Error) => ReactNode` — custom UI when `appConfig.cognito` is missing.
+
+### Migration
+
+```tsx
+// Before (Phase 11.0):
+<AcceslyProvider appId="my-app" env="dev">
+  <App />
+</AcceslyProvider>
+
+// After (Phase 11.5):
+// 1. Create the app from dev.accesly.xyz (this provisions the Cognito client).
+// 2. Same code — the Provider auto-detects appConfig.cognito at runtime.
+<AcceslyProvider appId="app_d_xyz_abc" env="dev">
+  <App />
+</AcceslyProvider>
+```
+
 ## 1.22.0
 
 ### Minor Changes

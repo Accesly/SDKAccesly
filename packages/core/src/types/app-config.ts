@@ -32,8 +32,26 @@ export interface AppConfigBranding {
     readonly success?: string;
   };
   readonly primaryColor?: string;
+  /**
+   * Color secundario del brand (segundo stop del gradient). Si se omite,
+   * el SDK usa su mint default `#45C9A8`.
+   */
+  readonly secondaryColor?: string;
   readonly fontFamily?: string;
   readonly darkModeDefault?: 'light' | 'dark' | 'auto';
+  /**
+   * Copy de la Landing/login. Soporta `{appName}` → `displayName`. Si el
+   * dev no setea estos campos, los integrators caen al default Accesly.
+   * Límites validados server-side: 40 / 30 / 160 chars respectivamente.
+   */
+  readonly landingTitle?: string;
+  readonly landingHighlight?: string;
+  readonly landingSubtitle?: string;
+  /**
+   * Texto del botón launcher cuando el user NO está autenticado. Soporta
+   * `{appName}`. Default: 'Iniciar sesión'. Validación backend: max 30 chars.
+   */
+  readonly loginButtonText?: string;
 }
 
 export interface AppConfigAuth {

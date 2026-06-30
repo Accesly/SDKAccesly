@@ -590,6 +590,17 @@ export interface RecoveryOtpVerifyInput {
   readonly email: string;
   /** 6 dígitos en string. */
   readonly code: string;
+  /**
+   * Opcional. Cognito idToken del usuario actualmente autenticado, si hay
+   * sesión activa (típicamente el flow Google recovery). El backend decodifica
+   * (sin verificar signature — el sub es routing hint, no autorización) y
+   * mete `sub` al `recoveryJwt` resultante. Sirve para que el `finalize`
+   * downstream haga `GetItem({userId: sub})` en vez del Query GSI by-email-
+   * hash, lo que evita rotar la wallet de OTRO Cognito user que comparta el
+   * mismo email (caso típico: email-native + Google-federated en la misma
+   * cuenta de email). Omitir para flow email-path (user sin sesión).
+   */
+  readonly idToken?: string;
 }
 
 export interface RecoveryOtpVerifyResponse {

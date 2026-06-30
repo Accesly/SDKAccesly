@@ -30,6 +30,11 @@ function withProvider(node: React.ReactNode, opts: { authClient?: AuthClient; to
     <AcceslyProvider
       appId="test-app"
       env="dev"
+      cognitoConfig={{
+        region: 'us-east-1',
+        userPoolId: 'us-east-1_TEST',
+        userPoolClientId: 'test-client',
+      }}
       overrides={{
         authClient: opts.authClient ?? makeAuthClient(),
         sessionStorage: storage,

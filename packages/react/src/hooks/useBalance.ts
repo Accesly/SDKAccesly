@@ -6,11 +6,15 @@
  * el hook se suscribe al canal `balance` del `wallet-stream` Lambda y se
  * actualiza instantáneamente cuando cambia el balance on-chain.
  *
- * Fallback automático a polling cada 10s si SSE no está disponible (entorno
+ * Fallback automático a polling cada 30s si SSE no está disponible (entorno
  * que no lo soporta o backend self-hosteado sin el endpoint).
  *
  * El `walletAddress` se auto-resuelve desde el `DeviceStore` si no se pasa
  * (cubrir el caso "wallet del user actual sin tener que pasarla a mano").
+ *
+ * **Shared store (2.2.2+):** todas las instancias del hook con el mismo
+ * `walletAddress` comparten UNA suscripción SSE + UN polling. Sin esto, 3
+ * componentes que muestren balance disparaban 3 fetches HTTP cada 10s.
  *
  * **Multi-asset (1.4.0+):** además de `stroops`/`xlm` (XLM) ahora devuelve
  * `usdc` (formatted) y `usdcAtomic` (micro-USDC, 1e-7). Backwards compat:
@@ -21,8 +25,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAccesly } from './useAccesly.js';
 import { ENVIRONMENT_DEFAULTS } from '../config.js';
 import { subscribeToWalletEvent } from './walletSubscription.js';
+import type { AcceslyContextValue } from '../context.js';
 
-const POLL_FALLBACK_MS = 10_000;
+const POLL_FALLBACK_MS = 30_000;
 
 function useStableRef<T>(value: T): { readonly current: T } {
   const ref = useRef(value);
@@ -45,17 +50,91 @@ export interface UseBalanceResult {
   refresh(): Promise<void>;
 }
 
+/* ── Module-level shared store por walletAddress ──────────────────────────── */
+
+interface BalanceState {
+  stroops: string | null;
+  xlm: string | null;
+  usdc: string | null;
+  usdcAtomic: string | null;
+  isLoading: boolean;
+  error: Error | null;
+}
+
+interface BalanceStore {
+  state: BalanceState;
+  refCount: number;
+  intervalId: ReturnType<typeof setInterval> | null;
+  unsubscribeSse: (() => void) | null;
+  visibilityHandler: (() => void) | null;
+  inFlight: Promise<void> | null;
+  listeners: Set<(s: BalanceState) => void>;
+}
+
+const balanceStores = new Map<string, BalanceStore>();
+
+const INITIAL_STATE: BalanceState = {
+  stroops: null,
+  xlm: null,
+  usdc: null,
+  usdcAtomic: null,
+  isLoading: true,
+  error: null,
+};
+
+function getBalanceStore(walletAddress: string): BalanceStore {
+  let s = balanceStores.get(walletAddress);
+  if (!s) {
+    s = {
+      state: { ...INITIAL_STATE },
+      refCount: 0,
+      intervalId: null,
+      unsubscribeSse: null,
+      visibilityHandler: null,
+      inFlight: null,
+      listeners: new Set(),
+    };
+    balanceStores.set(walletAddress, s);
+  }
+  return s;
+}
+
+function setState(store: BalanceStore, patch: Partial<BalanceState>) {
+  store.state = { ...store.state, ...patch };
+  for (const fn of store.listeners) fn(store.state);
+}
+
+async function fetchBalance(
+  walletAddress: string,
+  ctx: AcceslyContextValue,
+): Promise<void> {
+  const s = getBalanceStore(walletAddress);
+  if (s.inFlight) return s.inFlight;
+  s.inFlight = (async () => {
+    try {
+      const res = await ctx.endpoints.walletBalance(walletAddress);
+      setState(s, {
+        stroops: res.xlm.atomic ?? res.xlm.stroops ?? null,
+        xlm: res.xlm.formatted ?? res.xlm.xlm ?? null,
+        usdc: res.usdc?.formatted ?? null,
+        usdcAtomic: res.usdc?.atomic ?? null,
+        error: null,
+        isLoading: false,
+      });
+    } catch (err) {
+      setState(s, { error: err as Error, isLoading: false });
+    } finally {
+      s.inFlight = null;
+    }
+  })();
+  return s.inFlight;
+}
+
 export function useBalance(walletAddress?: string | null): UseBalanceResult {
   const { wallet, _internal } = useAccesly();
   const username = _internal.username;
 
   const [resolvedAddress, setResolvedAddress] = useState<string | null>(walletAddress ?? null);
-  const [stroops, setStroops] = useState<string | null>(null);
-  const [xlm, setXlm] = useState<string | null>(null);
-  const [usdc, setUsdc] = useState<string | null>(null);
-  const [usdcAtomic, setUsdcAtomic] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
 
   // Resolver walletAddress si no fue pasado explícitamente.
   const walletRef = useStableRef(wallet);
@@ -83,107 +162,113 @@ export function useBalance(walletAddress?: string | null): UseBalanceResult {
     };
   }, [walletAddress, username, walletRef]);
 
-  // Suscribirse SSE — o si no está, fallback a polling.
   const envDefaults = ENVIRONMENT_DEFAULTS[_internal.env];
   const streamUrl = envDefaults.walletStreamUrl;
-  const endpointsRef = useStableRef(_internal.endpoints);
+  const ctxRef = useStableRef(_internal);
 
-  const doFetchOnce = useCallback(async () => {
-    if (!resolvedAddress) return;
-    try {
-      const res = await endpointsRef.current.walletBalance(resolvedAddress);
-      // Backend >=1.4 devuelve `atomic`/`formatted`; <1.4 devolvía `stroops`/`xlm`.
-      // Soportamos ambos para que un SDK 1.4 pegue contra un backend viejo (poco
-      // probable pero barato) y un SDK 1.3 contra backend nuevo (caso real
-      // durante el rollout).
-      setStroops(res.xlm.atomic ?? res.xlm.stroops);
-      setXlm(res.xlm.formatted ?? res.xlm.xlm);
-      // USDC: presente solo en backend >=1.4. Si no viene, queda en null
-      // (no rompe — el integrador solo no muestra el badge).
-      if (res.usdc) {
-        setUsdc(res.usdc.formatted);
-        setUsdcAtomic(res.usdc.atomic);
-      } else {
-        setUsdc(null);
-        setUsdcAtomic(null);
-      }
-      setError(null);
-    } catch (err) {
-      setError(err as Error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [resolvedAddress, endpointsRef]);
+  // Snapshot del store + listener.
+  const [snapshot, setSnapshot] = useState<BalanceState>(
+    resolvedAddress ? getBalanceStore(resolvedAddress).state : INITIAL_STATE,
+  );
 
-  const doFetchRef = useStableRef(doFetchOnce);
   useEffect(() => {
     if (!resolvedAddress) {
-      setIsLoading(false);
+      setSnapshot(INITIAL_STATE);
       return undefined;
     }
 
-    // Intentar suscripción SSE primero.
-    const unsubscribe = subscribeToWalletEvent(
-      streamUrl,
-      resolvedAddress,
-      'balance',
-      (data: unknown) => {
-        // Backend nuevo (>=1.4): `{ xlm: { atomic, formatted }, usdc: {...} }`
-        // Backend viejo (<1.4):  `{ stroops, xlm }` (flat)
-        const d = data as Record<string, unknown>;
-        const xlmField = d['xlm'];
-        if (xlmField && typeof xlmField === 'object') {
-          const x = xlmField as { atomic?: string; formatted?: string };
-          if (typeof x.atomic === 'string') setStroops(x.atomic);
-          if (typeof x.formatted === 'string') setXlm(x.formatted);
-        } else if (typeof xlmField === 'string') {
-          setXlm(xlmField);
+    const store = getBalanceStore(resolvedAddress);
+    const listener = (next: BalanceState) => setSnapshot(next);
+    store.listeners.add(listener);
+    store.refCount += 1;
+
+    // Sync inmediato si ya hay datos.
+    listener(store.state);
+
+    // Si somos el primer consumidor, arrancamos SSE + polling. Resto recibe
+    // solo el snapshot del store.
+    if (store.refCount === 1) {
+      // Intentar SSE primero.
+      const unsubscribe = subscribeToWalletEvent(
+        streamUrl,
+        resolvedAddress,
+        'balance',
+        (data: unknown) => {
+          const d = data as Record<string, unknown>;
+          const xlmField = d['xlm'];
+          const patch: Partial<BalanceState> = { error: null, isLoading: false };
+          if (xlmField && typeof xlmField === 'object') {
+            const x = xlmField as { atomic?: string; formatted?: string };
+            if (typeof x.atomic === 'string') patch.stroops = x.atomic;
+            if (typeof x.formatted === 'string') patch.xlm = x.formatted;
+          } else if (typeof xlmField === 'string') {
+            patch.xlm = xlmField;
+          }
+          if (typeof d['stroops'] === 'string') patch.stroops = d['stroops'];
+          const usdcField = d['usdc'];
+          if (usdcField && typeof usdcField === 'object') {
+            const u = usdcField as { atomic?: string; formatted?: string };
+            if (typeof u.formatted === 'string') patch.usdc = u.formatted;
+            if (typeof u.atomic === 'string') patch.usdcAtomic = u.atomic;
+          }
+          setState(store, patch);
+        },
+      );
+
+      // Primer fetch HTTP — no esperar al primer push del SSE (puede tardar).
+      void fetchBalance(resolvedAddress, ctxRef.current);
+
+      if (unsubscribe) {
+        store.unsubscribeSse = unsubscribe;
+      } else {
+        // SSE no disponible → polling cada 30s con visibility-aware skip.
+        store.intervalId = setInterval(() => {
+          if (typeof document !== 'undefined' && document.hidden) return;
+          void fetchBalance(resolvedAddress, ctxRef.current);
+        }, POLL_FALLBACK_MS);
+        store.visibilityHandler = () => {
+          if (typeof document !== 'undefined' && !document.hidden) {
+            void fetchBalance(resolvedAddress, ctxRef.current);
+          }
+        };
+        if (typeof document !== 'undefined') {
+          document.addEventListener('visibilitychange', store.visibilityHandler);
         }
-        if (typeof d['stroops'] === 'string') setStroops(d['stroops']);
-        const usdcField = d['usdc'];
-        if (usdcField && typeof usdcField === 'object') {
-          const u = usdcField as { atomic?: string; formatted?: string };
-          if (typeof u.formatted === 'string') setUsdc(u.formatted);
-          if (typeof u.atomic === 'string') setUsdcAtomic(u.atomic);
-        }
-        setError(null);
-        setIsLoading(false);
-      },
-    );
-
-    if (unsubscribe) {
-      // SSE conectado — pero hacemos UN fetch HTTP inicial para no esperar
-      // hasta el primer push del server (puede tardar 10s).
-      void doFetchRef.current();
-      return unsubscribe;
-    }
-
-    // SSE no disponible → polling fallback.
-    void doFetchRef.current();
-    const interval = setInterval(() => {
-      if (typeof document !== 'undefined' && document.hidden) return;
-      void doFetchRef.current();
-    }, POLL_FALLBACK_MS);
-
-    const onVisibilityChange = () => {
-      if (typeof document === 'undefined') return;
-      if (!document.hidden) void doFetchRef.current();
-    };
-    if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', onVisibilityChange);
+      }
     }
 
     return () => {
-      clearInterval(interval);
-      if (typeof document !== 'undefined') {
-        document.removeEventListener('visibilitychange', onVisibilityChange);
+      store.listeners.delete(listener);
+      store.refCount = Math.max(0, store.refCount - 1);
+      if (store.refCount === 0) {
+        if (store.unsubscribeSse) {
+          store.unsubscribeSse();
+          store.unsubscribeSse = null;
+        }
+        if (store.intervalId) {
+          clearInterval(store.intervalId);
+          store.intervalId = null;
+        }
+        if (store.visibilityHandler && typeof document !== 'undefined') {
+          document.removeEventListener('visibilitychange', store.visibilityHandler);
+          store.visibilityHandler = null;
+        }
       }
     };
-  }, [resolvedAddress, streamUrl, doFetchRef]);
+  }, [resolvedAddress, streamUrl, ctxRef]);
 
   const refresh = useCallback(async () => {
-    await doFetchRef.current();
-  }, [doFetchRef]);
+    if (!resolvedAddress) return;
+    await fetchBalance(resolvedAddress, ctxRef.current);
+  }, [resolvedAddress, ctxRef]);
 
-  return { stroops, xlm, usdc, usdcAtomic, isLoading, error, refresh };
+  return {
+    stroops: snapshot.stroops,
+    xlm: snapshot.xlm,
+    usdc: snapshot.usdc,
+    usdcAtomic: snapshot.usdcAtomic,
+    isLoading: snapshot.isLoading,
+    error: snapshot.error,
+    refresh,
+  };
 }

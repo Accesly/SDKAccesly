@@ -40,6 +40,11 @@ describe('@accesly/react AcceslyProvider', () => {
       <AcceslyProvider
         appId="test"
         env="dev"
+        cognitoConfig={{
+          region: 'us-east-1',
+          userPoolId: 'us-east-1_TEST',
+          userPoolClientId: 'test-client',
+        }}
         overrides={{
           authClient,
           sessionStorage: new InMemorySessionStorage(),
@@ -93,6 +98,11 @@ describe('@accesly/react useAccesly.auth', () => {
       <AcceslyProvider
         appId="t"
         env="dev"
+        cognitoConfig={{
+          region: 'us-east-1',
+          userPoolId: 'us-east-1_TEST',
+          userPoolClientId: 'test-client',
+        }}
         overrides={{ authClient, sessionStorage: storage, deviceStore: new InMemoryDeviceStore() }}
       >
         <SignInButton email="alice@accesly.xyz" password="pwd" />
@@ -135,6 +145,11 @@ describe('@accesly/react useAccesly.auth', () => {
       <AcceslyProvider
         appId="t"
         env="dev"
+        cognitoConfig={{
+          region: 'us-east-1',
+          userPoolId: 'us-east-1_TEST',
+          userPoolClientId: 'test-client',
+        }}
         overrides={{ authClient, sessionStorage: storage, deviceStore: new InMemoryDeviceStore() }}
       >
         <SignOutPanel />

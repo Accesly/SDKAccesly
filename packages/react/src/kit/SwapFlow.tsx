@@ -87,7 +87,7 @@ export function SwapFlow(props: SwapFlowProps): JSX.Element {
     setStep('signing');
     try {
       const material = await wallet.unlockForSigning(auth.username);
-      const r = await tx.swap({
+      const swapArgs = {
         fromAsset,
         toAsset,
         amountIn,
@@ -95,7 +95,25 @@ export function SwapFlow(props: SwapFlowProps): JSX.Element {
         fragmentF1Plain: material.fragmentF1Plain,
         fragmentF2Key: material.fragmentF2Key,
         ownerPubkey: material.ownerPubkey,
-      });
+      };
+
+      let r;
+      try {
+        r = await tx.swap(swapArgs);
+      } catch (soroswapErr) {
+        // Soroswap testnet (y a veces mainnet) no tiene path para todos los
+        // pares. Auto-fallback a SDEX classic via swap-sdex Lambda. El user
+        // ya aprobó el passkey una vez — el material está unlocked, así que
+        // el retry es transparente (no le pide passkey de nuevo).
+        const msg = soroswapErr instanceof Error ? soroswapErr.message : '';
+        const isNoPath =
+          msg.includes('Path not found') ||
+          msg.includes('No path found') ||
+          msg.includes('soroswap');
+        if (!isNoPath) throw soroswapErr;
+        r = await tx.swapViaSdex(swapArgs);
+      }
+
       setResult({
         txHash: r.txHash,
         amountOut: (Number(r.quote.amountOut) / 1e7).toString(),
