@@ -1,6 +1,6 @@
 {
   "name": "@accesly/react",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "description": "Accesly SDK React adapter — AcceslyProvider and useAccesly hook.",
   "license": "MIT",
   "author": "Accesly Core <acceslyoficial@gmail.com>",
@@ -53,7 +53,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@accesly/core": "workspace:*"
+    "@accesly/core": "^1.21.0"
   },
   "peerDependencies": {
     "react": ">=18.0.0"

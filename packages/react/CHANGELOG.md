@@ -1,5 +1,11 @@
 # @accesly/react
 
+## 2.6.1
+
+### Fixes
+
+- **Package dep fix:** cambio la dependencia declarada de `@accesly/core` de `workspace:*` a `^1.21.0` para que npm pueda resolverla correctamente al publish. La versión 2.6.0 fue unpublished por este mismo bug; usá 2.6.1 en su lugar. No hay cambios funcionales entre 2.6.0 y 2.6.1.
+
 ## 2.6.0
 
 ### Features
