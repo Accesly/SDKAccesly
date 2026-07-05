@@ -107,6 +107,7 @@ export {
   ServerError,
   GAddressNotBootstrappedError,
   GMissingTrustlineError,
+  RotateWriteCapExceededError,
   ValidationError,
   WalletNotEnrolledError,
   type AccesslyApiClientOptions,

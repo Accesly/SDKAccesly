@@ -31,6 +31,14 @@ import type {
   RecoveryOtpVerifyResponse,
   SimulateRotateSignerRequest,
   SimulateRotateSignerResponse,
+  SimulateRotatePartialRequest,
+  SimulateRotatePartialResponse,
+  RotatePartialRequest,
+  RotatePartialResponse,
+  SimulateFinalizeRotationRequest,
+  SimulateFinalizeRotationResponse,
+  FinalizeRotationRequest,
+  FinalizeRotationResponse,
   ActivateAssetSimulateRequest,
   BootstrapGSimulateResponse,
   BootstrapGSubmitRequest,
@@ -433,6 +441,70 @@ export class AccesslyEndpoints {
       {
         headers: { 'X-Recovery-Jwt': recoveryJwt },
       },
+    );
+  }
+
+  /* ── Recovery multi-tx (Smart Account v3.2.0, Fase T) ─────────────────── */
+
+  /**
+   * Anónimo + `X-Recovery-Jwt`. Simula `rotate_signer_partial(rule_ids, ...)`
+   * — rota solo el subset de rules pasadas. El SDK loops este + `rotatePartial`
+   * hasta cubrir todas las rules del signer viejo, después cierra con
+   * `simulateFinalizeRotation` + `finalizeRotation`.
+   */
+  simulateRotatePartial(
+    recoveryJwt: string,
+    payload: SimulateRotatePartialRequest,
+  ): Promise<SimulateRotatePartialResponse> {
+    return this.client.post<SimulateRotatePartialResponse>(
+      '/recovery/simulate-rotate-partial',
+      payload as unknown as Json,
+      { headers: { 'X-Recovery-Jwt': recoveryJwt } },
+    );
+  }
+
+  /**
+   * Anónimo + `X-Recovery-Jwt`. Submitea un batch del rotate particionado.
+   * NO persiste fragments — eso pasa solo en `finalizeRotation`.
+   */
+  rotatePartial(
+    recoveryJwt: string,
+    payload: RotatePartialRequest,
+  ): Promise<RotatePartialResponse> {
+    return this.client.post<RotatePartialResponse>(
+      '/recovery/rotate-partial',
+      payload as unknown as Json,
+      { headers: { 'X-Recovery-Jwt': recoveryJwt } },
+    );
+  }
+
+  /**
+   * Anónimo + `X-Recovery-Jwt`. Simula `finalize_rotation(new_owner, new_secp,
+   * new_email_commitment)` — cierre del flow multi-tx.
+   */
+  simulateFinalizeRotation(
+    recoveryJwt: string,
+    payload: SimulateFinalizeRotationRequest,
+  ): Promise<SimulateFinalizeRotationResponse> {
+    return this.client.post<SimulateFinalizeRotationResponse>(
+      '/recovery/simulate-finalize-rotation',
+      payload as unknown as Json,
+      { headers: { 'X-Recovery-Jwt': recoveryJwt } },
+    );
+  }
+
+  /**
+   * Anónimo + `X-Recovery-Jwt`. Submitea `finalize_rotation` Y persiste todos
+   * los nuevos fragments (F1'/F2'/F3'/salt/emailCommit).
+   */
+  finalizeRotation(
+    recoveryJwt: string,
+    payload: FinalizeRotationRequest,
+  ): Promise<FinalizeRotationResponse> {
+    return this.client.post<FinalizeRotationResponse>(
+      '/recovery/finalize-rotation',
+      payload as unknown as Json,
+      { headers: { 'X-Recovery-Jwt': recoveryJwt } },
     );
   }
 

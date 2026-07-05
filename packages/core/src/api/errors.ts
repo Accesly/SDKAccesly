@@ -107,6 +107,36 @@ export class GMissingTrustlineError extends AccesslyApiError {
   }
 }
 
+/**
+ * 422 con code `ROTATE_SIGNER_WRITE_CAP_EXCEEDED` — la wallet tiene demasiadas
+ * context rules para que el `rotate_signer` atómico quepa bajo el cap P27 de
+ * `writeBytes` (132KB). El SDK cae al flow multi-tx v3.2.0 usando los
+ * `rotatableRuleIds` que devolvió el backend para particionar.
+ */
+export class RotateWriteCapExceededError extends AccesslyApiError {
+  readonly walletAddress: string;
+  readonly writeBytes: number;
+  readonly cap: number;
+  readonly rotatableRuleIds: readonly number[];
+
+  constructor(
+    message: string,
+    opts: AccesslyApiErrorOptions & {
+      walletAddress: string;
+      writeBytes: number;
+      cap: number;
+      rotatableRuleIds: readonly number[];
+    },
+  ) {
+    super(message, opts);
+    this.name = 'RotateWriteCapExceededError';
+    this.walletAddress = opts.walletAddress;
+    this.writeBytes = opts.writeBytes;
+    this.cap = opts.cap;
+    this.rotatableRuleIds = opts.rotatableRuleIds;
+  }
+}
+
 /** 404 — resource does not exist. */
 export class NotFoundError extends AccesslyApiError {
   constructor(message: string, opts: AccesslyApiErrorOptions) {
@@ -179,6 +209,21 @@ export function errorForResponse(
       return new GMissingTrustlineError(message, { ...opts, asset });
     }
   }
+  if (status === 422 && code === 'ROTATE_SIGNER_WRITE_CAP_EXCEEDED') {
+    const wa = extractString(body, 'walletAddress');
+    const wb = extractNumber(body, 'writeBytes');
+    const cap = extractNumber(body, 'cap');
+    const rules = extractNumberArray(body, 'rotatableRuleIds');
+    if (wa !== undefined && wb !== undefined && cap !== undefined && rules !== undefined) {
+      return new RotateWriteCapExceededError(message, {
+        ...opts,
+        walletAddress: wa,
+        writeBytes: wb,
+        cap,
+        rotatableRuleIds: rules,
+      });
+    }
+  }
   if (status >= 400 && status < 500) return new ValidationError(message, opts);
   if (status >= 500) return new ServerError(message, opts);
   return new AccesslyApiError(message, opts);
@@ -213,6 +258,32 @@ function extractAsset(body: unknown): 'XLM' | 'USDC' | 'EURC' | undefined {
   if (body && typeof body === 'object') {
     const b = body as { asset?: unknown };
     if (b.asset === 'XLM' || b.asset === 'USDC' || b.asset === 'EURC') return b.asset;
+  }
+  return undefined;
+}
+
+function extractString(body: unknown, key: string): string | undefined {
+  if (body && typeof body === 'object') {
+    const v = (body as Record<string, unknown>)[key];
+    if (typeof v === 'string' && v.length > 0) return v;
+  }
+  return undefined;
+}
+
+function extractNumber(body: unknown, key: string): number | undefined {
+  if (body && typeof body === 'object') {
+    const v = (body as Record<string, unknown>)[key];
+    if (typeof v === 'number' && Number.isFinite(v)) return v;
+  }
+  return undefined;
+}
+
+function extractNumberArray(body: unknown, key: string): readonly number[] | undefined {
+  if (body && typeof body === 'object') {
+    const v = (body as Record<string, unknown>)[key];
+    if (Array.isArray(v) && v.every((x) => typeof x === 'number' && Number.isInteger(x) && x >= 0)) {
+      return v as number[];
+    }
   }
   return undefined;
 }

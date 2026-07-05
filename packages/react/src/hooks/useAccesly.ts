@@ -12,6 +12,7 @@
 
 import { useContext, useMemo } from 'react';
 import {
+  AccesslyEndpoints,
   computeSmartAccountAddress,
   createWallet as coreCreateWallet,
   decryptAesGcm,
@@ -34,6 +35,7 @@ import {
   zeroize,
   GAddressNotBootstrappedError,
   GMissingTrustlineError,
+  RotateWriteCapExceededError,
   WalletNotEnrolledError,
   type ActivatableAsset,
   type AuthStatus,
@@ -1019,6 +1021,134 @@ function defaultCallbackUri(authCallbackPath: string | undefined): string {
     return `${window.location.origin}${normalized}`;
   }
   return `${window.location.origin}/auth/callback`;
+}
+
+/**
+ * Recovery multi-tx (Smart Account v3.2.0, Fase T 2026-07-03) — batching helper.
+ *
+ * Cuando el `rotate_signer` atómico rebota por exceder el cap P27 de writeBytes,
+ * el backend devuelve `RotateWriteCapExceededError` con `rotatableRuleIds`.
+ * Este helper particiona esos IDs en batches de 2 rules y ejecuta:
+ *
+ *   for each batch:
+ *     simulate-rotate-partial → sign auth entry → rotate-partial (submit)
+ *   simulate-finalize-rotation → sign auth entry → finalize-rotation (submit + persist fragments)
+ *
+ * El caller le pasa la seed reconstruida vía Shamir (para firmar como owner
+ * viejo bajo admin-cfg) + los blobs nuevos ya cifrados listos para persistir.
+ * Devuelve un shape idéntico a `finalizeRecovery` para que el caller no tenga
+ * que distinguir happy path del multi-tx.
+ */
+const PARTIAL_ROTATE_BATCH_SIZE = 2;
+
+async function runPartialRotateFlow(input: {
+  readonly endpoints: AccesslyEndpoints;
+  readonly recoveryJwt: string;
+  readonly rotatableRuleIds: readonly number[];
+  readonly oldReconstructedSeed: Uint8Array;
+  readonly oldOwnerPubkey: Uint8Array;
+  readonly verifierAddress: string;
+  readonly newOwnerHex: string;
+  readonly newSecpHex: string;
+  readonly newEmailCommitHex: string;
+  readonly encoded: {
+    readonly f1: ReturnType<typeof encodeFragmentToWire>;
+    readonly f2: ReturnType<typeof encodeFragmentToWire>;
+    readonly f2Recovery: ReturnType<typeof encodeFragmentToWire>;
+    readonly f3: ReturnType<typeof encodeFragmentToWire>;
+  };
+  readonly newRecoverySaltBase64: string;
+}): Promise<{ walletAddress: string; txHash: string; status: string }> {
+  const {
+    endpoints,
+    recoveryJwt,
+    rotatableRuleIds,
+    oldReconstructedSeed,
+    oldOwnerPubkey,
+    verifierAddress,
+    newOwnerHex,
+    newSecpHex,
+    newEmailCommitHex,
+    encoded,
+    newRecoverySaltBase64,
+  } = input;
+
+  // Split rotatableRuleIds en batches de 2. Empíricamente cada batch de 2 rules
+  // escribe ~85KB, cabe holgadamente bajo el cap de 132KB. Batches de 3 rules
+  // están al límite (~127KB) y no dejan margen para variaciones del KMS sig.
+  const batches: number[][] = [];
+  for (let i = 0; i < rotatableRuleIds.length; i += PARTIAL_ROTATE_BATCH_SIZE) {
+    batches.push([...rotatableRuleIds.slice(i, i + PARTIAL_ROTATE_BATCH_SIZE)]);
+  }
+
+  let lastWalletAddress = '';
+
+  // `signSorobanAuthEntry` zero-iza la seed al terminar. Como necesitamos
+  // firmar N+1 auth entries en este flow (N batches + 1 finalize), pasamos un
+  // clone en cada call y zero-izamos manualmente al final.
+  const cloneSeed = (): Uint8Array => new Uint8Array(oldReconstructedSeed);
+
+  // Fase 1 — N × (simulate-rotate-partial → sign → rotate-partial).
+  for (let bi = 0; bi < batches.length; bi += 1) {
+    const batch = batches[bi]!;
+    const sim = await endpoints.simulateRotatePartial(recoveryJwt, {
+      partialRuleIds: batch,
+      newOwnerEd25519Pubkey: newOwnerHex,
+      newSecp256r1Pubkey: newSecpHex,
+    });
+    lastWalletAddress = sim.walletAddress;
+
+    const { signedAuthEntryXdr } = await signSorobanAuthEntry({
+      signaturePayloadHashBase64: sim.signaturePayloadHashBase64,
+      contextRuleIds: [...sim.contextRuleIds],
+      placeholderAuthEntryXdr: sim.placeholderAuthEntryXdr,
+      ed25519Seed: cloneSeed(),
+      ed25519VerifierAddress: verifierAddress,
+      ownerPubkey: oldOwnerPubkey,
+    });
+
+    await endpoints.rotatePartial(recoveryJwt, {
+      unsignedXdr: sim.unsignedXdr,
+      signedAuthEntryXdr,
+      partialRuleIds: batch,
+    });
+  }
+
+  // Fase 2 — simulate-finalize-rotation → sign → finalize-rotation.
+  const finalizeSim = await endpoints.simulateFinalizeRotation(recoveryJwt, {
+    newOwnerEd25519Pubkey: newOwnerHex,
+    newSecp256r1Pubkey: newSecpHex,
+    newEmailCommitment: newEmailCommitHex,
+  });
+  lastWalletAddress = finalizeSim.walletAddress;
+
+  const { signedAuthEntryXdr: finalizeAuthXdr } = await signSorobanAuthEntry({
+    signaturePayloadHashBase64: finalizeSim.signaturePayloadHashBase64,
+    contextRuleIds: [...finalizeSim.contextRuleIds],
+    placeholderAuthEntryXdr: finalizeSim.placeholderAuthEntryXdr,
+    ed25519Seed: cloneSeed(),
+    ed25519VerifierAddress: verifierAddress,
+    ownerPubkey: oldOwnerPubkey,
+  });
+
+  const finalizeResp = await endpoints.finalizeRotation(recoveryJwt, {
+    unsignedXdr: finalizeSim.unsignedXdr,
+    signedAuthEntryXdr: finalizeAuthXdr,
+    newOwnerEd25519Pubkey: newOwnerHex,
+    newSecp256r1Pubkey: newSecpHex,
+    newFragmentF1Encrypted: encoded.f1,
+    newFragmentF2Encrypted: encoded.f2,
+    newFragmentF2Recovery: encoded.f2Recovery,
+    newFragmentF3Encrypted: encoded.f3,
+    newRecoverySalt: newRecoverySaltBase64,
+    newEmailCommitment: newEmailCommitHex,
+  });
+
+  return {
+    walletAddress: finalizeResp.walletAddress ?? lastWalletAddress,
+    txHash: finalizeResp.txHash,
+    status: finalizeResp.status,
+  };
 }
 
 export function useAccesly(): AcceslyHook {
@@ -2694,6 +2824,12 @@ export function useAccesly(): AcceslyHook {
           });
 
           // 8. POST /recovery/finalize.
+          //
+          // Wallets con 4+ context rules dispararán RotateWriteCapExceededError
+          // porque el rotate_signer atómico excede el cap P27 de writeBytes
+          // (bug detectado en Fase T, 2026-07-03). En ese caso caemos al flow
+          // multi-tx del Smart Account v3.2.0 usando los rotatableRuleIds que
+          // devolvió el backend en el error.
           let finalizeResp;
           try {
             finalizeResp = await ctx.endpoints.finalizeRecovery(input.recoveryJwt, {
@@ -2708,6 +2844,32 @@ export function useAccesly(): AcceslyHook {
               newRecoverySalt: newRecoverySaltBase64,
               newEmailCommitment: newEmailCommitHex,
             });
+          } catch (err) {
+            if (
+              err instanceof RotateWriteCapExceededError &&
+              err.rotatableRuleIds.length > 0
+            ) {
+              finalizeResp = await runPartialRotateFlow({
+                endpoints: ctx.endpoints,
+                recoveryJwt: input.recoveryJwt,
+                rotatableRuleIds: err.rotatableRuleIds,
+                oldReconstructedSeed,
+                oldOwnerPubkey,
+                verifierAddress,
+                newOwnerHex,
+                newSecpHex,
+                newEmailCommitHex,
+                encoded: {
+                  f1: encodeFragmentToWire(created.encryptedFragments[0]),
+                  f2: encodeFragmentToWire(created.encryptedFragments[1]),
+                  f2Recovery: encodeFragmentToWire(newFragmentF2Recovery),
+                  f3: encodeFragmentToWire(created.encryptedFragments[2]),
+                },
+                newRecoverySaltBase64,
+              });
+            } else {
+              throw err;
+            }
           } finally {
             zeroize(newRecoveryKey);
           }

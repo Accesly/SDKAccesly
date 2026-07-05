@@ -1,5 +1,14 @@
 # @accesly/react
 
+## 2.6.0
+
+### Features
+
+- **Recovery multi-tx transparente para Smart Account v3.2.0.** El hook `useAccesly().recovery.completeRecovery(...)` ahora detecta wallets con 4+ context rules y ejecuta el flow multi-tx del contrato v3.2.0 automáticamente. El caller no ve la diferencia: pasa las mismas credenciales, obtiene el mismo shape de respuesta (`walletAddress`, `txHash`, `status`).
+- Bajo el hood, cuando el backend devuelve `RotateWriteCapExceededError` con `rotatableRuleIds`, el SDK particiona en batches de 2 rules por tx y ejecuta: `N × (simulateRotatePartial → sign → rotatePartial)` + `simulateFinalizeRotation → sign → finalizeRotation`. El último submit persiste todos los fragments nuevos atómicamente en el backend.
+- Wallets con ≤ 3 rules siguen usando el path atómico legacy sin cambios.
+- Requiere `@accesly/core@1.21.0+` y backend con endpoints `/recovery/{simulate-,}rotate-partial` y `/recovery/{simulate-,}finalize-rotation` desplegados (Fase T).
+
 ## 2.5.4
 
 ### Features

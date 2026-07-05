@@ -689,6 +689,73 @@ export interface FinalizeRecoveryResponse {
   readonly status: string;
 }
 
+/* ── Recovery multi-tx (Smart Account v3.2.0, Fase T 2026-07-03) ────────── */
+
+/**
+ * `POST /recovery/simulate-rotate-partial` body. Simula
+ * `rotate_signer_partial(rule_ids, new_owner, new_secp)` — rota solo el subset
+ * de rules pasadas. Diseñado para wallets con 4+ context rules donde el
+ * rotate atómico excede el cap P27 de writeBytes.
+ */
+export interface SimulateRotatePartialRequest {
+  readonly partialRuleIds: readonly number[];
+  readonly newOwnerEd25519Pubkey: HexString;
+  readonly newSecp256r1Pubkey: HexString;
+}
+
+export type SimulateRotatePartialResponse = SimulateRotateSignerResponse;
+
+/**
+ * `POST /recovery/rotate-partial` body. Submitea un batch del rotate
+ * particionado. NO persiste fragments — eso pasa solo en `finalize-rotation`.
+ */
+export interface RotatePartialRequest {
+  readonly unsignedXdr: Base64String;
+  readonly signedAuthEntryXdr: Base64String;
+  /** Los mismos rule_ids que se firmaron. El backend valida que matchean. */
+  readonly partialRuleIds: readonly number[];
+}
+
+export interface RotatePartialResponse {
+  readonly walletAddress: string;
+  readonly txHash: string;
+  readonly status: string;
+  readonly rotatedRuleIds: readonly number[];
+}
+
+/**
+ * `POST /recovery/simulate-finalize-rotation` body. Simula
+ * `finalize_rotation(new_owner, new_secp, new_email_commitment)` — cierre del
+ * flow multi-tx.
+ */
+export interface SimulateFinalizeRotationRequest {
+  readonly newOwnerEd25519Pubkey: HexString;
+  readonly newSecp256r1Pubkey: HexString;
+  readonly newEmailCommitment: HexString;
+}
+
+export type SimulateFinalizeRotationResponse = SimulateRotateSignerResponse;
+
+/**
+ * `POST /recovery/finalize-rotation` body. Submitea la tx `finalize_rotation`
+ * Y persiste TODOS los nuevos fragments (mismo protocolo que `/recovery/finalize`
+ * legacy, pero on-chain llama a `finalize_rotation` en vez de `rotate_signer`).
+ */
+export interface FinalizeRotationRequest {
+  readonly unsignedXdr: Base64String;
+  readonly signedAuthEntryXdr: Base64String;
+  readonly newOwnerEd25519Pubkey: HexString;
+  readonly newSecp256r1Pubkey: HexString;
+  readonly newFragmentF1Encrypted: EncryptedFragmentWire;
+  readonly newFragmentF2Encrypted: EncryptedFragmentWire;
+  readonly newFragmentF2Recovery: EncryptedFragmentWire;
+  readonly newFragmentF3Encrypted: EncryptedFragmentWire;
+  readonly newRecoverySalt: Base64String;
+  readonly newEmailCommitment: HexString;
+}
+
+export type FinalizeRotationResponse = FinalizeRecoveryResponse;
+
 /* ── v1.1.0: read-only data endpoints (balance, activity) ───────────────── */
 
 /**

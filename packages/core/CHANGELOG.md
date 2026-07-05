@@ -1,5 +1,19 @@
 # @accesly/core
 
+## 1.21.0
+
+### Minor Changes
+
+- feat(api): soporte para Smart Account v3.2.0 rotate particionado (Fase T, 2026-07-03). Wallets con 4+ context rules ya no fallan el recovery por exceder el cap P27 de `writeBytes` (~132KB).
+  - Nueva clase de error `RotateWriteCapExceededError extends AccesslyApiError` con `walletAddress`, `writeBytes`, `cap`, `rotatableRuleIds`. Se construye cuando el backend devuelve `422` con `code: ROTATE_SIGNER_WRITE_CAP_EXCEEDED`.
+  - Nuevos métodos en `AccesslyEndpoints`:
+    - `simulateRotatePartial(recoveryJwt, { partialRuleIds, newOwner, newSecp })` → `SimulateRotatePartialResponse`.
+    - `rotatePartial(recoveryJwt, { unsignedXdr, signedAuthEntryXdr, partialRuleIds })` → `RotatePartialResponse`.
+    - `simulateFinalizeRotation(recoveryJwt, { newOwner, newSecp, newEmailCommitment })` → `SimulateFinalizeRotationResponse`.
+    - `finalizeRotation(recoveryJwt, { unsignedXdr, signedAuthEntryXdr, ...fragments })` → `FinalizeRotationResponse`.
+  - Nuevos types públicos: `SimulateRotatePartialRequest/Response`, `RotatePartialRequest/Response`, `SimulateFinalizeRotationRequest/Response`, `FinalizeRotationRequest/Response`.
+- El happy path del recovery en wallets pequeñas (≤3 rules) sigue usando `rotate_signer` atómico sin overhead — el flow multi-tx solo se dispara si el backend devuelve el error tipado.
+
 ## 1.20.0
 
 ### Minor Changes
