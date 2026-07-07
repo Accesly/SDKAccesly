@@ -68,6 +68,24 @@ export interface AppConfigNetworks {
   readonly mainnet: boolean;
 }
 
+/**
+ * Devuelve la Stellar network que el app tiene habilitada. Complemento
+ * client-side del helper del backend con el mismo nombre.
+ *
+ * Reglas:
+ *  - Si `networks.mainnet === true` → 'mainnet'.
+ *  - Si `networks.testnet === true` (default) o el field está ausente → 'testnet'.
+ *  - Si ambas son `true` → 'testnet' (fail-safe; el backend rechaza este caso).
+ */
+export function getAppNetwork(config: {
+  readonly networks?: AppConfigNetworks;
+}): 'testnet' | 'mainnet' {
+  const nets = config.networks;
+  if (!nets) return 'testnet';
+  if (nets.mainnet && !nets.testnet) return 'mainnet';
+  return 'testnet';
+}
+
 export interface AppConfigTrustline {
   readonly code: TrustlineCode;
   readonly isNative?: boolean;

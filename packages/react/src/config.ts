@@ -16,25 +16,33 @@ export interface EnvironmentDefaults {
    */
   readonly walletStreamUrl: string;
   readonly cognito: CognitoConfig;
-  readonly stellar: {
-    readonly networkPassphrase: string;
-    readonly horizonUrl: string;
-    readonly sorobanRpcUrl: string;
-    /**
-     * Stellar G-address of the account that invokes `CreateContract` for new
-     * Smart Accounts. Same account the backend Lambda uses, so the wallet
-     * address computed client-side via `wallet.computeAddress` matches
-     * exactly what the backend will (or did) deploy.
-     */
-    readonly deployerAddress: string;
-    /**
-     * Address del contrato `ed25519-verifier` desplegado en la red. Necesario
-     * cuando el SDK construye la entrada `Signer::External(verifier, pubkey)`
-     * dentro del `AuthPayload` que firma — el Smart Account compara con la
-     * misma address que tiene almacenada en su context rule.
-     */
-    readonly ed25519VerifierAddress: string;
-  };
+  readonly stellar: StellarNetworkConfig;
+  /**
+   * Fase 14 (2026-07-05) — mismo backend puede servir apps mainnet + testnet.
+   * Cuando el appConfig del user marca network=mainnet, el SDK usa esta
+   * config en lugar de `stellar` para elegir el verifier, RPC y passphrase.
+   */
+  readonly stellarMainnet?: StellarNetworkConfig;
+}
+
+export interface StellarNetworkConfig {
+  readonly networkPassphrase: string;
+  readonly horizonUrl: string;
+  readonly sorobanRpcUrl: string;
+  /**
+   * Stellar G-address of the account that invokes `CreateContract` for new
+   * Smart Accounts. Same account the backend Lambda uses, so the wallet
+   * address computed client-side via `wallet.computeAddress` matches
+   * exactly what the backend will (or did) deploy.
+   */
+  readonly deployerAddress: string;
+  /**
+   * Address del contrato `ed25519-verifier` desplegado en la red. Necesario
+   * cuando el SDK construye la entrada `Signer::External(verifier, pubkey)`
+   * dentro del `AuthPayload` que firma — el Smart Account compara con la
+   * misma address que tiene almacenada en su context rule.
+   */
+  readonly ed25519VerifierAddress: string;
 }
 
 export const ENVIRONMENT_DEFAULTS: Record<Environment, EnvironmentDefaults> = {
@@ -59,6 +67,15 @@ export const ENVIRONMENT_DEFAULTS: Record<Environment, EnvironmentDefaults> = {
       deployerAddress: 'GDRHSVLY3VCEHCHCSR5MZR2ALYLCERDDFT3ULCUIELGFVYHTZFCMNU4E',
       // accesly-contracts Phase 1 deploy on Stellar testnet.
       ed25519VerifierAddress: 'CALVIIGIOMODZMWTMKZLSD4PZFFEPWQBSYERHUFM6MH5FLWKCHW4E4G5',
+    },
+    // Fase 14 (2026-07-05) — apps mainnet en el mismo backend dev.
+    // Contratos desplegados en Stellar Public el 2026-07-05.
+    stellarMainnet: {
+      networkPassphrase: 'Public Global Stellar Network ; September 2015',
+      horizonUrl: 'https://horizon.stellar.org',
+      sorobanRpcUrl: 'https://mainnet.sorobanrpc.com',
+      deployerAddress: 'GDIVGZYBIIS33JHX36OUWGPQ4EP2SQW4YBNNGXDX4WCZRPQJCDBYONET',
+      ed25519VerifierAddress: 'CCWNNXKR72N7NJ2QQTAVRXOOKQBTM2XWCLPJ5KF47TKY7GB7IJGHQOGK',
     },
   },
   staging: {

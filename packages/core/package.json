@@ -1,6 +1,6 @@
 {
   "name": "@accesly/core",
-  "version": "1.21.0",
+  "version": "1.23.0",
   "description": "Accesly SDK core — framework-agnostic non-custodial wallet primitives for Stellar (MPC Shamir + WebAuthn + Cognito + Soroban).",
   "license": "MIT",
   "author": "Accesly Core <acceslyoficial@gmail.com>",

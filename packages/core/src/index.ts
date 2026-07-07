@@ -173,6 +173,8 @@ export type {
   FiatOnrampMethod,
 } from './types/app-config.js';
 
+export { getAppNetwork } from './types/app-config.js';
+
 export {
   IndexedDbDeviceStore,
   InMemoryDeviceStore,

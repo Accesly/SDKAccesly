@@ -1,5 +1,20 @@
 # @accesly/core
 
+## 1.23.0
+
+### Minor Changes
+
+- feat: `AccesslyApiClient` acepta `appId` en el constructor. Si se pasa, se envía como header `X-Accesly-App-Id` en todas las requests. Backend lo usa para desambiguar wallets del mismo Cognito user en apps distintas (typical: testnet + mainnet coexistiendo).
+- El `<AcceslyProvider appId=...>` de `@accesly/react` propaga el appId al cliente automáticamente. Sin cambios de código para los integradores.
+- Zero breaking changes: backends que no reconocen el header lo ignoran; wallets viejas siguen funcionando via fallback legacy.
+
+## 1.22.0
+
+### Minor Changes
+
+- feat(types): nuevo helper `getAppNetwork(config)` que devuelve `'testnet'` o `'mainnet'` según `appConfig.networks`. Complemento client-side del helper del backend con el mismo nombre. Usado por `@accesly/react` para exponer `useNetwork()` y ramificar UI según red activa.
+- Sin breaking changes.
+
 ## 1.21.0
 
 ### Minor Changes

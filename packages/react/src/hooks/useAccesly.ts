@@ -48,6 +48,8 @@ import {
 } from '@accesly/core';
 import { AcceslyContext, type AcceslyContextValue } from '../context.js';
 import { ENVIRONMENT_DEFAULTS } from '../config.js';
+import { useAppConfig } from './useAppConfig.js';
+import { getAppNetwork } from '@accesly/core';
 import { WalletAlreadyExistsError } from '../errors.js';
 
 // Recovery (ZK email) se removió en 1.0.0-pre.0 (2026-06-15). El nuevo modelo
@@ -1214,7 +1216,25 @@ export function useAccesly(): AcceslyHook {
 
   const { hexToBytes, hexFromBytes } = useMemo(() => coderHelpers(), []);
 
-  const stellarConfig = ENVIRONMENT_DEFAULTS[ctx.env].stellar;
+  // Fase 14 (2026-07-05) — resolvemos la stellar config segun el network del
+  // appConfig. Un mismo backend (env=dev) puede servir wallets testnet Y
+  // mainnet — la elección del verifier, RPC y passphrase depende del
+  // appConfig.networks flag del user.
+  // Si el appConfig no ha cargado aún, fallback a stellar (testnet default).
+  const { config: appConfig } = useAppConfig();
+  const stellarConfig = useMemo(() => {
+    const envDefaults = ENVIRONMENT_DEFAULTS[ctx.env];
+    if (!appConfig) return envDefaults.stellar;
+    try {
+      const net = getAppNetwork(appConfig);
+      if (net === 'mainnet' && envDefaults.stellarMainnet) {
+        return envDefaults.stellarMainnet;
+      }
+    } catch {
+      // network ambiguo — cae al default.
+    }
+    return envDefaults.stellar;
+  }, [appConfig, ctx.env]);
 
   const wallet = useMemo<WalletNamespace>(() => {
     // Capture the narrowed non-null context once, so the inner closures

@@ -24,6 +24,7 @@
 
 export { AuthForm, type AuthFormProps } from './AuthForm.js';
 export { BalanceCard, type BalanceCardProps } from './BalanceCard.js';
+export { NetworkBadge, type NetworkBadgeProps } from './NetworkBadge.js';
 export { MovementsList, type MovementsListProps } from './MovementsList.js';
 export { ReceiveFlow, type ReceiveFlowProps } from './ReceiveFlow.js';
 export { SendFlow, type SendFlowProps } from './SendFlow.js';

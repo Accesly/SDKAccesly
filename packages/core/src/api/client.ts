@@ -51,6 +51,13 @@ export interface AccesslyApiClientOptions {
    * Tests only. Default: 500 * 2^(attempt-1) ± 20% jitter.
    */
   readonly backoffMs?: (attempt: number) => number;
+  /**
+   * appId del integrator. Si se pasa, el cliente lo envía como header
+   * `X-Accesly-App-Id` en todas las requests. Backend lo usa para desambiguar
+   * wallets del mismo Cognito user en apps distintas (typical: testnet + mainnet).
+   * Introduced in @accesly/core 1.23.0.
+   */
+  readonly appId?: string;
 }
 
 export type Json =
@@ -82,6 +89,14 @@ export class AccesslyApiClient {
   private readonly timeoutMs: number;
   private readonly telemetry: TelemetrySink;
   private readonly backoffMs: (attempt: number) => number;
+  /**
+   * appId opcional. Si se pasa en el constructor, se envía como header
+   * `X-Accesly-App-Id` en todas las requests. El backend lo usa para
+   * desambiguar wallets del mismo Cognito user cuando el user tiene wallets
+   * en múltiples apps (testnet + mainnet). Ver `fragments-store.ts`
+   * `compoundUserId(sub, appId)` en el backend.
+   */
+  private readonly appId: string | undefined;
 
   constructor(opts: AccesslyApiClientOptions) {
     if (!opts.baseUrl) throw new TypeError('AccesslyApiClient: baseUrl is required');
@@ -94,6 +109,7 @@ export class AccesslyApiClient {
     this.timeoutMs = opts.timeoutMs ?? 30_000;
     this.telemetry = opts.telemetry ?? (() => undefined);
     this.backoffMs = opts.backoffMs ?? defaultBackoff;
+    this.appId = opts.appId;
   }
 
   get<T>(path: string, opts?: RequestOptions): Promise<T> {
@@ -135,6 +151,11 @@ export class AccesslyApiClient {
       // NOTE: API Gateway REST v1 + Cognito Authorizer expects the bare JWT,
       // NOT `Bearer <jwt>`. See CloudServices-accesly/docs/Handoff_Fase3.md.
       headers['Authorization'] = idToken;
+    }
+    // Fase 14 (2026-07-05) — appId hint para que el backend desambigüe
+    // wallets del mismo Cognito user en apps distintas.
+    if (this.appId && !headers['X-Accesly-App-Id']) {
+      headers['X-Accesly-App-Id'] = this.appId;
     }
 
     const init: RequestInit = { method, headers };

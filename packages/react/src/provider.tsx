@@ -215,6 +215,7 @@ function BootstrappedProvider(props: BootstrappedProviderProps): JSX.Element {
     const apiClient = new AccesslyApiClient({
       baseUrl: props.apiUrl,
       getIdToken: () => tokenManager.getValidIdToken(),
+      appId: props.appId,
       ...(props.telemetry ? { telemetry: props.telemetry } : {}),
     });
     const endpoints = new AccesslyEndpoints(apiClient);

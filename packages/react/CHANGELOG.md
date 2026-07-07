@@ -1,5 +1,28 @@
 # @accesly/react
 
+## 2.9.0
+
+### Minor Changes
+
+- feat(mainnet): resolución dinámica de `stellarConfig` según `getAppNetwork(appConfig)`. `EnvironmentDefaults.stellar` sigue apuntando a testnet; nuevo `EnvironmentDefaults.stellarMainnet` (opcional) trae verifier + RPC + passphrase + deployer mainnet. Un mismo backend (env=dev) puede servir apps testnet Y mainnet — `useAccesly` elige la config correcta según el appConfig del user.
+- Sin este fix, apps mainnet firmaban el auth entry con el ed25519-verifier testnet (`CALVIIGI...`) contra rules registradas con el verifier mainnet (`CCWNNXKR...`) → `Error(Contract, #3002)` en `__check_auth`.
+- Requiere `@accesly/core@1.23.0+`. Contratos mainnet deployados en Fase 14 (2026-07-05).
+
+## 2.8.0
+
+### Minor Changes
+
+- feat: `<AcceslyProvider>` propaga el `appId` prop al `AccesslyApiClient` para que se envíe como header `X-Accesly-App-Id` en todas las requests. Backend usa el header para desambiguar wallets del mismo Cognito user cuando el user tiene wallets en apps distintas (testnet + mainnet).
+- Requiere `@accesly/core@1.23.0+`.
+
+## 2.7.0
+
+### Minor Changes
+
+- feat: nuevo hook `useNetwork()` que devuelve la Stellar network activa del app (`'testnet'` o `'mainnet'`) leyendo `appConfig.networks`. Undefined mientras el appConfig está cargando.
+- feat: nuevo componente `<NetworkBadge>` para renderizar un pill visual con la network activa. Colores: gris para testnet, lavanda para mainnet. Prop `mainnetOnly` para mostrar solo en mainnet.
+- Requiere `@accesly/core@1.22.0+`.
+
 ## 2.6.1
 
 ### Fixes

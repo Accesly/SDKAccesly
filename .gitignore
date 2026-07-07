@@ -54,3 +54,4 @@ docs/
 .smoke-test-results/
 .gstack/
 packages/react/*.tgz
+packages/core/*.tgz
