@@ -1,5 +1,19 @@
 # @accesly/react
 
+## 2.10.0
+
+### Minor Changes
+
+- feat(kit): `<SendFlow>` ahora tiene un botón **"Escanear"** al lado del selector de contactos. Abre `<QrScanModal>` que usa la cámara del device (`qr-scanner` con WebAssembly + worker), auto-cierra al detectar y pobla el input de destino.
+- feat(kit): parser SEP-0007 (`parseQrPayment`) que reconoce direcciones plain (`G…`, `C…`) y URIs `web+stellar:pay?destination=…&amount=…&asset_code=USDC`. USDC solo aceptado si el `asset_issuer` es Circle (mainnet o testnet).
+- feat(kit): nuevo prop `<SendFlow qrAmount>` con 3 policies para decidir qué hacer con el `amount` (y `asset_code`) del QR:
+  - `'ignore'` (default): el kit los descarta, el user siempre tipea. Recomendado.
+  - `'prefill'`: pobla pero editable. Útil para "invoices" amistosos.
+  - `'lock'`: pobla y bloquea inputs de monto + asset. POS / merchant flow.
+- feat(kit): `<QrScanModal>` + `parseQrPayment` re-exportados desde `@accesly/react/kit` para integradores que quieran reusarlos en otros pantallas.
+- Nueva dep: `qr-scanner@^1.4.2` (~13KB gzipped, cargada on-demand vía `import()` para no pesar el bundle inicial del kit).
+- La cámara requiere HTTPS y permission del user — el modal muestra mensajes amigables si el user niega o no hay cámara.
+
 ## 2.9.0
 
 ### Minor Changes

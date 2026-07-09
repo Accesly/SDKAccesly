@@ -6,6 +6,8 @@ import { useAppConfig } from '../hooks/useAppConfig.js';
 import { useBalance } from '../hooks/useBalance.js';
 import { useSpendingPolicy, checkTransferPolicy } from '../hooks/usePolicies.js';
 import { ContactPicker } from './ContactPicker.js';
+import { QrScanModal } from './QrScanModal.js';
+import { parseQrPayment } from './parseSep0007.js';
 import type { ContactRecord } from '@accesly/core';
 
 /**
@@ -27,11 +29,34 @@ import type { ContactRecord } from '@accesly/core';
  *   - `onCancel()`: callback.
  *   - `defaultAsset`: 'USDC' (default) | 'XLM'.
  */
+/**
+ * Policy que decide qué hace el kit con los fields `amount` y `asset_code`
+ * cuando el user escanea un QR SEP-0007 que los trae.
+ *
+ *  - `'ignore'` (default): el kit los descarta. El user siempre tipea el
+ *    monto y elige el asset. Recomendado para wallets generales — evita
+ *    que un QR malicioso pida un monto mayor al esperado sin que el user
+ *    lo note.
+ *  - `'prefill'`: el kit pobla los inputs con lo que trae el QR pero deja
+ *    al user editarlos antes de firmar. Útil para "invoices" amistosos.
+ *  - `'lock'`: el kit pobla y bloquea. El user solo confirma. Para flujos
+ *    POS / merchant donde el monto es la fuente de verdad.
+ *
+ * En modo `'lock'`, si el QR NO trae `amount` cae a `'ignore'` para no
+ * dejar el input bloqueado en vacío.
+ */
+export type QrAmountPolicy = 'ignore' | 'prefill' | 'lock';
+
 export interface SendFlowProps {
   readonly onSuccess?: (txHash: string) => void;
   readonly onCancel?: () => void;
   readonly defaultAsset?: 'USDC' | 'XLM';
   readonly className?: string;
+  /**
+   * Cómo tratar el `amount` (y `asset_code`) que trae un QR SEP-0007.
+   * Default `'ignore'` — el user siempre tipea el monto.
+   */
+  readonly qrAmount?: QrAmountPolicy;
 }
 
 type Step = 'form' | 'signing' | 'success' | 'error';
@@ -50,10 +75,36 @@ export function SendFlow(props: SendFlowProps): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [explorerUrl, setExplorerUrl] = useState<string | null>(null);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrLocked, setQrLocked] = useState(false);
+
+  const qrPolicy: QrAmountPolicy = props.qrAmount ?? 'ignore';
 
   function pickContact(c: ContactRecord) {
     if (c.handle) setDestination(`@${c.handle}`);
     else if (c.address) setDestination(c.address);
+    // Escribir manual desbloquea el monto — el user tomó control.
+    setQrLocked(false);
+  }
+
+  function handleQrResult(raw: string) {
+    const parsed = parseQrPayment(raw);
+    if (!parsed) {
+      setError('El QR no contiene una dirección Stellar ni un URI SEP-0007 válido.');
+      setQrOpen(false);
+      return;
+    }
+    setError(null);
+    setDestination(parsed.destination);
+
+    // Amount + asset según policy del integrador.
+    if (qrPolicy !== 'ignore') {
+      if (parsed.amount) setAmount(parsed.amount);
+      if (parsed.asset) setAsset(parsed.asset);
+      // Solo lockeamos si viene amount — sin él, dejar lock trababa el form.
+      setQrLocked(qrPolicy === 'lock' && parsed.amount !== null);
+    }
+    setQrOpen(false);
   }
 
   function toStroops(human: string): string {
@@ -195,20 +246,41 @@ export function SendFlow(props: SendFlowProps): JSX.Element {
       </header>
 
       <div className="space-y-1">
-        <label className="text-xs uppercase tracking-wider text-neutral-500">Para</label>
+        <div className="flex items-center justify-between">
+          <label className="text-xs uppercase tracking-wider text-neutral-500">Para</label>
+          <button
+            type="button"
+            onClick={() => setQrOpen(true)}
+            className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 inline-flex items-center gap-1.5"
+            aria-label="Escanear QR"
+          >
+            <QrIcon />
+            Escanear
+          </button>
+        </div>
         <ContactPicker onPick={pickContact} />
         <input
           type="text"
           required
           value={destination}
-          onChange={(e) => setDestination(e.target.value.trim())}
+          onChange={(e) => {
+            setDestination(e.target.value.trim());
+            setQrLocked(false);
+          }}
           placeholder={handlesEnabled ? '@ana.mtz o GBV2…XBQU o CCG3…ZF7E' : 'GBV2…XBQU o CCG3…ZF7E'}
           className="w-full rounded-xl border border-neutral-200 dark:border-neutral-700 px-4 py-3 bg-transparent font-mono text-sm"
         />
       </div>
 
       <div className="space-y-1">
-        <label className="text-xs uppercase tracking-wider text-neutral-500">Monto</label>
+        <div className="flex items-center justify-between">
+          <label className="text-xs uppercase tracking-wider text-neutral-500">Monto</label>
+          {qrLocked && (
+            <span className="text-[10px] uppercase tracking-wider text-neutral-500">
+              Fijado por el QR
+            </span>
+          )}
+        </div>
         <div className="flex gap-2">
           <input
             type="number"
@@ -216,15 +288,17 @@ export function SendFlow(props: SendFlowProps): JSX.Element {
             step="0.0001"
             min="0"
             required
+            readOnly={qrLocked}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            className="flex-1 rounded-xl border border-neutral-200 dark:border-neutral-700 px-4 py-3 bg-transparent text-lg font-mono"
+            className={`flex-1 rounded-xl border border-neutral-200 dark:border-neutral-700 px-4 py-3 bg-transparent text-lg font-mono ${qrLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
           />
           <select
             value={asset}
+            disabled={qrLocked}
             onChange={(e) => setAsset(e.target.value as 'USDC' | 'XLM')}
-            className="rounded-xl border border-neutral-200 dark:border-neutral-700 px-3 bg-transparent"
+            className={`rounded-xl border border-neutral-200 dark:border-neutral-700 px-3 bg-transparent ${qrLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
             <option value="USDC">USDC</option>
             <option value="XLM">XLM</option>
@@ -259,6 +333,37 @@ export function SendFlow(props: SendFlowProps): JSX.Element {
           Enviar
         </button>
       </div>
+
+      {qrOpen && (
+        <QrScanModal onResult={handleQrResult} onClose={() => setQrOpen(false)} />
+      )}
     </form>
+  );
+}
+
+/**
+ * Icono QR minimal — matchea el weight de los iconos del kit sin traer una
+ * lib de icons extra. 4 cuadros esquineros + un cuadro central: la lectura
+ * visual clásica de un QR.
+ */
+function QrIcon(): JSX.Element {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="3" height="3" />
+      <rect x="18" y="18" width="3" height="3" />
+    </svg>
   );
 }
