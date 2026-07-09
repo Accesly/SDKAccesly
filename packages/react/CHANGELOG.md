@@ -1,5 +1,13 @@
 # @accesly/react
 
+## 2.10.1
+
+### Patch Changes
+
+- fix(kit): el kit ahora usa **inline styles** en lugar de Tailwind classes en los componentes críticos. Antes las clases (`rounded-xl`, `aspect-square`, `bg-black/70`, `backdrop-blur-sm`, etc.) se purgaban cuando el integrador tenía Tailwind pero no incluía `node_modules/@accesly/react/dist/**` en su `content`. Resultado: `<QrScanModal>` se veía como una banda aplastada, `<SendFlow>` con inputs sin border, botones invisibles.
+- feat(kit): `<SendFlow>` rediseñado con teclado numérico + display grande estilo POS (respeta el UI que muchos integradores ya tenían custom). Header con label DIRECCIÓN DESTINO + botón "Escanear" alineado a la derecha, toggle XLM/USDC con pills, monto grande centrado con "Disponible: X ASSET", grid teclado 3x4 con backspace, botón enviar full-width.
+- Todos los colores usan CSS vars con fallback (`--accesly-text`, `--accesly-muted`, `--accesly-border`, `--accesly-card`, `--accesly-primary`, `--accesly-danger`) — el kit sigue respetando la paleta que el integrador setea via `useBranding()` pero funciona standalone sin ella.
+
 ## 2.10.0
 
 ### Minor Changes

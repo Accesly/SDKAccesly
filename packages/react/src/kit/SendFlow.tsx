@@ -233,26 +233,74 @@ export function SendFlow(props: SendFlowProps): JSX.Element {
     );
   }
 
-  return (
-    <form onSubmit={onSubmit} className={props.className ?? 'w-full max-w-sm space-y-4'}>
-      <header>
-        <h2 className="text-lg font-semibold">Enviar</h2>
-        <p className="text-sm text-neutral-500 mt-1">
-          Saldo {asset}:{' '}
-          <span className="font-mono">
-            {asset === 'USDC' ? balance.usdc ?? '0' : balance.xlm ?? '0'}
-          </span>
-        </p>
-      </header>
+  // Handler del teclado numérico. Reglas: máx 7 decimales, máx 12 dígitos
+  // total (evita monto absurdo tipo 1e13), sin doble ".". `back` borra un
+  // dígito. Bloqueado si `qrLocked` (policy = 'lock' + QR con amount).
+  function pressKey(k: string) {
+    if (qrLocked) return;
+    let cur = amount;
+    if (k === 'back') cur = cur.slice(0, -1);
+    else if (k === '.') {
+      if (cur.includes('.')) return;
+      cur = cur === '' ? '0.' : cur + '.';
+    } else {
+      if (cur === '0') cur = k;
+      else if ((cur.split('.')[1] ?? '').length >= 7) return;
+      else cur += k;
+    }
+    if (cur.replace('.', '').length > 12) return;
+    setAmount(cur);
+  }
 
-      <div className="space-y-1">
-        <div className="flex items-center justify-between">
-          <label className="text-xs uppercase tracking-wider text-neutral-500">Para</label>
+  const displayAmount = amount === '' ? '0' : amount;
+  const assetBalance = asset === 'USDC' ? balance.usdc ?? '0' : balance.xlm ?? '0';
+
+  // Inline styles — el kit debe funcionar sin depender de que el integrador
+  // tenga Tailwind con el kit en su content path. Todos los colores usan
+  // CSS vars con fallback razonable para dark mode.
+  const labelStyle: React.CSSProperties = {
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: '.14em',
+    textTransform: 'uppercase',
+    color: 'var(--accesly-muted, #8a8a94)',
+  };
+
+  return (
+    <form
+      onSubmit={onSubmit}
+      className={props.className}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 14,
+        width: '100%',
+        maxWidth: 420,
+      }}
+    >
+      {/* Fila: label DIRECCIÓN DESTINO + botón Escanear */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label style={labelStyle}>Dirección destino</label>
           <button
             type="button"
             onClick={() => setQrOpen(true)}
-            className="text-xs px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 inline-flex items-center gap-1.5"
             aria-label="Escanear QR"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '.08em',
+              textTransform: 'uppercase',
+              padding: '5px 10px',
+              borderRadius: 8,
+              border: '1px solid var(--accesly-border, rgba(148, 163, 184, 0.3))',
+              background: 'transparent',
+              color: 'var(--accesly-text, inherit)',
+              cursor: 'pointer',
+            }}
           >
             <QrIcon />
             Escanear
@@ -267,70 +315,202 @@ export function SendFlow(props: SendFlowProps): JSX.Element {
             setDestination(e.target.value.trim());
             setQrLocked(false);
           }}
-          placeholder={handlesEnabled ? '@ana.mtz o GBV2…XBQU o CCG3…ZF7E' : 'GBV2…XBQU o CCG3…ZF7E'}
-          className="w-full rounded-xl border border-neutral-200 dark:border-neutral-700 px-4 py-3 bg-transparent font-mono text-sm"
+          placeholder={handlesEnabled ? '@ana.mtz o G… o C…' : 'G… o C…'}
+          spellCheck={false}
+          autoCapitalize="off"
+          autoCorrect="off"
+          style={{
+            width: '100%',
+            padding: '12px 14px',
+            borderRadius: 14,
+            border: '1px solid var(--accesly-border, rgba(148, 163, 184, 0.3))',
+            background: 'var(--accesly-card, transparent)',
+            color: 'var(--accesly-text, inherit)',
+            fontSize: 14,
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+            outline: 'none',
+            boxSizing: 'border-box',
+          }}
         />
       </div>
 
-      <div className="space-y-1">
-        <div className="flex items-center justify-between">
-          <label className="text-xs uppercase tracking-wider text-neutral-500">Monto</label>
-          {qrLocked && (
-            <span className="text-[10px] uppercase tracking-wider text-neutral-500">
-              Fijado por el QR
-            </span>
-          )}
+      {/* Toggle XLM / USDC */}
+      <div style={{ display: 'flex', gap: 8 }}>
+        {(['XLM', 'USDC'] as const).map((a) => {
+          const on = asset === a;
+          return (
+            <button
+              key={a}
+              type="button"
+              disabled={qrLocked}
+              onClick={() => setAsset(a)}
+              style={{
+                flex: 1,
+                padding: '10px 0',
+                borderRadius: 12,
+                border: on
+                  ? '1.5px solid var(--accesly-primary, #8B6CE7)'
+                  : '1px solid var(--accesly-border, rgba(148, 163, 184, 0.3))',
+                background: on
+                  ? 'var(--accesly-primary-soft, rgba(139, 108, 231, 0.15))'
+                  : 'transparent',
+                color: on
+                  ? 'var(--accesly-primary-ink, var(--accesly-primary, #8B6CE7))'
+                  : 'var(--accesly-muted, #8a8a94)',
+                fontWeight: 700,
+                fontSize: 13,
+                letterSpacing: '.04em',
+                cursor: qrLocked ? 'not-allowed' : 'pointer',
+                opacity: qrLocked ? 0.6 : 1,
+              }}
+            >
+              {a}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Display grande del monto */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 4,
+          padding: '10px 0 6px',
+        }}
+      >
+        <div style={{ fontSize: 12, color: 'var(--accesly-muted, #8a8a94)' }}>
+          Disponible: {assetBalance} {asset}
         </div>
-        <div className="flex gap-2">
-          <input
-            type="number"
-            inputMode="decimal"
-            step="0.0001"
-            min="0"
-            required
-            readOnly={qrLocked}
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-            className={`flex-1 rounded-xl border border-neutral-200 dark:border-neutral-700 px-4 py-3 bg-transparent text-lg font-mono ${qrLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
-          />
-          <select
-            value={asset}
-            disabled={qrLocked}
-            onChange={(e) => setAsset(e.target.value as 'USDC' | 'XLM')}
-            className={`rounded-xl border border-neutral-200 dark:border-neutral-700 px-3 bg-transparent ${qrLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+          <span
+            style={{
+              fontSize: 24,
+              fontWeight: 700,
+              color: 'var(--accesly-muted, #8a8a94)',
+            }}
           >
-            <option value="USDC">USDC</option>
-            <option value="XLM">XLM</option>
-          </select>
+            {asset}
+          </span>
+          <span
+            style={{
+              fontSize: 46,
+              lineHeight: 1,
+              letterSpacing: '-.03em',
+              fontWeight: 700,
+              color:
+                amount && amount !== '0'
+                  ? 'var(--accesly-text, inherit)'
+                  : 'var(--accesly-muted, #8a8a94)',
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+            }}
+          >
+            {displayAmount}
+          </span>
         </div>
+        {qrLocked && (
+          <div style={{ ...labelStyle, fontSize: 10 }}>Fijado por el QR</div>
+        )}
+      </div>
+
+      {/* Teclado numérico */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 6,
+        }}
+      >
+        {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'back'].map((k) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => pressKey(k)}
+            disabled={qrLocked}
+            style={{
+              height: 48,
+              borderRadius: 12,
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--accesly-text, inherit)',
+              fontSize: 22,
+              fontWeight: 500,
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+              cursor: qrLocked ? 'not-allowed' : 'pointer',
+              opacity: qrLocked ? 0.4 : 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {k === 'back' ? <BackspaceIcon /> : k}
+          </button>
+        ))}
       </div>
 
       {policy.perTxStroops && policy.perTxAsset === asset && (
-        <p className="text-[11px] text-neutral-500">
+        <p style={{ margin: 0, fontSize: 11, color: 'var(--accesly-muted, #8a8a94)' }}>
           Límite por transacción del app:{' '}
-          <span className="font-mono">{Number(policy.perTxStroops) / 1e7}</span> {asset}
+          <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+            {Number(policy.perTxStroops) / 1e7}
+          </span>{' '}
+          {asset}
         </p>
       )}
 
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && (
+        <div
+          role="alert"
+          style={{
+            padding: '10px 12px',
+            borderRadius: 12,
+            background: 'rgba(244, 113, 116, 0.1)',
+            color: 'var(--accesly-danger, #ef4444)',
+            fontSize: 12.5,
+          }}
+        >
+          {error}
+        </div>
+      )}
 
-      <div className="flex gap-2">
+      <div style={{ display: 'flex', gap: 8 }}>
         {props.onCancel && (
           <button
             type="button"
             onClick={props.onCancel}
-            className="flex-1 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 font-medium"
+            style={{
+              flex: 1,
+              padding: '14px 0',
+              borderRadius: 14,
+              border: '1px solid var(--accesly-border, rgba(148, 163, 184, 0.3))',
+              background: 'transparent',
+              color: 'var(--accesly-text, inherit)',
+              fontWeight: 600,
+              fontSize: 14,
+              cursor: 'pointer',
+            }}
           >
             Cancelar
           </button>
         )}
         <button
           type="submit"
-          className="flex-1 py-3 rounded-xl text-white font-medium"
-          style={{ background: 'var(--accesly-primary, #8B6CE7)' }}
+          disabled={!destination || !amount}
+          style={{
+            flex: 1,
+            padding: '14px 0',
+            borderRadius: 14,
+            border: 'none',
+            background: 'var(--accesly-primary, #8B6CE7)',
+            color: '#fff',
+            fontWeight: 700,
+            fontSize: 15,
+            cursor: 'pointer',
+            opacity: !destination || !amount ? 0.55 : 1,
+          }}
         >
-          Enviar
+          Enviar {displayAmount !== '0' ? `${displayAmount} ${asset}` : ''}
         </button>
       </div>
 
@@ -338,6 +518,16 @@ export function SendFlow(props: SendFlowProps): JSX.Element {
         <QrScanModal onResult={handleQrResult} onClose={() => setQrOpen(false)} />
       )}
     </form>
+  );
+}
+
+function BackspaceIcon(): JSX.Element {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M22 4H8L2 12l6 8h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" />
+      <line x1="18" y1="9" x2="12" y2="15" />
+      <line x1="12" y1="9" x2="18" y2="15" />
+    </svg>
   );
 }
 

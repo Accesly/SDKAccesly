@@ -17,8 +17,11 @@ import { useEffect, useRef, useState } from 'react';
  * a la default. HTTPS obligatorio — en HTTP el prompt de permission no
  * aparece (política de browsers).
  *
- * UI: sigue el mismo estilo Tailwind que el resto del kit (rounded-xl,
- * bordes neutros, dark-mode friendly).
+ * Styling: **inline styles** para todo el layout crítico (posicionamiento,
+ * dimensiones, aspect-ratio, colores base). El componente funciona
+ * sin depender de que el integrador tenga Tailwind configurado ni escanee
+ * el kit en su content path. Los tokens de color respetan la paleta lavanda
+ * del kit con fallback dark-friendly.
  */
 export interface QrScanModalProps {
   readonly onResult: (raw: string) => void;
@@ -103,44 +106,120 @@ export function QrScanModal(props: QrScanModalProps): JSX.Element {
       role="dialog"
       aria-modal="true"
       aria-label={props.title ?? 'Escanear QR'}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) props.onClose();
       }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'rgba(0, 0, 0, 0.72)',
+        backdropFilter: 'blur(4px)',
+        WebkitBackdropFilter: 'blur(4px)',
+        padding: 16,
+      }}
     >
-      <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 overflow-hidden shadow-xl">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
-          <h3 className="text-sm font-semibold">{props.title ?? 'Escanear QR'}</h3>
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 380,
+          borderRadius: 20,
+          background: '#0f0f1a',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          overflow: 'hidden',
+          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)',
+          color: '#f5f5f5',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px 16px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+          }}
+        >
+          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>
+            {props.title ?? 'Escanear QR'}
+          </h3>
           <button
             type="button"
             onClick={props.onClose}
-            className="text-xs text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 px-2 py-1 rounded-lg"
             aria-label="Cerrar"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#aaa',
+              fontSize: 12,
+              padding: '6px 10px',
+              borderRadius: 8,
+              cursor: 'pointer',
+            }}
           >
             Cerrar
           </button>
         </div>
 
-        <div className="relative aspect-square bg-black">
+        {/* Contenedor cuadrado sin depender de `aspect-square` de Tailwind.
+            El truco `paddingTop: 100%` fuerza height = width. */}
+        <div
+          style={{
+            position: 'relative',
+            width: '100%',
+            paddingTop: '100%',
+            background: '#000',
+          }}
+        >
           <video
             ref={videoRef}
-            className="absolute inset-0 w-full h-full object-cover"
             playsInline
             muted
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
           />
           {starting && !error ? (
-            <div className="absolute inset-0 flex items-center justify-center text-xs text-white/80">
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 12,
+                color: 'rgba(255, 255, 255, 0.8)',
+              }}
+            >
               Iniciando cámara…
             </div>
           ) : null}
           {error ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-center px-6">
-              <p className="text-sm text-white">{error}</p>
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                padding: 24,
+                background: 'rgba(0, 0, 0, 0.65)',
+              }}
+            >
+              <p style={{ margin: 0, fontSize: 13, color: '#fff' }}>{error}</p>
             </div>
           ) : null}
         </div>
 
-        <p className="px-4 py-3 text-xs text-neutral-500 dark:text-neutral-400">
+        <p style={{ margin: 0, padding: '12px 16px', fontSize: 12, color: '#888' }}>
           {props.hint ??
             'Apunta la cámara al código. Detectamos direcciones Stellar (G…, C…) y URIs SEP-0007.'}
         </p>
