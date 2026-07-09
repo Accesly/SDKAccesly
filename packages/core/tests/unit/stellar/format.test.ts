@@ -103,14 +103,19 @@ describe('stellar/format', () => {
   });
 
   describe('explorer URLs', () => {
-    it('uses testnet by default', () => {
+    it('uses testnet by default (backwards compat)', () => {
       expect(walletExplorerUrl('CABC')).toContain('/testnet/contract/CABC');
       expect(txExplorerUrl('deadbeef')).toContain('/testnet/tx/deadbeef');
       expect(accountExplorerUrl('GABC')).toContain('/testnet/account/GABC');
     });
 
-    it('respects mainnet selection', () => {
-      expect(walletExplorerUrl('CABC', 'mainnet')).toContain('/mainnet/contract/CABC');
+    // Stellar Expert usa `/public/` para mainnet — no `/mainnet/`.
+    // Antes de Fase 16, walletExplorerUrl('CABC', 'mainnet') generaba
+    // `/mainnet/contract/CABC` que da 404. Este test cubre el fix.
+    it('renders mainnet URLs with /public/', () => {
+      expect(walletExplorerUrl('CABC', 'mainnet')).toContain('/public/contract/CABC');
+      expect(txExplorerUrl('deadbeef', 'mainnet')).toContain('/public/tx/deadbeef');
+      expect(accountExplorerUrl('GABC', 'mainnet')).toContain('/public/account/GABC');
     });
   });
 

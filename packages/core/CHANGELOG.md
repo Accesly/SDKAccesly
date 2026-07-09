@@ -1,5 +1,12 @@
 # @accesly/core
 
+## 1.24.0
+
+### Minor Changes
+
+- fix(explorer URLs): `walletExplorerUrl`, `txExplorerUrl`, `accountExplorerUrl` ahora generan URLs válidas para mainnet. Antes concatenaban `/${network}/` directo, produciendo `/mainnet/contract/...` que da 404 porque Stellar Expert usa `/public/` para la red pública. Ahora un helper interno `explorerSegment` mapea `'mainnet' → 'public'` y `'testnet' → 'testnet'`.
+- El default `'testnet'` sigue vigente por backwards compat. Apps mainnet deben pasar `network: 'mainnet'` explícitamente.
+
 ## 1.23.0
 
 ### Minor Changes

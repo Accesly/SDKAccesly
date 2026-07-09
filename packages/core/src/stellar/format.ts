@@ -90,22 +90,40 @@ export function shortAddress(address: string, head = 6, tail = 4): string {
 }
 
 /**
+ * Stellar Expert usa `/testnet/` para testnet y `/public/` para mainnet.
+ * NO usa `/mainnet/` — un URL con `/mainnet/` da 404. Este helper hace el
+ * mapping correcto para que integradores no tengan que memorizarlo.
+ */
+function explorerSegment(network: StellarNetwork): string {
+  return network === 'mainnet' ? 'public' : 'testnet';
+}
+
+/**
  * Link al explorer de Stellar Expert para un contrato (C-address) en la red dada.
+ *
+ * Fase 16 (2026-07-08): antes concatenaba `/${network}/` directo — el URL
+ * mainnet resultante (`/mainnet/`) daba 404 porque Stellar Expert usa
+ * `/public/`. Ahora se mapea via `explorerSegment` y devuelve URLs válidas.
+ * El default `'testnet'` se mantiene por backwards compat con integradores
+ * pre-1.24 que no pasaban `network` — pero apps mainnet deben pasarlo
+ * explícitamente.
  */
 export function walletExplorerUrl(address: string, network: StellarNetwork = 'testnet'): string {
-  return `https://stellar.expert/explorer/${network}/contract/${address}`;
+  return `https://stellar.expert/explorer/${explorerSegment(network)}/contract/${address}`;
 }
 
 /**
  * Link al explorer de Stellar Expert para una tx en la red dada.
+ * Ver nota sobre network mapping en `walletExplorerUrl`.
  */
 export function txExplorerUrl(txHash: string, network: StellarNetwork = 'testnet'): string {
-  return `https://stellar.expert/explorer/${network}/tx/${txHash}`;
+  return `https://stellar.expert/explorer/${explorerSegment(network)}/tx/${txHash}`;
 }
 
 /**
  * Link al explorer de Stellar Expert para una G-address clásica.
+ * Ver nota sobre network mapping en `walletExplorerUrl`.
  */
 export function accountExplorerUrl(address: string, network: StellarNetwork = 'testnet'): string {
-  return `https://stellar.expert/explorer/${network}/account/${address}`;
+  return `https://stellar.expert/explorer/${explorerSegment(network)}/account/${address}`;
 }
