@@ -64,6 +64,10 @@ export { useAppConfig, type UseAppConfigResult } from './hooks/useAppConfig.js';
 export { useBranding, type UseBrandingResult } from './hooks/useBranding.js';
 export { useNetwork } from './hooks/useNetwork.js';
 export {
+  useWalletBootstrap,
+  type UseWalletBootstrapResult,
+} from './hooks/useWalletBootstrap.js';
+export {
   useAuthProviders,
   useKycPolicy,
   useSpendingPolicy,

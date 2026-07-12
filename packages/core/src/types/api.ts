@@ -85,6 +85,21 @@ export interface CreateWalletResponse {
   readonly walletAddress: string;
   /** Transaction hash if the deploy already settled; null while pending. */
   readonly txHash: string | null;
+  /**
+   * Fase 17 (2026-07-11) — bootstrap flow ahora es asíncrono.
+   *  - `'bootstrapping'`: el deploy tx aplicó, pero el bootstrap está en
+   *    la cola. El SDK debe suscribirse al `wallet-stream` SSE y esperar
+   *    el evento `bootstrap { status: 'ready' }` antes de exponer la wallet
+   *    como usable al user.
+   *  - `'ready'` (o campo ausente, wallets pre-Fase-17): la wallet está
+   *    lista para firmar.
+   *
+   * El SDK del kit React (`@accesly/react/kit`) maneja esta transición
+   * automáticamente en `<CreateWalletFlow>`. Integradores custom que
+   * consuman `AccesslyApiClient` directamente deben verificar este campo
+   * antes de disparar `tx.send()`.
+   */
+  readonly status?: 'bootstrapping' | 'ready';
 }
 
 /**

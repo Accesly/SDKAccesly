@@ -1,5 +1,12 @@
 # @accesly/core
 
+## 1.25.0
+
+### Minor Changes
+
+- feat(api): `CreateWalletResponse` acepta un campo opcional `status: 'bootstrapping' | 'ready'`. Fase 17 (2026-07-11) del backend cambió el `POST /wallets` de sync a async — el response es 202 en vez de 201 y devuelve `status: 'bootstrapping'` mientras el bootstrap corre en el worker. El SDK debe suscribirse al `wallet-stream` SSE (evento `bootstrap`) y esperar `status: 'ready'` antes de exponer la wallet como usable.
+- Backwards compat: wallets pre-Fase-17 responden sin este campo — el SDK debe asumir `ready` si está ausente.
+
 ## 1.24.0
 
 ### Minor Changes

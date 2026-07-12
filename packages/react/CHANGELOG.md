@@ -1,5 +1,13 @@
 # @accesly/react
 
+## 2.11.0
+
+### Minor Changes
+
+- feat(hooks): nuevo `useWalletBootstrap(walletAddress)` que suscribe al `wallet-stream` SSE (evento `bootstrap`) y devuelve el estado del bootstrap asíncrono en tiempo real. Fase 17 (2026-07-11) del backend hace el bootstrap post-deploy en un worker Lambda + SQS, no en el request HTTP. Este hook expone `{ status: 'unknown' | 'bootstrapping' | 'ready', txHash?, attemptCount? }` para que integradores custom y el kit `<CreateWalletFlow>` sepan cuándo la wallet está lista para firmar.
+- feat(walletSubscription): agregado el event type `'bootstrap'` con payload `{ status, txHash?, attemptCount? }`. Compatible con el resto de los eventos multiplexados en la misma conexión SSE.
+- Requiere `@accesly/core@1.25.0+` para el field `status` en `CreateWalletResponse`.
+
 ## 2.10.1
 
 ### Patch Changes

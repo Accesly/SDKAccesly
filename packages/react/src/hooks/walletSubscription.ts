@@ -17,11 +17,25 @@
  * `unavailable` y caen al polling fallback que ya existe.
  */
 
-export type WalletStreamEventType = 'status' | 'balance' | 'activity';
+export type WalletStreamEventType = 'status' | 'balance' | 'activity' | 'bootstrap';
 
 export interface WalletStreamStatusPayload {
   readonly walletAddress: string | null;
   readonly onChain: boolean | null;
+}
+
+/**
+ * Fase 17 (2026-07-11) — evento emitido por el `wallet-stream` cuando el
+ * `bootstrap-worker` cambia el flag `bootstrapPending` en DDB.
+ *
+ * Transiciones:
+ *  - Al abrir el stream: emite el estado actual (bootstrapping | ready).
+ *  - Cuando el worker termina: emite `ready` con el txHash del bootstrap tx.
+ */
+export interface WalletStreamBootstrapPayload {
+  readonly status: 'bootstrapping' | 'ready';
+  readonly txHash?: string;
+  readonly attemptCount?: number;
 }
 
 export interface WalletStreamBalancePayload {
@@ -80,6 +94,7 @@ interface InternalSubscription {
   status: Set<Listener<WalletStreamStatusPayload>>;
   balance: Set<Listener<WalletStreamBalancePayload>>;
   activity: Set<Listener<WalletStreamActivityPayload>>;
+  bootstrap: Set<Listener<WalletStreamBootstrapPayload>>;
 }
 
 interface WalletSubscriptionState {
@@ -89,6 +104,7 @@ interface WalletSubscriptionState {
   listeners: InternalSubscription;
   lastStatus: WalletStreamStatusPayload | null;
   lastBalance: WalletStreamBalancePayload | null;
+  lastBootstrap: WalletStreamBootstrapPayload | null;
   /** Acumulamos los últimos eventos para que nuevos subscribers vean histórico. */
   activityBuffer: WalletActivityItem[];
   refCount: number;
@@ -161,6 +177,16 @@ function openConnection(state: WalletSubscriptionState): void {
     }
   });
 
+  es.addEventListener('bootstrap', (ev) => {
+    try {
+      const data = JSON.parse((ev as MessageEvent).data) as WalletStreamBootstrapPayload;
+      state.lastBootstrap = data;
+      for (const listener of state.listeners.bootstrap) listener(data);
+    } catch {
+      /* ignore malformed */
+    }
+  });
+
   es.addEventListener('close', () => {
     // El server cerró por timeout de budget — EventSource reconectará solo.
     // No hacemos nada acá.
@@ -193,9 +219,11 @@ function getOrCreateSubscription(
       status: new Set(),
       balance: new Set(),
       activity: new Set(),
+      bootstrap: new Set(),
     },
     lastStatus: null,
     lastBalance: null,
+    lastBootstrap: null,
     activityBuffer: [],
     refCount: 0,
   };
@@ -219,7 +247,9 @@ export function subscribeToWalletEvent<T extends WalletStreamEventType>(
     ? Listener<WalletStreamStatusPayload>
     : T extends 'balance'
       ? Listener<WalletStreamBalancePayload>
-      : Listener<WalletStreamActivityPayload>,
+      : T extends 'bootstrap'
+        ? Listener<WalletStreamBootstrapPayload>
+        : Listener<WalletStreamActivityPayload>,
 ): (() => void) | null {
   if (!streamUrl || typeof EventSource === 'undefined') return null;
 
@@ -238,6 +268,8 @@ export function subscribeToWalletEvent<T extends WalletStreamEventType>(
     (listener as Listener<WalletStreamActivityPayload>)({
       events: state.activityBuffer,
     });
+  } else if (eventType === 'bootstrap' && state.lastBootstrap) {
+    (listener as Listener<WalletStreamBootstrapPayload>)(state.lastBootstrap);
   }
 
   // Abrir conexión si es el primer subscriber.
