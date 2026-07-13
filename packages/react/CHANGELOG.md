@@ -1,5 +1,14 @@
 # @accesly/react
 
+## 2.13.0
+
+### Minor Changes
+
+- feat(hooks): nuevo `useSessionKey()` — Fase 18 (2026-07-12). Genera un keypair ed25519 client-side, lo agrega como rule `session-key` en el Smart Account del user via `POST /session-keys`, y devuelve `{sessionPubkeyHex, sessionPrivateSeed, txHash, validUntilLedger, spendingLimitStroops, periodLedgers}`. Un solo passkey prompt del owner para firmar el `add_context_rule` contra la rule admin-cfg — después el session key puede firmar transfers sin biometría hasta que expire.
+- Uso típico: bots, subscriptions, background signers. El backend NUNCA ve la privateKey — el SDK la persiste local (IndexedDB / LocalStorage según el integrator) o la retorna al caller.
+- Gating: la app debe tener `walletDefaults.sessionKeyEnabled: true` en su appConfig. Sin ese flag, el hook lanza un Error explícito ("session keys are not enabled for this app — enable in dashboard settings").
+- Requiere `@accesly/core@1.26.0+`.
+
 ## 2.12.0
 
 ### Minor Changes

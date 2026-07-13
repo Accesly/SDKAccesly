@@ -91,6 +91,11 @@ export {
 } from './hooks/useStatus.js';
 export { useContacts, type UseContactsResult } from './hooks/useContacts.js';
 export { useHandle, type UseHandleResult } from './hooks/useHandle.js';
+export {
+  useSessionKey,
+  type SessionKeyResult,
+  type UseSessionKeyResult,
+} from './hooks/useSessionKey.js';
 export type { ContactInput, ContactRecord } from '@accesly/core';
 export {
   useWalletActivity,

@@ -420,6 +420,55 @@ export interface SubmitTxResponse {
   readonly status: string;
 }
 
+/* ── Session keys (Fase 18, 2026-07-12) ─────────────────────────────────────
+ *
+ * `POST /session-keys` — endpoint único que despacha por `action`:
+ *   - `simulate`: arma + simula `smart_account.add_context_rule("session-key")`.
+ *     El SDK genera ed25519 keypair local, envía sólo la pubkey, y firma la
+ *     auth entry con la rule admin-cfg (biometric passkey del owner).
+ *   - `submit`: KMS-firma el envelope con channels-fund y lo manda a Soroban.
+ *
+ * Gating: si `walletDefaults.sessionKeyEnabled=false` en el appConfig del app,
+ * el backend responde 403 `SESSION_KEYS_DISABLED_FOR_APP`.
+ */
+export interface SimulateSessionKeyRequest {
+  readonly action: 'simulate';
+  /** Hex 32 bytes — pubkey ed25519 del session key generado por el SDK. */
+  readonly sessionPubkey: HexString;
+}
+
+export interface SimulateSessionKeyResponse {
+  readonly unsignedXdr: Base64String;
+  readonly signaturePayloadHashBase64: Base64String;
+  readonly nonce: string;
+  readonly signatureExpirationLedger: number;
+  readonly contextRuleIds: readonly number[];
+  readonly placeholderAuthEntryXdr: Base64String;
+  readonly resourceFeeStroops: string;
+  /** Ledger # en el que expira la rule session-key (currentLedger + validityDays*17280). */
+  readonly validUntilLedger: number;
+  /** Cap de gasto que el session key puede firmar (stroops). */
+  readonly spendingLimitStroops: string;
+  /** Período del spending limit en ledgers (~5s cada uno). */
+  readonly periodLedgers: number;
+}
+
+export interface SubmitSessionKeyRequest {
+  readonly action: 'submit';
+  readonly unsignedXdr: Base64String;
+  readonly signedAuthEntryXdr: Base64String;
+  /** Se re-envía para audit trail — el backend chequea consistencia. */
+  readonly sessionPubkey: HexString;
+}
+
+export interface SubmitSessionKeyResponse {
+  readonly txHash: string;
+  readonly status: string;
+  readonly sessionPubkey: HexString;
+  readonly spendingLimitStroops: string;
+  readonly periodLedgers: number;
+}
+
 export interface KycStartResponse {
   readonly customerId: string;
   readonly status: 'pending' | 'approved' | 'rejected';

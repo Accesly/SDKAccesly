@@ -53,6 +53,10 @@ import type {
   SubmitSwapSdexResponse,
   FinalizeSwapSdexRequest,
   FinalizeSwapSdexResponse,
+  SimulateSessionKeyRequest,
+  SimulateSessionKeyResponse,
+  SubmitSessionKeyRequest,
+  SubmitSessionKeyResponse,
   SimulateTxRequest,
   SimulateTxResponse,
   SubmitTxRequest,
@@ -285,6 +289,38 @@ export class AccesslyEndpoints {
       '/tx/swap-sdex/finalize',
       req as unknown as Json,
     );
+  }
+
+  /**
+   * Cognito-auth (Fase 18, 2026-07-12). Simula
+   * `smart_account.add_context_rule("session-key", ...)`. El SDK genera un
+   * keypair ed25519 client-side, manda solo la pubkey, y firma la auth entry
+   * con la rule admin-cfg (biometric passkey del owner).
+   *
+   * Requiere `walletDefaults.sessionKeyEnabled=true` en el appConfig — sino
+   * responde 403 `SESSION_KEYS_DISABLED_FOR_APP`.
+   */
+  simulateSessionKey(
+    req: Omit<SimulateSessionKeyRequest, 'action'>,
+  ): Promise<SimulateSessionKeyResponse> {
+    return this.client.post<SimulateSessionKeyResponse>('/session-keys', {
+      action: 'simulate',
+      ...req,
+    } as unknown as Json);
+  }
+
+  /**
+   * Cognito-auth (Fase 18). Submit del add_context_rule firmado. Backend
+   * KMS-firma con channels-fund + submitea. Idempotency-Key dedup 24h via
+   * withIdempotency wrapper.
+   */
+  submitSessionKey(
+    req: Omit<SubmitSessionKeyRequest, 'action'>,
+  ): Promise<SubmitSessionKeyResponse> {
+    return this.client.post<SubmitSessionKeyResponse>('/session-keys', {
+      action: 'submit',
+      ...req,
+    } as unknown as Json);
   }
 
   /** Cognito-auth. Starts a KYC verification with Etherfuse. */

@@ -1,5 +1,14 @@
 # @accesly/core
 
+## 1.26.0
+
+### Minor Changes
+
+- feat(api): agregado `endpoints.simulateSessionKey({ sessionPubkey })` + `endpoints.submitSessionKey({ unsignedXdr, signedAuthEntryXdr, sessionPubkey })` — Fase 18 (2026-07-12). Wraps el nuevo `POST /session-keys` del backend que agrega una rule `session-key` al Smart Account del user via `add_context_rule("session-key", ContextRuleType::Default, Some(validUntilLedger), [Signer::External(verifier, sessionPubkey)], {spending-limit-policy: {...}})`.
+- Nuevos tipos: `SimulateSessionKeyRequest`, `SimulateSessionKeyResponse`, `SubmitSessionKeyRequest`, `SubmitSessionKeyResponse`.
+- Gating: la app debe tener `walletDefaults.sessionKeyEnabled: true` en el appConfig (dashboard `/apps/[appId]/settings`). Sin ese flag el backend responde 403 `SESSION_KEYS_DISABLED_FOR_APP`.
+- Uso típico: bots / subscriptions / background signers — el keypair del session-key se genera client-side, el backend NUNCA ve la privateKey; solo persiste la pubkey on-chain.
+
 ## 1.25.0
 
 ### Minor Changes
