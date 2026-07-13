@@ -1,5 +1,12 @@
 # @accesly/react
 
+## 2.12.0
+
+### Minor Changes
+
+- feat(kit): `<SwapFlow>` ahora muestra **quote preview en tiempo real** debajo del input "A". Antes solo decía "≈ (cotización tras firmar)" — el user no sabía cuánto recibiría hasta después del passkey prompt. Ahora consulta `swapSimulate` con debounce 500ms y muestra `amountOut` + `priceImpactPct` + `platform`. Si el backend no devuelve quote (sin liquidez, RPC lag), muestra un warning discreto pero permite intentar el submit.
+- fix(kit): removido el fallback automático a SDEX (`swap-sdex`) dentro de `<SwapFlow>`. El fallback requería `bootstrapG()` previo del user (G-address bridge classic), lo que confundía la UX con un error 409 críptico. Soroswap Aggregator ya rutea internamente a SDEX cuando le conviene por precio, así que la liquidez no se pierde. Integradores que necesiten SDEX explícito pueden llamar `tx.swapViaSdex()` directo.
+
 ## 2.11.0
 
 ### Minor Changes

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useAccesly } from '../hooks/useAccesly.js';
 import { useBalance } from '../hooks/useBalance.js';
 import type { TransferAsset } from '@accesly/core';
@@ -34,7 +34,7 @@ export interface SwapFlowProps {
 type Step = 'form' | 'signing' | 'success' | 'error';
 
 export function SwapFlow(props: SwapFlowProps): JSX.Element {
-  const { tx, wallet, auth } = useAccesly();
+  const { tx, wallet, auth, _internal } = useAccesly();
   const balance = useBalance();
 
   const [fromAsset, setFromAsset] = useState<TransferAsset>(props.defaultFrom ?? 'XLM');
@@ -50,6 +50,58 @@ export function SwapFlow(props: SwapFlowProps): JSX.Element {
     explorerUrl: string;
     platform: string;
   } | null>(null);
+
+  // Fase 18 (2026-07-12) — quote preview vía debounced simulate.
+  // Antes el input "A" solo decía "≈ (cotización tras firmar)" — el user no
+  // sabía cuánto recibiría hasta después del passkey prompt. Ahora consulta
+  // el backend cada vez que cambian los inputs y muestra amountOut + price
+  // impact en tiempo real.
+  const [preview, setPreview] = useState<{
+    amountOut: string;
+    priceImpactPct: string;
+    platform: string;
+  } | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPreview(null);
+    setPreviewError(null);
+    const amt = Number(amount);
+    if (!isFinite(amt) || amt <= 0 || fromAsset === toAsset) return;
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setPreviewLoading(true);
+      try {
+        const stroops = BigInt(Math.round(amt * 1e7)).toString();
+        const sim = await _internal.endpoints.swapSimulate({
+          fromAsset,
+          toAsset,
+          amountIn: stroops,
+          slippageBps,
+        });
+        if (controller.signal.aborted) return;
+        setPreview({
+          amountOut: (Number(sim.quote.amountOut) / 1e7).toFixed(7).replace(/\.?0+$/, ''),
+          priceImpactPct: sim.quote.priceImpactPct,
+          platform: sim.quote.platform,
+        });
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        // No mostramos error del preview como error del form — solo indicamos
+        // que no hay quote (mostrar el placeholder). Si el user firma igual,
+        // el submit real ya devuelve el error.
+        setPreview(null);
+        setPreviewError(err instanceof Error ? err.message : 'sin cotización');
+      } finally {
+        if (!controller.signal.aborted) setPreviewLoading(false);
+      }
+    }, 500); // debounce 500ms
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [amount, fromAsset, toAsset, slippageBps, _internal]);
 
   function toStroops(human: string): string {
     const n = Number(human);
@@ -97,22 +149,13 @@ export function SwapFlow(props: SwapFlowProps): JSX.Element {
         ownerPubkey: material.ownerPubkey,
       };
 
-      let r;
-      try {
-        r = await tx.swap(swapArgs);
-      } catch (soroswapErr) {
-        // Soroswap testnet (y a veces mainnet) no tiene path para todos los
-        // pares. Auto-fallback a SDEX classic via swap-sdex Lambda. El user
-        // ya aprobó el passkey una vez — el material está unlocked, así que
-        // el retry es transparente (no le pide passkey de nuevo).
-        const msg = soroswapErr instanceof Error ? soroswapErr.message : '';
-        const isNoPath =
-          msg.includes('Path not found') ||
-          msg.includes('No path found') ||
-          msg.includes('soroswap');
-        if (!isNoPath) throw soroswapErr;
-        r = await tx.swapViaSdex(swapArgs);
-      }
+      // Fase 18 (2026-07-12) — el kit usa SOLO Soroswap Aggregator.
+      // Se removió el fallback automático a SDEX (`swap-sdex`) que requería
+      // `bootstrapG()` previo del user (G-address bridge classic). El aggregator
+      // ya rutea a SDEX internamente cuando le conviene por precio, así que
+      // el user no pierde liquidez. Integradores que necesiten SDEX explícito
+      // deben llamar `tx.swapViaSdex(...)` directo desde su código custom.
+      const r = await tx.swap(swapArgs);
 
       setResult({
         txHash: r.txHash,
@@ -135,8 +178,8 @@ export function SwapFlow(props: SwapFlowProps): JSX.Element {
         <div className="text-4xl animate-pulse">⏳</div>
         <h2 className="text-lg font-semibold">Firmando swap…</h2>
         <p className="text-sm text-neutral-500">
-          Aprueba con tu biométrico. Si no hay liquidez en Soroswap, el backend cae a SDEX
-          automáticamente.
+          Aprueba con tu biométrico. El swap se ejecuta vía Soroswap Aggregator
+          que rutea al mejor precio disponible.
         </p>
       </div>
     );
@@ -242,8 +285,14 @@ export function SwapFlow(props: SwapFlowProps): JSX.Element {
         <div>
           <label className="text-xs uppercase tracking-wider text-neutral-500">A</label>
           <div className="flex gap-2 mt-1">
-            <div className="flex-1 rounded-lg bg-neutral-50 dark:bg-neutral-900 px-3 py-2 text-lg font-mono text-neutral-400">
-              ≈ (cotización tras firmar)
+            <div className="flex-1 rounded-lg bg-neutral-50 dark:bg-neutral-900 px-3 py-2 text-lg font-mono">
+              {previewLoading ? (
+                <span className="text-neutral-400">Cotizando…</span>
+              ) : preview ? (
+                <span>≈ {preview.amountOut}</span>
+              ) : (
+                <span className="text-neutral-400">—</span>
+              )}
             </div>
             <select
               value={toAsset}
@@ -254,6 +303,21 @@ export function SwapFlow(props: SwapFlowProps): JSX.Element {
               <option value="XLM">XLM</option>
             </select>
           </div>
+          {preview && (
+            <div className="text-[10px] text-neutral-400 mt-1 flex justify-between">
+              <span>
+                Price impact: <span className="font-mono">{preview.priceImpactPct}%</span>
+              </span>
+              <span>
+                via <span className="font-mono">{preview.platform}</span>
+              </span>
+            </div>
+          )}
+          {previewError && !previewLoading && (
+            <div className="text-[10px] text-amber-500 mt-1">
+              Sin cotización disponible ahora — el swap puede intentarse igual.
+            </div>
+          )}
         </div>
       </div>
 
