@@ -467,6 +467,18 @@ export interface SubmitSessionKeyResponse {
   readonly sessionPubkey: HexString;
   readonly spendingLimitStroops: string;
   readonly periodLedgers: number;
+  /**
+   * Fase 18 (2026-07-12) — ruleId de la nueva rule `session-key` post-apply.
+   * El SDK lo persiste junto al `sessionPrivateSeed` y lo pasa a
+   * `tx.sendWithSessionKey()` como `contextRuleIds: [sessionKeyRuleId]` para
+   * que Soroban __check_auth evalúe contra la rule correcta (biometric-tx
+   * matchearía primero si no forzamos este ID).
+   *
+   * Puede venir `undefined` si el lookup post-apply falla — no bloquea el
+   * flow porque el submit ya aplicó; el SDK puede resolverlo después con
+   * un endpoint de rules.
+   */
+  readonly sessionKeyRuleId?: number;
 }
 
 export interface KycStartResponse {

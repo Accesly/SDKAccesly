@@ -619,6 +619,33 @@ export interface SendXlmResult {
 }
 
 /**
+ * Fase 18 (2026-07-12) — input para `tx.sendWithSessionKey`.
+ *
+ * A diferencia de `SendXlmInput`, NO recibe `fragmentF1Plain` / `fragmentF2Key`
+ * / `ownerPubkey` — el session key firma directo con su propio material.
+ * El caller es responsable de persistir `sessionPrivateSeed` + `sessionPubkey`
+ * + `sessionKeyRuleId` (típicamente en IndexedDB o LocalStorage) desde que
+ * `useSessionKey().createSessionKey()` los devolvió.
+ */
+export interface SendWithSessionKeyInput {
+  readonly destinationAddress: string;
+  readonly amountStroops: string;
+  readonly asset?: TransferAsset;
+  /** 32 bytes — secret seed del session key generado client-side. */
+  readonly sessionPrivateSeed: Uint8Array;
+  /** 32 bytes — pubkey ed25519 del session key. */
+  readonly sessionPubkey: Uint8Array;
+  /**
+   * ID de la rule `session-key` on-chain. Se recibió en
+   * `SubmitSessionKeyResponse.sessionKeyRuleId` cuando se creó el session key.
+   * El SDK lo pasa como `contextRuleIds: [sessionKeyRuleId]` al firmar el
+   * auth entry para que Soroban __check_auth evalúe la rule correcta
+   * (sino biometric-tx del asset matchearía primero).
+   */
+  readonly sessionKeyRuleId: number;
+}
+
+/**
  * Input para `tx.swap(...)` — cambia XLM por USDC (o viceversa) usando Soroswap
  * Aggregator. El SDK firma la auth entry del Smart Account contra la regla
  * biometric-tx del asset de entrada.
@@ -714,6 +741,23 @@ export interface TxNamespace {
    *   - La pubkey derivada de la seed no matchea `ownerPubkey`.
    */
   send(input: SendXlmInput): Promise<SendXlmResult>;
+  /**
+   * **Fase 18 (2026-07-12):** manda XLM o USDC firmando con un **session key**
+   * previamente creado por `useSessionKey()`. NO dispara passkey prompt —
+   * usa el `sessionPrivateSeed` que el caller persistió.
+   *
+   * Requiere que el session-key rule aún esté vigente on-chain
+   * (`validUntilLedger`) y dentro del `spendingLimitStroops` del período.
+   * Si el spending-limit-policy rechaza (excede cap), el submit falla con
+   * "policy rejected" — el caller debe caer de vuelta a `tx.send()` con
+   * biométrico.
+   *
+   * Uso típico: automatización (bots), subscriptions periódicas, background
+   * signers server-side. El keypair session-key se puede persistir en
+   * IndexedDB (browser bot), env var (server-side runner), o subprocess
+   * memory (short-lived agent).
+   */
+  sendWithSessionKey(input: SendWithSessionKeyInput): Promise<SendXlmResult>;
   /**
    * **Fase D (1.6+):** swap XLM↔USDC vía Soroswap Aggregator. El backend hace
    * el round-trip a la API de Soroswap (`/quote` + `/quote/build`), procesa el
@@ -2382,6 +2426,71 @@ export function useAccesly(): AcceslyHook {
           networkPassphrase: stellarConfig.networkPassphrase,
           ...(input.expectedPublicKey ? { expectedPublicKey: input.expectedPublicKey } : {}),
         });
+      },
+
+      async sendWithSessionKey(input) {
+        const networkPassphrase = stellarConfig.networkPassphrase;
+        const verifierAddress = stellarConfig.ed25519VerifierAddress;
+        const explorerBase =
+          networkPassphrase === 'Public Global Stellar Network ; September 2015'
+            ? 'https://stellar.expert/explorer/public/tx/'
+            : 'https://stellar.expert/explorer/testnet/tx/';
+
+        // 1. Simulate — mismo endpoint que tx.send. Backend arma el envelope
+        //    y devuelve contextRuleIds (por default apunta a biometric-tx).
+        //    Ignoramos esos contextRuleIds y usamos [sessionKeyRuleId] en el
+        //    signSorobanAuthEntry para forzar que Soroban evalúe la rule
+        //    session-key en vez de biometric-tx.
+        const sim = await ctx.endpoints.simulateTx({
+          amountStroops: input.amountStroops,
+          destinationAddress: input.destinationAddress,
+          ...(input.asset ? { asset: input.asset } : {}),
+        });
+
+        // 2. Firmar la auth entry con el sessionPrivateSeed. NO hay
+        //    passkey prompt — es la clave del session key ya persistida.
+        const { signedAuthEntryXdr } = await signSorobanAuthEntry({
+          signaturePayloadHashBase64: sim.signaturePayloadHashBase64,
+          contextRuleIds: [input.sessionKeyRuleId],
+          placeholderAuthEntryXdr: sim.placeholderAuthEntryXdr,
+          ed25519Seed: input.sessionPrivateSeed,
+          ed25519VerifierAddress: verifierAddress,
+          ownerPubkey: input.sessionPubkey,
+        });
+
+        // 3. Submit — backend KMS-firma con channels-fund + submitea.
+        const submit = await ctx.endpoints.submitTx({
+          unsignedXdr: sim.unsignedXdr,
+          signedAuthEntryXdr,
+        });
+
+        // 4. Optimistic push al history (mismo que tx.send).
+        try {
+          const username = ctx.username;
+          if (username) {
+            const stored = await ctx.deviceStore.loadCredential(username);
+            if (stored?.walletAddress) {
+              const { historyOptimisticPush } = await import('./useWalletHistory.js');
+              historyOptimisticPush(stored.walletAddress, {
+                type: 'transfer-out',
+                txHash: submit.txHash,
+                ledger: Math.floor(Date.now() / 1000),
+                timestamp: new Date().toISOString(),
+                to: input.destinationAddress,
+                amountStroops: input.amountStroops,
+                ...(input.asset ? { asset: input.asset } : {}),
+              });
+            }
+          }
+        } catch {
+          // Fire-and-forget.
+        }
+
+        return {
+          txHash: submit.txHash,
+          status: submit.status,
+          explorerUrl: `${explorerBase}${submit.txHash}`,
+        };
       },
 
       async swap(input) {

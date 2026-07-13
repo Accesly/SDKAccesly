@@ -39,6 +39,8 @@ import { useAppConfig } from './useAppConfig.js';
 export interface SessionKeyResult {
   /** Hex 32 bytes — pubkey ed25519 del session key (indexable on-chain). */
   readonly sessionPubkeyHex: string;
+  /** 32 bytes — pubkey ed25519 (bytes). Se pasa a `tx.sendWithSessionKey`. */
+  readonly sessionPubkey: Uint8Array;
   /** 32 bytes — secret seed del session key. Persistir donde quiera el caller. */
   readonly sessionPrivateSeed: Uint8Array;
   readonly txHash: string;
@@ -46,6 +48,13 @@ export interface SessionKeyResult {
   /** Cap de gasto del session key en stroops. */
   readonly spendingLimitStroops: string;
   readonly periodLedgers: number;
+  /**
+   * ID de la rule `session-key` on-chain. Se pasa a
+   * `tx.sendWithSessionKey({ sessionKeyRuleId })` para que Soroban __check_auth
+   * evalúe la rule correcta. Puede venir `null` si el backend no logró
+   * resolverlo post-apply — el caller debe fetchearlo por otro método.
+   */
+  readonly sessionKeyRuleId: number | null;
 }
 
 export interface UseSessionKeyResult {
@@ -160,11 +169,13 @@ export function useSessionKey(): UseSessionKeyResult {
 
       const result: SessionKeyResult = {
         sessionPubkeyHex,
+        sessionPubkey: sessionKeypair.publicKey,
         sessionPrivateSeed: sessionKeypair.privateSeed,
         txHash: submit.txHash,
         validUntilLedger: sim.validUntilLedger,
         spendingLimitStroops: submit.spendingLimitStroops,
         periodLedgers: submit.periodLedgers,
+        sessionKeyRuleId: submit.sessionKeyRuleId ?? null,
       };
       return result;
     } catch (err) {

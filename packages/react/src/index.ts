@@ -43,6 +43,7 @@ export {
   type ReconstructedSeed,
   type RemoteWalletInfo,
   type RetryDeployResult,
+  type SendWithSessionKeyInput,
   type SendXlmInput,
   type SendXlmResult,
   type SessionNamespace,

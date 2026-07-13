@@ -1,5 +1,11 @@
 # @accesly/core
 
+## 1.26.1
+
+### Patch Changes
+
+- feat(api): `SubmitSessionKeyResponse` ahora incluye `sessionKeyRuleId?: number` — el backend lo resuelve post-apply con `findContextRuleIdByName`. El SDK lo persiste junto al `sessionPrivateSeed` y lo pasa a `tx.sendWithSessionKey({ sessionKeyRuleId })` para que Soroban __check_auth evalúe la rule correcta (biometric-tx del asset matchearía primero si no se fuerza este ID).
+
 ## 1.26.0
 
 ### Minor Changes

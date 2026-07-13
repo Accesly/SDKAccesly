@@ -1,5 +1,13 @@
 # @accesly/react
 
+## 2.14.0
+
+### Minor Changes
+
+- feat(hooks): nuevo `tx.sendWithSessionKey({destinationAddress, amountStroops, asset?, sessionPrivateSeed, sessionPubkey, sessionKeyRuleId})` — Fase 18 (2026-07-12). Manda XLM/USDC **sin passkey prompt** firmando con un session key previamente creado por `useSessionKey()`. Idéntico shape de response que `tx.send()`. Ideal para bots, subscriptions y background signers.
+- feat(hooks): `useSessionKey().createSessionKey()` ahora devuelve `sessionPubkey` (bytes) y `sessionKeyRuleId` — el caller los persiste junto al `sessionPrivateSeed` para poder invocar `tx.sendWithSessionKey` después.
+- Requiere `@accesly/core@1.26.1+` (nuevo campo `sessionKeyRuleId` en `SubmitSessionKeyResponse`).
+
 ## 2.13.0
 
 ### Minor Changes
