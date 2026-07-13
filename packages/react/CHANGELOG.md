@@ -1,5 +1,17 @@
 # @accesly/react
 
+## 2.15.0
+
+### Minor Changes
+
+- feat(hooks): `useSessionKey()` ahora **auto-persiste el keypair en IndexedDB** (DB `accesly-session-keys`, store `session_keys`, keyed por `username`). Antes el caller tenía que escribir código IndexedDB propio para que el session key sobreviviera reloads del browser.
+- Nueva API expuesta por `useSessionKey`:
+  - `active: SessionKeyResult | null` — el session key activo persistido (se hidrata en el mount).
+  - `isLoadingActive: boolean` — mientras se lee del IndexedDB al mount.
+  - `clearSessionKey(): Promise<void>` — elimina el session key local. NO revoca la rule on-chain.
+- `SessionKeyResult.createdAt: string` (ISO timestamp) — para UX y debugging.
+- Flow completo end-to-end: `createSessionKey()` una sola vez, después `active` está disponible en cada mount y `tx.sendWithSessionKey({...active})` firma sin passkey prompt hasta que expire.
+
 ## 2.14.0
 
 ### Minor Changes

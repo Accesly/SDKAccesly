@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useContext, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
   generateKeypair,
   generateX25519Keypair,
@@ -19,18 +19,19 @@ import { useAppConfig } from './useAppConfig.js';
  * Fase 18 (2026-07-12) — `useSessionKey`.
  *
  * Genera un keypair ed25519 client-side, lo agrega como rule `session-key` en
- * el Smart Account del user (via backend `POST /session-keys`), y devuelve la
- * privateKey al caller para que la persista donde quiera (IndexedDB, LocalStorage,
- * subprocess memory).
+ * el Smart Account del user (via backend `POST /session-keys`), y persiste
+ * automáticamente el keypair + ruleId en IndexedDB (DB `accesly-session-keys`,
+ * store `session_keys`, keyed por `username`) para que `tx.sendWithSessionKey`
+ * pueda usarlo sin passkey prompt.
  *
- * Uso típico: automatización sin passkey prompt (bots, subscriptions, background
- * signers). Después de `createSessionKey()`, el caller puede llamar
- * `tx.sendWithSessionKey({ sessionPrivateKey, ... })` en cualquier momento hasta
- * `validUntilLedger` sin biometría, respetando el spending limit configurado.
+ * Uso típico: automatización sin passkey prompt (bots, subscriptions,
+ * background signers). Después de `createSessionKey()`, futuras calls a
+ * `tx.sendWithSessionKey({...sessionKey})` firman sin biometría hasta
+ * `validUntilLedger`, respetando el spending limit configurado.
  *
  * No-custodial: el backend NUNCA ve la privateKey. El SDK la genera, la firma
- * con la rule admin-cfg (biometric prompt del owner), y solo persiste la pubkey
- * on-chain.
+ * con la rule admin-cfg (biometric prompt del owner), y solo persiste la
+ * pubkey on-chain. El seed vive en IndexedDB del browser del user.
  *
  * Gating: la app debe tener `walletDefaults.sessionKeyEnabled=true` en su
  * appConfig (dashboard `/apps/[appId]/settings`). Sin ese flag el backend
@@ -55,16 +56,31 @@ export interface SessionKeyResult {
    * resolverlo post-apply — el caller debe fetchearlo por otro método.
    */
   readonly sessionKeyRuleId: number | null;
+  /** ISO timestamp de creación (para UX / debugging). */
+  readonly createdAt: string;
 }
 
 export interface UseSessionKeyResult {
   readonly isCreating: boolean;
   readonly error: Error | null;
   /**
+   * Session key activo persistido para el `auth.username` actual, si existe.
+   * `null` mientras carga o si no hay session key registrado.
+   */
+  readonly active: SessionKeyResult | null;
+  readonly isLoadingActive: boolean;
+  /**
    * Crea un session-key on-chain. Dispara un passkey prompt del owner para
    * firmar el `add_context_rule("session-key")` contra la rule admin-cfg.
+   * Persiste automáticamente en IndexedDB al terminar.
    */
   createSessionKey(): Promise<SessionKeyResult>;
+  /**
+   * Elimina el session key local. NO revoca la rule on-chain — para eso hace
+   * falta llamar `wallet.removeContextRule(ruleId)` explícitamente. Sirve
+   * cuando el user cambia de device o cierra sesión.
+   */
+  clearSessionKey(): Promise<void>;
 }
 
 export function useSessionKey(): UseSessionKeyResult {
@@ -91,6 +107,35 @@ export function useSessionKey(): UseSessionKeyResult {
 
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [active, setActive] = useState<SessionKeyResult | null>(null);
+  const [isLoadingActive, setIsLoadingActive] = useState(true);
+
+  // Load persisted session key al mount / cuando cambia username.
+  useEffect(() => {
+    let cancelled = false;
+    if (!auth.username) {
+      setActive(null);
+      setIsLoadingActive(false);
+      return;
+    }
+    setIsLoadingActive(true);
+    loadPersistedSessionKey(auth.username)
+      .then((sk) => {
+        if (!cancelled) {
+          setActive(sk);
+          setIsLoadingActive(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setActive(null);
+          setIsLoadingActive(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.username]);
 
   const createSessionKey = useCallback(async (): Promise<SessionKeyResult> => {
     if (!auth.username) {
@@ -113,22 +158,13 @@ export function useSessionKey(): UseSessionKeyResult {
     setError(null);
 
     try {
-      // 1. Generamos el keypair session-key client-side. El backend NUNCA verá
-      //    la privateKey — solo la pubkey.
       const sessionKeypair = generateKeypair();
       const sessionPubkeyHex = bytesToHex(sessionKeypair.publicKey);
 
-      // 2. Passkey prompt del owner (biometric) para desbloquear el material
-      //    F1/F2/ownerPubkey. Este es EL prompt del flow — después se firma
-      //    off-line con el session-key sin biometría.
       const material = await wallet.unlockForSigning(auth.username);
 
-      // 3. Backend simulate: arma `add_context_rule("session-key", ...)` +
-      //    devuelve el placeholder auth entry para que firmemos con la seed
-      //    del owner contra la rule admin-cfg.
       const sim = await ctx.endpoints.simulateSessionKey({ sessionPubkey: sessionPubkeyHex });
 
-      // 4. Reconstruir la seed del owner via ECDH + Shamir (mismo flow que tx.send).
       const ephemeral = generateX25519Keypair();
       const wrappedF2 = await ctx.endpoints.getFragment2({
         clientEphemeralPubkey: base64FromBytes(ephemeral.publicKey),
@@ -148,8 +184,6 @@ export function useSessionKey(): UseSessionKeyResult {
         fragmentF2: { envelope: fragmentF2Envelope, key: material.fragmentF2Key },
       });
 
-      // 5. Firmar la auth entry contra la rule admin-cfg (contextRuleIds vienen
-      //    del simulate — usualmente [ruleId(admin-cfg)]).
       const { signedAuthEntryXdr } = await signSorobanAuthEntry({
         signaturePayloadHashBase64: sim.signaturePayloadHashBase64,
         contextRuleIds: [...sim.contextRuleIds],
@@ -159,8 +193,6 @@ export function useSessionKey(): UseSessionKeyResult {
         ownerPubkey: material.ownerPubkey,
       });
 
-      // 6. Submit: backend re-simula con firma real + KMS-firma envelope +
-      //    Soroban RPC submit + poll getTransaction hasta status='SUCCESS'.
       const submit = await ctx.endpoints.submitSessionKey({
         unsignedXdr: sim.unsignedXdr,
         signedAuthEntryXdr,
@@ -176,7 +208,17 @@ export function useSessionKey(): UseSessionKeyResult {
         spendingLimitStroops: submit.spendingLimitStroops,
         periodLedgers: submit.periodLedgers,
         sessionKeyRuleId: submit.sessionKeyRuleId ?? null,
+        createdAt: new Date().toISOString(),
       };
+
+      // Auto-persist en IndexedDB para que sobreviva reloads del browser.
+      try {
+        await persistSessionKey(auth.username, result);
+      } catch {
+        // No-fatal: el session key ya está on-chain. Sin persist el user
+        // tendría que recrearlo tras un reload; loggeamos y seguimos.
+      }
+      setActive(result);
       return result;
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
@@ -187,8 +229,126 @@ export function useSessionKey(): UseSessionKeyResult {
     }
   }, [ctx, auth.username, wallet, appConfig, stellarConfig]);
 
-  return { isCreating, error, createSessionKey };
+  const clearSessionKey = useCallback(async (): Promise<void> => {
+    if (!auth.username) return;
+    try {
+      await deletePersistedSessionKey(auth.username);
+    } finally {
+      setActive(null);
+    }
+  }, [auth.username]);
+
+  return { isCreating, error, active, isLoadingActive, createSessionKey, clearSessionKey };
 }
+
+// ─── IndexedDB persistence ──────────────────────────────────────────────────
+//
+// DB separada de la de credentials (`accesly` / `credentials`) para no romper
+// migraciones existentes. Store `session_keys` keyed por `username`.
+
+const SK_DB_NAME = 'accesly-session-keys';
+const SK_DB_VERSION = 1;
+const SK_STORE = 'session_keys';
+
+interface PersistedRecord {
+  readonly username: string;
+  readonly sessionPubkeyHex: string;
+  readonly sessionPubkey: Uint8Array;
+  readonly sessionPrivateSeed: Uint8Array;
+  readonly txHash: string;
+  readonly validUntilLedger: number;
+  readonly spendingLimitStroops: string;
+  readonly periodLedgers: number;
+  readonly sessionKeyRuleId: number | null;
+  readonly createdAt: string;
+}
+
+async function persistSessionKey(username: string, sk: SessionKeyResult): Promise<void> {
+  if (typeof indexedDB === 'undefined') return;
+  const db = await openSkDb();
+  try {
+    const record: PersistedRecord = {
+      username,
+      sessionPubkeyHex: sk.sessionPubkeyHex,
+      sessionPubkey: sk.sessionPubkey,
+      sessionPrivateSeed: sk.sessionPrivateSeed,
+      txHash: sk.txHash,
+      validUntilLedger: sk.validUntilLedger,
+      spendingLimitStroops: sk.spendingLimitStroops,
+      periodLedgers: sk.periodLedgers,
+      sessionKeyRuleId: sk.sessionKeyRuleId,
+      createdAt: sk.createdAt,
+    };
+    await runSkTx(db, 'readwrite', (store) => store.put(record));
+  } finally {
+    db.close();
+  }
+}
+
+async function loadPersistedSessionKey(username: string): Promise<SessionKeyResult | null> {
+  if (typeof indexedDB === 'undefined') return null;
+  const db = await openSkDb();
+  try {
+    const raw = await runSkTx<PersistedRecord | undefined>(db, 'readonly', (store) =>
+      store.get(username),
+    );
+    if (!raw) return null;
+    return {
+      sessionPubkeyHex: raw.sessionPubkeyHex,
+      sessionPubkey: raw.sessionPubkey,
+      sessionPrivateSeed: raw.sessionPrivateSeed,
+      txHash: raw.txHash,
+      validUntilLedger: raw.validUntilLedger,
+      spendingLimitStroops: raw.spendingLimitStroops,
+      periodLedgers: raw.periodLedgers,
+      sessionKeyRuleId: raw.sessionKeyRuleId,
+      createdAt: raw.createdAt,
+    };
+  } finally {
+    db.close();
+  }
+}
+
+async function deletePersistedSessionKey(username: string): Promise<void> {
+  if (typeof indexedDB === 'undefined') return;
+  const db = await openSkDb();
+  try {
+    await runSkTx(db, 'readwrite', (store) => store.delete(username));
+  } finally {
+    db.close();
+  }
+}
+
+function openSkDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(SK_DB_NAME, SK_DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(SK_STORE)) {
+        db.createObjectStore(SK_STORE, { keyPath: 'username' });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error ?? new Error('IndexedDB open failed'));
+  });
+}
+
+function runSkTx<T>(
+  db: IDBDatabase,
+  mode: IDBTransactionMode,
+  op: (store: IDBObjectStore) => IDBRequest<T>,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const tx = db.transaction(SK_STORE, mode);
+    const store = tx.objectStore(SK_STORE);
+    const request = op(store);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error ?? new Error('IndexedDB request failed'));
+    tx.onerror = () => reject(tx.error ?? new Error('IndexedDB transaction failed'));
+  });
+}
+
+// ─── Utility helpers ────────────────────────────────────────────────────────
 
 function bytesToHex(bytes: Uint8Array): string {
   let hex = '';
@@ -212,4 +372,3 @@ function base64ToBytes(s: string): Uint8Array {
   for (let i = 0; i < bin.length; i += 1) arr[i] = bin.charCodeAt(i);
   return arr;
 }
-
