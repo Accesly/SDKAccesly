@@ -46,6 +46,8 @@ export {
   type SendWithSessionKeyInput,
   type SendXlmInput,
   type SendXlmResult,
+  type UpdateSpendingLimitInput,
+  type UpdateSpendingLimitResult,
   type SessionNamespace,
   type SettingsNamespace,
   type TxNamespace,

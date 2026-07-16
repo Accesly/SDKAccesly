@@ -1,5 +1,12 @@
 # @accesly/react
 
+## 2.17.0
+
+### Minor Changes
+
+- feat(hooks): nuevo `wallet.updateSpendingLimit({asset, newLimitStroops, fragmentF1Plain, fragmentF2Key, ownerPubkey})` — Fase 18.3 (2026-07-12). Actualiza on-chain el cap de gasto de la rule biometric-tx sin re-bootstrap. Preserva spending history + `period_ledgers`. Un solo passkey prompt del owner (firma contra rule admin-cfg). Caso: developer bumpea `walletDefaults.spendingLimitStroops` en el dashboard y ofrece al user via UI "Actualizar tu límite" opt-in.
+- Requiere `@accesly/core@1.27.0+`.
+
 ## 2.16.0
 
 ### Minor Changes

@@ -57,6 +57,10 @@ import type {
   SimulateSessionKeyResponse,
   SubmitSessionKeyRequest,
   SubmitSessionKeyResponse,
+  SimulateUpdateSpendingLimitRequest,
+  SimulateUpdateSpendingLimitResponse,
+  SubmitUpdateSpendingLimitRequest,
+  SubmitUpdateSpendingLimitResponse,
   SimulateTxRequest,
   SimulateTxResponse,
   SubmitTxRequest,
@@ -322,6 +326,37 @@ export class AccesslyEndpoints {
   ): Promise<SubmitSessionKeyResponse> {
     return this.client.post<SubmitSessionKeyResponse>('/session-keys', {
       action: 'submit',
+      ...req,
+    } as unknown as Json);
+  }
+
+  /**
+   * Cognito-auth (Fase 18.3, 2026-07-12). Simula `SpendingLimitPolicy.set_limit`
+   * sobre la rule biometric-tx del asset. Preserva spending history y
+   * period_ledgers — solo cambia el cap. Backend arma la tx + devuelve
+   * material para que el SDK firme contra la rule admin-cfg (owner passkey).
+   *
+   * Casos: developer subió `walletDefaults.spendingLimitStroops` en el
+   * dashboard y el kit ofrece al user "Actualizar tu límite" opt-in.
+   */
+  simulateUpdateSpendingLimit(
+    req: Omit<SimulateUpdateSpendingLimitRequest, 'action'>,
+  ): Promise<SimulateUpdateSpendingLimitResponse> {
+    return this.client.post<SimulateUpdateSpendingLimitResponse>('/wallets/rules', {
+      action: 'update-spending-limit-simulate',
+      ...req,
+    } as unknown as Json);
+  }
+
+  /**
+   * Cognito-auth (Fase 18.3). Submit del set_limit firmado. Backend
+   * KMS-firma con channels-fund + submitea. Idempotency-Key dedup 24h.
+   */
+  submitUpdateSpendingLimit(
+    req: Omit<SubmitUpdateSpendingLimitRequest, 'action'>,
+  ): Promise<SubmitUpdateSpendingLimitResponse> {
+    return this.client.post<SubmitUpdateSpendingLimitResponse>('/wallets/rules', {
+      action: 'update-spending-limit-submit',
       ...req,
     } as unknown as Json);
   }

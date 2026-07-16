@@ -384,6 +384,22 @@ export interface WalletNamespace {
    */
   activateAsset(input: ActivateAssetInput): Promise<ActivateAssetResult>;
   /**
+   * **Fase 18.3 (2026-07-12):** actualiza el `spending_limit` on-chain de la
+   * rule biometric-tx del asset (llama `SpendingLimitPolicy.set_limit`).
+   * Preserva spending history + `period_ledgers` — solo cambia el cap.
+   *
+   * Caso de uso: developer sube `walletDefaults.spendingLimitStroops` en el
+   * dashboard. Wallets nuevas toman el nuevo default en bootstrap; wallets
+   * existentes usan este método (opt-in del user via UI) para aplicar
+   * el cambio a su rule on-chain.
+   *
+   * Un solo passkey prompt del owner. Firmado contra rule admin-cfg.
+   *
+   * Para cambiar `period_ledgers` de la policy, se requiere uninstall+install
+   * de la policy — feature separada (no implementada).
+   */
+  updateSpendingLimit(input: UpdateSpendingLimitInput): Promise<UpdateSpendingLimitResult>;
+  /**
    * **Fase I (1.10+):** crea la **G-address bridge** del user on-chain.
    *
    * La G-address es una cuenta classic Stellar derivada del mismo owner
@@ -552,6 +568,30 @@ export interface ActivateAssetResult {
   readonly txHash: string;
   readonly status: string;
   readonly explorerUrl: string;
+}
+
+/**
+ * Fase 18.3 (2026-07-12) — input para `wallet.updateSpendingLimit()`.
+ * Actualiza on-chain el cap de gasto de la rule `biometric-tx` del asset.
+ * Preserva el spending history (contador del período actual) y el
+ * `period_ledgers` — solo cambia el monto.
+ */
+export interface UpdateSpendingLimitInput {
+  /** Asset cuya biometric-tx rule se actualiza. */
+  readonly asset: TransferAsset;
+  /** Nuevo cap en stroops. Base-10 string. Debe ser > 0. */
+  readonly newLimitStroops: string;
+  readonly fragmentF1Plain: Uint8Array;
+  readonly fragmentF2Key: Uint8Array;
+  readonly ownerPubkey: Uint8Array;
+}
+
+export interface UpdateSpendingLimitResult {
+  readonly txHash: string;
+  readonly status: string;
+  readonly explorerUrl: string;
+  readonly asset: TransferAsset;
+  readonly newLimitStroops: string;
 }
 
 export interface FundTestnetResult {
@@ -1873,6 +1913,68 @@ export function useAccesly(): AcceslyHook {
           txHash: submit.txHash,
           status: submit.status,
           explorerUrl: `${explorerBase}${submit.txHash}`,
+        };
+      },
+
+      async updateSpendingLimit(input) {
+        const networkPassphrase = stellarConfig.networkPassphrase;
+        const verifierAddress = stellarConfig.ed25519VerifierAddress;
+        const explorerBase =
+          networkPassphrase === 'Public Global Stellar Network ; September 2015'
+            ? 'https://stellar.expert/explorer/public/tx/'
+            : 'https://stellar.expert/explorer/testnet/tx/';
+
+        // 1. Simulate — backend arma `SpendingLimitPolicy.set_limit(new, rule, sa)`
+        //    + devuelve material para firmar contra admin-cfg.
+        const sim = await ctx.endpoints.simulateUpdateSpendingLimit({
+          asset: input.asset,
+          newLimitStroops: input.newLimitStroops,
+        });
+
+        // 2. ECDH F2 unwrap (mismo flow que activateAsset).
+        const ephemeral = generateX25519Keypair();
+        const wrappedF2 = await ctx.endpoints.getFragment2({
+          clientEphemeralPubkey: base64FromBytes(ephemeral.publicKey),
+        });
+        const sessionPlaintext = unwrapSessionFragment2(wrappedF2, ephemeral.privateKey).plaintext;
+        const fragmentF2Wire = JSON.parse(new TextDecoder().decode(sessionPlaintext)) as {
+          ciphertext: string;
+          nonce: string;
+          algo: string;
+        };
+        const fragmentF2Envelope: EncryptedEnvelope = {
+          nonce: base64ToBytes(fragmentF2Wire.nonce),
+          ciphertext: base64ToBytes(fragmentF2Wire.ciphertext),
+        };
+        const reconstructed = reconstructFromPlainAndEncrypted({
+          fragmentF1Plain: input.fragmentF1Plain,
+          fragmentF2: { envelope: fragmentF2Envelope, key: input.fragmentF2Key },
+        });
+
+        // 3. Firmar la auth entry contra admin-cfg.
+        const { signedAuthEntryXdr } = await signSorobanAuthEntry({
+          signaturePayloadHashBase64: sim.signaturePayloadHashBase64,
+          contextRuleIds: [...sim.contextRuleIds],
+          placeholderAuthEntryXdr: sim.placeholderAuthEntryXdr,
+          ed25519Seed: reconstructed.privateSeed,
+          ed25519VerifierAddress: verifierAddress,
+          ownerPubkey: input.ownerPubkey,
+        });
+
+        // 4. Submit — backend KMS-firma envelope + submitea.
+        const submit = await ctx.endpoints.submitUpdateSpendingLimit({
+          unsignedXdr: sim.unsignedXdr,
+          signedAuthEntryXdr,
+          asset: input.asset,
+          newLimitStroops: input.newLimitStroops,
+        });
+
+        return {
+          txHash: submit.txHash,
+          status: submit.status,
+          explorerUrl: `${explorerBase}${submit.txHash}`,
+          asset: submit.asset,
+          newLimitStroops: submit.newLimitStroops,
         };
       },
 

@@ -1,5 +1,14 @@
 # @accesly/core
 
+## 1.27.0
+
+### Minor Changes
+
+- feat(api): `endpoints.simulateUpdateSpendingLimit({ asset, newLimitStroops })` + `submitUpdateSpendingLimit({...})` — Fase 18.3 (2026-07-12). Actualiza on-chain el cap de gasto (`spending_limit_stroops`) de la rule biometric-tx de un asset en un Smart Account YA DEPLOYED. Llama `SpendingLimitPolicy.set_limit(new_limit, context_rule, smart_account)`, preservando el spending history + `period_ledgers`.
+- Nuevos tipos: `SimulateUpdateSpendingLimitRequest/Response`, `SubmitUpdateSpendingLimitRequest/Response`.
+- Backend endpoint: `POST /wallets/rules` con `action: 'update-spending-limit-simulate' | 'update-spending-limit-submit'`. Pensado para crecer con `remove-context-rule`, `add-signer`, etc.
+- Cambiar `period_ledgers` requiere uninstall+install de la policy (feature separada — no implementada).
+
 ## 1.26.2
 
 ### Patch Changes

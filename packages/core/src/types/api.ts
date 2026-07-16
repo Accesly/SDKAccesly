@@ -461,6 +461,54 @@ export interface SubmitSessionKeyRequest {
   readonly sessionPubkey: HexString;
 }
 
+/* ── Manage rules (Fase 18.3, 2026-07-12) ────────────────────────────────
+ *
+ * `POST /wallets/rules` — endpoint único que muta rules on-chain de un
+ * Smart Account YA DEPLOYED. Nace con update-spending-limit (cambiar cap
+ * de gasto de la rule biometric-tx sin re-bootstrap). Pensado para crecer
+ * con remove-context-rule, update-valid-until, add-signer, etc.
+ *
+ * Preserva spending history: si el user gastó 30 XLM del período actual,
+ * sigue contando así — solo cambia el cap.
+ *
+ * Cambiar `period_ledgers` requiere uninstall+install de la policy (feature
+ * separada). Este flow solo cubre el 90% de casos: bumpear el monto.
+ */
+export interface SimulateUpdateSpendingLimitRequest {
+  readonly action: 'update-spending-limit-simulate';
+  readonly asset: TransferAsset;
+  /** Nuevo cap en stroops. Base-10 string. Debe ser > 0. */
+  readonly newLimitStroops: string;
+}
+
+export interface SimulateUpdateSpendingLimitResponse {
+  readonly unsignedXdr: Base64String;
+  readonly signaturePayloadHashBase64: Base64String;
+  readonly nonce: string;
+  readonly signatureExpirationLedger: number;
+  readonly contextRuleIds: readonly number[];
+  readonly placeholderAuthEntryXdr: Base64String;
+  readonly resourceFeeStroops: string;
+  readonly asset: TransferAsset;
+  readonly biometricTxRuleId: number;
+  readonly newLimitStroops: string;
+}
+
+export interface SubmitUpdateSpendingLimitRequest {
+  readonly action: 'update-spending-limit-submit';
+  readonly unsignedXdr: Base64String;
+  readonly signedAuthEntryXdr: Base64String;
+  readonly asset: TransferAsset;
+  readonly newLimitStroops: string;
+}
+
+export interface SubmitUpdateSpendingLimitResponse {
+  readonly txHash: string;
+  readonly status: string;
+  readonly asset: TransferAsset;
+  readonly newLimitStroops: string;
+}
+
 export interface SubmitSessionKeyResponse {
   readonly txHash: string;
   readonly status: string;
