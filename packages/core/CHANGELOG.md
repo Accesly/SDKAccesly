@@ -1,5 +1,11 @@
 # @accesly/core
 
+## 1.26.2
+
+### Patch Changes
+
+- fix(api): `swapSdexSimulate/submit/finalize` ahora apuntan a un endpoint único `POST /tx/swap-sdex` con `action` en el body (patrón consolidado para caber en el 500 CFN cap del parent stack). Backwards-compatible con el Lambda handler (que sigue aceptando los paths viejos si algún cliente los llama). El SDK expone las mismas 3 methods, cambia solo la URL interna.
+
 ## 1.26.1
 
 ### Patch Changes

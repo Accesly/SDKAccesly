@@ -266,8 +266,8 @@ export class AccesslyEndpoints {
    */
   swapSdexSimulate(req: SimulateSwapRequest): Promise<SimulateSwapSdexResponse> {
     return this.client.post<SimulateSwapSdexResponse>(
-      '/tx/swap-sdex/simulate',
-      req as unknown as Json,
+      '/tx/swap-sdex',
+      { action: 'simulate', ...req } as unknown as Json,
     );
   }
 
@@ -277,7 +277,10 @@ export class AccesslyEndpoints {
    * KMS). Devuelve los 3 hashes para auditoría / explorer linking.
    */
   swapSdexSubmit(req: SubmitSwapSdexRequest): Promise<SubmitSwapSdexResponse> {
-    return this.client.post<SubmitSwapSdexResponse>('/tx/swap-sdex/submit', req as unknown as Json);
+    return this.client.post<SubmitSwapSdexResponse>(
+      '/tx/swap-sdex',
+      { action: 'submit', ...req } as unknown as Json,
+    );
   }
 
   /**
@@ -286,8 +289,8 @@ export class AccesslyEndpoints {
    */
   swapSdexFinalize(req: FinalizeSwapSdexRequest): Promise<FinalizeSwapSdexResponse> {
     return this.client.post<FinalizeSwapSdexResponse>(
-      '/tx/swap-sdex/finalize',
-      req as unknown as Json,
+      '/tx/swap-sdex',
+      { action: 'finalize', ...req } as unknown as Json,
     );
   }
 

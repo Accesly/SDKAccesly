@@ -1,5 +1,12 @@
 # @accesly/react
 
+## 2.16.0
+
+### Minor Changes
+
+- fix(kit): `<SwapFlow>` restaura auto-fallback Soroswap → SDEX. Soroswap Aggregator no soporta Smart Accounts como trader — su `/quote/build` valida from/to como G-address y simula contra la balance del owner G (que no tiene los tokens; los tiene el smart account C, resultando en `TokenError.InsufficientBalance`). Cuando Soroswap falla con esas signatures (`soroswap`, `InsufficientBalance`, `Path not found`, `expected 48`), el kit cae a `tx.swapViaSdex(...)` que usa SDEX classic via G-bridge — el material del passkey se re-usa, sin segundo prompt biométrico. Bootstrap G on-demand (`withAutoBootstrapG` + `withAutoAddTrustlineG`) — un extra ~10s la primera vez, después instantáneo.
+- Requiere `@accesly/core@1.26.2+` (endpoint `/tx/swap-sdex` consolidado con `action` dispatch).
+
 ## 2.15.0
 
 ### Minor Changes

@@ -149,13 +149,28 @@ export function SwapFlow(props: SwapFlowProps): JSX.Element {
         ownerPubkey: material.ownerPubkey,
       };
 
-      // Fase 18 (2026-07-12) — el kit usa SOLO Soroswap Aggregator.
-      // Se removió el fallback automático a SDEX (`swap-sdex`) que requería
-      // `bootstrapG()` previo del user (G-address bridge classic). El aggregator
-      // ya rutea a SDEX internamente cuando le conviene por precio, así que
-      // el user no pierde liquidez. Integradores que necesiten SDEX explícito
-      // deben llamar `tx.swapViaSdex(...)` directo desde su código custom.
-      const r = await tx.swap(swapArgs);
+      // Fase 18.2 (2026-07-12) — restauramos auto-fallback a SDEX.
+      // Soroswap Aggregator no soporta Smart Accounts como trader — su
+      // `/quote/build` valida from/to como G-address y simula contra la
+      // balance del owner G (que no tiene los tokens; los tiene el smart
+      // account C). Cuando falla, caemos a SDEX classic via G-bridge —
+      // `withAutoBootstrapG` + `withAutoAddTrustlineG` en useAccesly
+      // manejan el bootstrap on-demand (un extra ~10s la primera vez, después
+      // instantáneo). El material del passkey se re-usa, sin segundo prompt.
+      let r;
+      try {
+        r = await tx.swap(swapArgs);
+      } catch (soroswapErr) {
+        const msg = soroswapErr instanceof Error ? soroswapErr.message : '';
+        const softFallback =
+          msg.includes('soroswap') ||
+          msg.includes('InsufficientBalance') ||
+          msg.includes('Path not found') ||
+          msg.includes('No path found') ||
+          msg.includes('expected 48');
+        if (!softFallback) throw soroswapErr;
+        r = await tx.swapViaSdex(swapArgs);
+      }
 
       setResult({
         txHash: r.txHash,
