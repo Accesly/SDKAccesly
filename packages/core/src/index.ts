@@ -133,6 +133,8 @@ export {
   type SimulateSwapRequest,
   type SimulateSwapResponse,
   type SimulateSwapSdexResponse,
+  type SwapQuoteRequest,
+  type SwapQuoteResponse,
   type SubmitSwapSdexRequest,
   type SubmitSwapSdexResponse,
   type FinalizeSwapSdexRequest,

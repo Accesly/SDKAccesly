@@ -49,6 +49,8 @@ import type {
   SimulateSwapRequest,
   SimulateSwapResponse,
   SimulateSwapSdexResponse,
+  SwapQuoteRequest,
+  SwapQuoteResponse,
   SubmitSwapSdexRequest,
   SubmitSwapSdexResponse,
   FinalizeSwapSdexRequest,
@@ -254,12 +256,33 @@ export class AccesslyEndpoints {
    * biometric-tx del asset de entrada.
    */
   swapSimulate(req: SimulateSwapRequest): Promise<SimulateSwapResponse> {
-    return this.client.post<SimulateSwapResponse>('/tx/swap/simulate', req as unknown as Json);
+    return this.client.post<SimulateSwapResponse>(
+      '/tx/swap',
+      { action: 'simulate', ...req } as unknown as Json,
+    );
+  }
+
+  /**
+   * Cognito-auth (Fase 18.5, 2026-07-16). Cotización liviana pre-firma:
+   * solo pricing, sin XDR ni auth entries. Backend intenta Soroswap `/quote`
+   * primero (evita el bug de `/quote/build` que simula contra la G del owner);
+   * si falla, fallback a Horizon `/paths/strict-send` para SDEX.
+   *
+   * Uso: preview live en el composer del swap (debounced ~500ms).
+   */
+  swapQuote(req: SwapQuoteRequest): Promise<SwapQuoteResponse> {
+    return this.client.post<SwapQuoteResponse>(
+      '/tx/swap',
+      { action: 'quote', ...req } as unknown as Json,
+    );
   }
 
   /** Cognito-auth. Submit del swap firmado (mismo shape que submitTx). */
   swapSubmit(req: SubmitTxRequest): Promise<SubmitTxResponse> {
-    return this.client.post<SubmitTxResponse>('/tx/swap/submit', req as unknown as Json);
+    return this.client.post<SubmitTxResponse>(
+      '/tx/swap',
+      { action: 'submit', ...req } as unknown as Json,
+    );
   }
 
   /**

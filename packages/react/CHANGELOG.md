@@ -1,5 +1,13 @@
 # @accesly/react
 
+## 2.18.0
+
+### Minor Changes
+
+- feat: expone `endpoints.swapQuote({fromAsset, toAsset, amountIn, slippageBps?})` (via @accesly/core 1.28.0). Preview live pre-firma para el composer del swap — solo pricing (~500ms), sin XDR/auth entries. Retorna `{amountOut, minAmountOut, priceImpactPct, platform, source}` con auto-fallback Soroswap → SDEX.
+- Route backend consolidado a `POST /tx/swap` con `action: 'quote'|'simulate'|'submit'` dispatch (cambio interno para caber en el 500 CFN cap). Sin cambios de API para el caller — las 3 methods del SDK siguen igual.
+- Requiere `@accesly/core@1.28.0+`.
+
 ## 2.17.0
 
 ### Minor Changes

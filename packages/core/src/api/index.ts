@@ -79,6 +79,8 @@ export type {
   SimulateSwapRequest,
   SimulateSwapResponse,
   SimulateSwapSdexResponse,
+  SwapQuoteRequest,
+  SwapQuoteResponse,
   SubmitSwapSdexRequest,
   SubmitSwapSdexResponse,
   FinalizeSwapSdexRequest,

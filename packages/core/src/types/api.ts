@@ -461,6 +461,42 @@ export interface SubmitSessionKeyRequest {
   readonly sessionPubkey: HexString;
 }
 
+/* ── Swap quote (Fase 18.5, 2026-07-16) ─────────────────────────────────
+ *
+ * `POST /tx/swap/quote` — cotización liviana pre-firma. Solo pricing,
+ * NO devuelve XDR/auth entries. Sirve para el preview live del kit/frontend
+ * mientras el user teclea el monto (debounced).
+ *
+ * Backend intenta Soroswap `/quote` primero (evita el bug de
+ * `TokenError.InsufficientBalance` porque no llama `/quote/build`). Si
+ * Soroswap no tiene path, fallback a Horizon `/paths/strict-send` para SDEX.
+ *
+ * ~500ms típico. Cognito JWT required.
+ */
+export interface SwapQuoteRequest {
+  readonly fromAsset: TransferAsset;
+  readonly toAsset: TransferAsset;
+  /** Stroops del input (1e-7). */
+  readonly amountIn: string;
+  /** Default 50 = 0.5%. */
+  readonly slippageBps?: number;
+}
+
+export interface SwapQuoteResponse {
+  readonly fromAsset: TransferAsset;
+  readonly toAsset: TransferAsset;
+  readonly amountIn: string;
+  /** Stroops estimados de salida (sin slippage). */
+  readonly amountOut: string;
+  /** Stroops mínimos aceptables con slippage aplicado. */
+  readonly minAmountOut: string;
+  readonly priceImpactPct: string;
+  /** Etiqueta de UI ("router" / "aggregator" / "sdex"). */
+  readonly platform: string;
+  /** Ruta que se usaría en el submit real. */
+  readonly source: 'soroswap' | 'sdex';
+}
+
 /* ── Manage rules (Fase 18.3, 2026-07-12) ────────────────────────────────
  *
  * `POST /wallets/rules` — endpoint único que muta rules on-chain de un

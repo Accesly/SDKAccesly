@@ -1,5 +1,12 @@
 # @accesly/core
 
+## 1.28.0
+
+### Minor Changes
+
+- feat(api): `endpoints.swapQuote({fromAsset, toAsset, amountIn, slippageBps?})` — Fase 18.5 (2026-07-16). Cotización liviana pre-firma para preview live del composer del swap. Solo pricing (~500ms), NO devuelve XDR/auth entries. Backend intenta Soroswap `/quote` primero (evita el bug de `/quote/build` con Smart Accounts) y fallback a Horizon `/paths/strict-send` para SDEX si Soroswap no tiene path.
+- Nuevos tipos: `SwapQuoteRequest`, `SwapQuoteResponse` (con `source: 'soroswap' | 'sdex'` para que la UI sepa qué ruta usaría el submit real).
+
 ## 1.27.0
 
 ### Minor Changes
