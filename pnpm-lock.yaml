@@ -79,8 +79,11 @@ importers:
   packages/react:
     dependencies:
       '@accesly/core':
-        specifier: workspace:*
-        version: link:../core
+        specifier: ^1.23.0
+        version: 1.24.0
+      qr-scanner:
+        specifier: ^1.4.2
+        version: 1.4.2
     devDependencies:
       '@testing-library/react':
         specifier: ^16.1.0
@@ -114,6 +117,15 @@ importers:
         version: 2.1.9(@types/node@22.19.19)(happy-dom@15.11.7)
 
 packages:
+
+  '@accesly/core@1.24.0':
+    resolution: {integrity: sha512-R/VqBvM0b4/sUcdos7Py8lk3hcsdosBNflEMYf5utK+H0FSwb0l/vmQRtYDZHb3rLG8Yo6mAJKX6u4isTCT6Og==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      fake-indexeddb: '*'
+    peerDependenciesMeta:
+      fake-indexeddb:
+        optional: true
 
   '@aws-crypto/sha256-js@1.2.2':
     resolution: {integrity: sha512-Nr1QJIbW/afYYGzYvrF70LtaHrIRtd4TNAglX8BvlfxJLZ45SAmueIKYl5tWoNBPzp65ymXGFK0Bb1vZUpuc9g==}
@@ -734,6 +746,7 @@ packages:
   '@stellar/stellar-base@13.1.0':
     resolution: {integrity: sha512-90EArG+eCCEzDGj3OJNoCtwpWDwxjv+rs/RNPhvg4bulpjN/CSRj+Ys/SalRcfM4/WRC5/qAfjzmJBAuquWhkA==}
     engines: {node: '>=18.0.0'}
+    deprecated: This package is now rolled into @stellar/stellar-sdk. Please use @stellar/stellar-sdk to continue receiving updates and support.
 
   '@stellar/stellar-sdk@13.3.0':
     resolution: {integrity: sha512-8+GHcZLp+mdin8gSjcgfb/Lb6sSMYRX6Nf/0LcSJxvjLQR0XHpjGzOiRbYb2jSXo51EnA6kAV5j+4Pzh5OUKUg==}
@@ -775,6 +788,9 @@ packages:
 
   '@types/node@22.19.19':
     resolution: {integrity: sha512-dyh/xO2Fh5bYrfWaaqGrRQQGkNdmYw6AmaAUvYeUMNTWQtvb796ikLdmTchRmOlOiIJ1TDXfWgVx1QkUlQ6Hew==}
+
+  '@types/offscreencanvas@2019.7.3':
+    resolution: {integrity: sha512-ieXiYmgSRXUDeOntE1InxjWyvEelZGP63M+cGuquuRLuIKKT1osnkXjxev9B7d1nXSug5vpunx+gNlbVxMlC9A==}
 
   '@types/prop-types@15.7.15':
     resolution: {integrity: sha512-F6bEyamV9jKGAFBEmlQnesRPGOQqS2+Uwi0Em15xenOxHaf2hv6L8YCVn3rPdPJOiJfPiCnLIRyvwVaqMY3MIw==}
@@ -1750,6 +1766,9 @@ packages:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
 
+  qr-scanner@1.4.2:
+    resolution: {integrity: sha512-kV1yQUe2FENvn59tMZW6mOVfpq9mGxGf8l6+EGaXUOd4RBOLg7tRC83OrirM5AtDvZRpdjdlXURsHreAOSPOUw==}
+
   quansync@0.2.11:
     resolution: {integrity: sha512-AifT7QEbW9Nri4tAwR5M/uzpBuqfZf+zwaEM/QkzEjj7NBuFD2rBuy0K3dE+8wltbezDV7JMA0WfnCPYRSYbXA==}
 
@@ -2119,6 +2138,19 @@ packages:
     engines: {node: '>=10'}
 
 snapshots:
+
+  '@accesly/core@1.24.0':
+    dependencies:
+      '@noble/ciphers': 1.3.0
+      '@noble/curves': 1.9.7
+      '@noble/hashes': 1.8.0
+      '@stellar/stellar-sdk': 13.3.0
+      amazon-cognito-identity-js: 6.3.16
+    transitivePeerDependencies:
+      - bare-url
+      - debug
+      - encoding
+      - supports-color
 
   '@aws-crypto/sha256-js@1.2.2':
     dependencies:
@@ -2703,6 +2735,8 @@ snapshots:
   '@types/node@22.19.19':
     dependencies:
       undici-types: 6.21.0
+
+  '@types/offscreencanvas@2019.7.3': {}
 
   '@types/prop-types@15.7.15': {}
 
@@ -3688,6 +3722,10 @@ snapshots:
   proxy-from-env@2.1.0: {}
 
   punycode@2.3.1: {}
+
+  qr-scanner@1.4.2:
+    dependencies:
+      '@types/offscreencanvas': 2019.7.3
 
   quansync@0.2.11: {}
 
