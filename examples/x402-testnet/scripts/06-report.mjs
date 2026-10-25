@@ -15,7 +15,10 @@ import { fileURLToPath } from 'node:url';
 import { cfg, state } from '../lib/config.mjs';
 import { contractLink, failureCode, server, txLink } from '../lib/stellar.mjs';
 
-const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'evidence');
+const OUT = join(
+  process.env.RUN_DIR ?? join(dirname(fileURLToPath(import.meta.url)), '..'),
+  'evidence',
+);
 mkdirSync(OUT, { recursive: true });
 
 const s = state.get();
