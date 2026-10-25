@@ -1,6 +1,6 @@
 # Evidence — x402 on Stellar testnet
 
-Generated 2026-10-25T02:41:07.446Z. Every row was re-checked against the network when this file
+Generated 2026-10-25T02:43:14.312Z. Every row was re-checked against the network when this file
 was generated.
 
 - x402 spending policy: [CBWNUGXOJWNNQ5FGLRD3HCREU7XD2RTZNFPZDDRKE3RL4JEH3N75VZZV](https://stellar.expert/explorer/testnet/contract/CBWNUGXOJWNNQ5FGLRD3HCREU7XD2RTZNFPZDDRKE3RL4JEH3N75VZZV)
@@ -18,14 +18,13 @@ was generated.
 | 2026-10-25 01:26 | buy 20 test USDC on testnet DEX | SUCCESS | [b60df78c26…](https://stellar.expert/explorer/testnet/tx/b60df78c26b2fe761f4586d580a5d66539e96eb71de0e200ff7d8c58a23e6fcb) |
 | 2026-10-25 01:30 | restore archived smart-account-v3.2.0 WASM (same hash as mainnet) via fee-bump | SUCCESS | [af55703593…](https://stellar.expert/explorer/testnet/tx/af5570359369d86454a5a347e2e264b345dbc2a7b515686f937a8085ec465efb) |
 | 2026-10-25 01:31 | deploy customer Smart Account v3 | SUCCESS | [ee1fde3b3a…](https://stellar.expert/explorer/testnet/tx/ee1fde3b3a33942ba95867c0b3d3ad9f71458a51d05a4b7a9a1d3b9959600583) |
-| 2026-10-25 01:32 | deploy customer Smart Account v3 | SUCCESS | [ee1fde3b3a…](https://stellar.expert/explorer/testnet/tx/ee1fde3b3a33942ba95867c0b3d3ad9f71458a51d05a4b7a9a1d3b9959600583) |
 | 2026-10-25 01:32 | bootstrap Smart Account (owner = MPC 2-of-3 key) | SUCCESS | [689f59b390…](https://stellar.expert/explorer/testnet/tx/689f59b39001b10117b5c82ebb3049ad8721cc275e982871963bae80981cc820) |
 | 2026-10-25 01:32 | fund Smart Account with 5 test USDC | SUCCESS | [a024aafc34…](https://stellar.expert/explorer/testnet/tx/a024aafc34c1fc8bd0da279f9397a5b6e162a01034d5dfa86efc895dca269914) |
 | 2026-10-25 01:33 | install x402 session key (rule 3): cap $0.05/payment, $5/month, allowlist = merchant — owner signed under MPC 2-of-3 after email OTP | SUCCESS | [0b6cc1a1a8…](https://stellar.expert/explorer/testnet/tx/0b6cc1a1a8e746f477e71445c682737231c0e8e9b42dbfd3ef1a3bc1987ce28d) |
 | 2026-10-25 01:36 | install x402 rule 4 for owner key (MPC 2-of-3): cap $0.05/payment, $5/month, allowlist = merchant; signed by the owner under MPC 2-of-3 after email OTP | SUCCESS | [f1827599ae…](https://stellar.expert/explorer/testnet/tx/f1827599ae4500f87c81ee2ed9c2140afcf0477941f49fb58b52d830c9a01669) |
-| 2026-10-25 01:37 | owner lowers monthly cap to $0.015 (already spent $0.01); signed under MPC 2-of-3 after email OTP | SUCCESS | [775060e15e…](https://stellar.expert/explorer/testnet/tx/775060e15e30429ffa89eef1329fc7d9c1d5775ff716346d649d6c505d26eec1) |
+| 2026-10-25 01:37 | owner lowers caps to $0.005/payment and $0.015/month (first attempt: the per-request cap was lowered too, by mistake); signed under MPC 2-of-3 after email OTP | SUCCESS | [775060e15e…](https://stellar.expert/explorer/testnet/tx/775060e15e30429ffa89eef1329fc7d9c1d5775ff716346d649d6c505d26eec1) |
 | 2026-10-25 01:37 | owner restores caps ($0.05/payment, $5/month) | SUCCESS | [5918e0d26e…](https://stellar.expert/explorer/testnet/tx/5918e0d26ea463d72238b3900adfe993d37888735c6da545eb2e6b00182deaed) |
-| 2026-10-25 01:39 | owner lowers monthly cap to $0.015 (already spent $0.01); signed under MPC 2-of-3 after email OTP | SUCCESS | [414889ebdd…](https://stellar.expert/explorer/testnet/tx/414889ebdde536fdbe8115ce05963cfaaecfdc2f998e2383ca7d43e5af94183d) |
+| 2026-10-25 01:39 | owner lowers caps to $0.01/payment and $0.015/month (already spent $0.01); signed under MPC 2-of-3 after email OTP | SUCCESS | [414889ebdd…](https://stellar.expert/explorer/testnet/tx/414889ebdde536fdbe8115ce05963cfaaecfdc2f998e2383ca7d43e5af94183d) |
 | 2026-10-25 01:39 | owner restores caps ($0.05/payment, $5/month) | SUCCESS | [73e933b65e…](https://stellar.expert/explorer/testnet/tx/73e933b65eba79b6c1b03b7b6a1eeb9e3249e66799abfe1b936b1984583fec83) |
 
 ## On-chain rejections

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-25T02:41:07.446Z",
+  "generatedAt": "2026-10-25T02:43:14.312Z",
   "network": "stellar:testnet",
   "explorer": "https://stellar.expert/explorer/testnet",
   "contracts": {
@@ -139,19 +139,6 @@
       "link": "https://stellar.expert/explorer/testnet/tx/ee1fde3b3a33942ba95867c0b3d3ad9f71458a51d05a4b7a9a1d3b9959600583"
     },
     {
-      "at": "2026-10-25T01:32:08.906Z",
-      "kind": "deploy",
-      "label": "deploy customer Smart Account v3",
-      "hash": "ee1fde3b3a33942ba95867c0b3d3ad9f71458a51d05a4b7a9a1d3b9959600583",
-      "status": "SUCCESS",
-      "onChain": {
-        "status": "SUCCESS",
-        "ledger": 5373660,
-        "closedAt": "2026-10-25T01:31:27.000Z"
-      },
-      "link": "https://stellar.expert/explorer/testnet/tx/ee1fde3b3a33942ba95867c0b3d3ad9f71458a51d05a4b7a9a1d3b9959600583"
-    },
-    {
       "at": "2026-10-25T01:32:37.673Z",
       "kind": "deploy",
       "label": "bootstrap Smart Account (owner = MPC 2-of-3 key)",
@@ -271,7 +258,7 @@
     {
       "at": "2026-10-25T01:37:22.625Z",
       "kind": "policy",
-      "label": "owner lowers monthly cap to $0.015 (already spent $0.01); signed under MPC 2-of-3 after email OTP",
+      "label": "owner lowers caps to $0.005/payment and $0.015/month (first attempt: the per-request cap was lowered too, by mistake); signed under MPC 2-of-3 after email OTP",
       "hash": "775060e15e30429ffa89eef1329fc7d9c1d5775ff716346d649d6c505d26eec1",
       "status": "SUCCESS",
       "onChain": {
@@ -352,7 +339,7 @@
     {
       "at": "2026-10-25T01:39:03.239Z",
       "kind": "policy",
-      "label": "owner lowers monthly cap to $0.015 (already spent $0.01); signed under MPC 2-of-3 after email OTP",
+      "label": "owner lowers caps to $0.01/payment and $0.015/month (already spent $0.01); signed under MPC 2-of-3 after email OTP",
       "hash": "414889ebdde536fdbe8115ce05963cfaaecfdc2f998e2383ca7d43e5af94183d",
       "status": "SUCCESS",
       "onChain": {
