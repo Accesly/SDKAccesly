@@ -2,3 +2,6 @@
 .secrets/
 # Estado local de la corrida (direcciones, hashes). Se publica vía 06-report.
 .state/
+
+# Video de la demo (herramienta local, no se versiona)
+_demo-video.mjs
