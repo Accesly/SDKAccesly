@@ -32,11 +32,14 @@ export function vaultRouter({ dataDir, secret, resendApiKey, otpFrom, gmail, dev
   const save = (s) => writeFileSync(storePath, JSON.stringify(s, null, 2), { mode: 0o600 });
   const otps = new Map();
 
-  const emailId = (email) => createHash('sha256').update(String(email).trim().toLowerCase()).digest('hex');
+  const emailId = (email) =>
+    createHash('sha256').update(String(email).trim().toLowerCase()).digest('hex');
   const hmac = (s) => createHmac('sha256', secret).update(s).digest('base64url');
 
   function issueToken(id) {
-    const body = Buffer.from(JSON.stringify({ id, exp: Date.now() + TOKEN_TTL_MS })).toString('base64url');
+    const body = Buffer.from(JSON.stringify({ id, exp: Date.now() + TOKEN_TTL_MS })).toString(
+      'base64url',
+    );
     return `${body}.${hmac(body)}`;
   }
 
@@ -67,7 +70,12 @@ export function vaultRouter({ dataDir, secret, resendApiKey, otpFrom, gmail, dev
   async function sendOtp(email, code) {
     if (smtp) {
       // Gmail exige que el remitente sea la propia cuenta.
-      await smtp.sendMail({ from: `Accesly <${gmail.user}>`, to: email, subject: subject(code), text: text(code) });
+      await smtp.sendMail({
+        from: `Accesly <${gmail.user}>`,
+        to: email,
+        subject: subject(code),
+        text: text(code),
+      });
       return;
     }
     if (resendApiKey) {
@@ -96,7 +104,11 @@ export function vaultRouter({ dataDir, secret, resendApiKey, otpFrom, gmail, dev
       return res.status(400).json({ error: 'invalid email' });
     }
     const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
-    otps.set(emailId(email), { codeHash: hmac(code), expires: Date.now() + OTP_TTL_MS, attempts: 0 });
+    otps.set(emailId(email), {
+      codeHash: hmac(code),
+      expires: Date.now() + OTP_TTL_MS,
+      attempts: 0,
+    });
     try {
       await sendOtp(email, code);
     } catch (err) {

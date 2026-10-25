@@ -98,7 +98,12 @@ const ruleInfo = {
 if (forOwner) {
   state.merge({ ownerX402: ruleInfo, rules: { ...s.rules, x402Owner: ruleId } });
 } else {
-  saveJson('.secrets', 'session', { seed: b64(sessionSeed), pubkey: b64(sessionPubkey), ruleId, validUntil });
+  saveJson('.secrets', 'session', {
+    seed: b64(sessionSeed),
+    pubkey: b64(sessionPubkey),
+    ruleId,
+    validUntil,
+  });
   state.merge({ session: ruleInfo });
 }
 sessionSeed.fill(0);

@@ -21,11 +21,11 @@ testnet only. Written 25 Oct 2026.
 ## 2. What the customer signs
 
 - The customer signs one `SorobanAuthorizationEntry` for a single SEP-41 `transfer(from = Smart
-  Account, to = payTo, amount)`. The signature covers the network id, the nonce, the expiration
+Account, to = payTo, amount)`. The signature covers the network id, the nonce, the expiration
   ledger (about 60 s) and the exact invocation, so the facilitator **cannot change the asset, the
   recipient or the amount, and cannot replay the entry** (the nonce is consumed on-chain).
 - The signature goes inside the Smart Account `AuthPayload` (`Signer::External(ed25519_verifier,
-  pubkey)` plus `context_rule_ids`). It is verified by `__check_auth`, which also runs every
+pubkey)` plus `context_rule_ids`). It is verified by `__check_auth`, which also runs every
   policy attached to the selected context rule.
 
 ## 3. Facilitator trust
@@ -48,15 +48,15 @@ testnet only. Written 25 Oct 2026.
 Account, context rule) it stores the token, a per-request cap, a monthly cap, a window length and
 an allowlist. `enforce` rejects, in this order:
 
-| Check | Error |
-|---|---|
-| Call is not `transfer` (e.g. `approve`, `transfer_from`) | 10003 FunctionNotAllowed |
-| Contract is not the configured token | 10004 WrongToken |
-| `from` is not the Smart Account, or `to` is not a plain address | 10005 InvalidTransfer |
-| Amount ≤ 0 | 10006 InvalidAmount |
-| Amount > per-request cap | 10007 PerRequestCapExceeded |
-| Recipient not in allowlist (an empty list rejects everything) | 10008 RecipientNotAllowed |
-| Spent in window + amount > monthly cap | 10009 MonthlyCapExceeded |
+| Check                                                           | Error                       |
+| --------------------------------------------------------------- | --------------------------- |
+| Call is not `transfer` (e.g. `approve`, `transfer_from`)        | 10003 FunctionNotAllowed    |
+| Contract is not the configured token                            | 10004 WrongToken            |
+| `from` is not the Smart Account, or `to` is not a plain address | 10005 InvalidTransfer       |
+| Amount ≤ 0                                                      | 10006 InvalidAmount         |
+| Amount > per-request cap                                        | 10007 PerRequestCapExceeded |
+| Recipient not in allowlist (an empty list rejects everything)   | 10008 RecipientNotAllowed   |
+| Spent in window + amount > monthly cap                          | 10009 MonthlyCapExceeded    |
 
 - Changing caps or the allowlist requires the Smart Account's own authorization, which goes
   through the `admin-cfg` rule (owner key, MPC 2-of-3 after email OTP).

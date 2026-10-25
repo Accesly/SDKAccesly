@@ -111,7 +111,12 @@ describe('payments/x402: authorizeSmartAccountEntry', () => {
   it('does not touch the original entry', async () => {
     const entry = placeholderEntry(5n);
     const before = entry.toXDR('base64');
-    await authorizeSmartAccountEntry(makeSigner(ed25519.utils.randomPrivateKey()), entry, 99, PASSPHRASE);
+    await authorizeSmartAccountEntry(
+      makeSigner(ed25519.utils.randomPrivateKey()),
+      entry,
+      99,
+      PASSPHRASE,
+    );
     expect(entry.toXDR('base64')).toBe(before);
   });
 });

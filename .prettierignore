@@ -5,3 +5,8 @@ coverage
 .changeset
 **/*.generated.ts
 pnpm-lock.yaml
+
+# Generados por scripts del ejemplo x402
+examples/*/evidence
+examples/*/.state
+examples/*/.secrets

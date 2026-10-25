@@ -19,7 +19,14 @@ import { Address, Keypair, Operation, StrKey, TransactionBuilder, rpc } from '@s
 import { createWallet } from '@accesly/core/mpc';
 import { deriveRecoveryKeyFromPasswordString, generateRecoverySalt } from '@accesly/core/crypto';
 import { cfg, loadJson, saveJson, state, usd } from '../lib/config.mjs';
-import { assembleAndSign, invoke, restoreCodeIfArchived, scv, server, submit } from '../lib/stellar.mjs';
+import {
+  assembleAndSign,
+  invoke,
+  restoreCodeIfArchived,
+  scv,
+  server,
+  submit,
+} from '../lib/stellar.mjs';
 import { b64, envelopeToWire, otpLogin, storeF2 } from '../lib/wallet.mjs';
 
 const email = process.env.DEMO_EMAIL ?? 'customer@demo.accesly.xyz';
@@ -62,7 +69,12 @@ const secpPubkey = p256.getPublicKey(p256.utils.randomPrivateKey(), false);
 const wasmHash = cfg.smartAccountWasmHash;
 const restored = await restoreCodeIfArchived(funder, wasmHash);
 if (restored) {
-  state.logTx({ kind: 'deploy', label: 'restore archived smart-account-v3.2.0 WASM', hash: restored.hash, status: restored.status });
+  state.logTx({
+    kind: 'deploy',
+    label: 'restore archived smart-account-v3.2.0 WASM',
+    hash: restored.hash,
+    status: restored.status,
+  });
 }
 
 // Reanudable: si un deploy anterior quedó sin bootstrap, se reusa.
@@ -77,7 +89,12 @@ if (!smartAccount) {
     }),
   );
   smartAccount = StrKey.encodeContract(Address.fromScVal(deployed.raw.returnValue).toBuffer());
-  state.logTx({ kind: 'deploy', label: 'deploy customer Smart Account v3', hash: deployed.hash, status: deployed.status });
+  state.logTx({
+    kind: 'deploy',
+    label: 'deploy customer Smart Account v3',
+    hash: deployed.hash,
+    status: deployed.status,
+  });
   state.merge({ pendingSmartAccount: smartAccount });
   console.log(`smart account ${smartAccount} (${deployed.hash})`);
 }
@@ -98,7 +115,12 @@ const boot = await invoke({
     scv.vec([scv.address(cfg.usdc)]),
   ],
 });
-state.logTx({ kind: 'deploy', label: 'bootstrap Smart Account (owner = MPC 2-of-3 key)', hash: boot.hash, status: boot.status });
+state.logTx({
+  kind: 'deploy',
+  label: 'bootstrap Smart Account (owner = MPC 2-of-3 key)',
+  hash: boot.hash,
+  status: boot.status,
+});
 console.log(`bootstrap ${boot.status} (${boot.hash})`);
 
 // 3. OTP → F2 a la bóveda; F1 + llaves al device; F3 a recuperación.
@@ -125,7 +147,12 @@ const fund = await invoke({
   method: 'transfer',
   args: [scv.address(funder.publicKey()), scv.address(smartAccount), scv.i128(usd(FUND_USDC))],
 });
-state.logTx({ kind: 'setup', label: `fund Smart Account with ${FUND_USDC} test USDC`, hash: fund.hash, status: fund.status });
+state.logTx({
+  kind: 'setup',
+  label: `fund Smart Account with ${FUND_USDC} test USDC`,
+  hash: fund.hash,
+  status: fund.status,
+});
 console.log(`funded ${FUND_USDC} USDC (${fund.hash})`);
 
 state.merge({

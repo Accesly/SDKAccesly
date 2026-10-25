@@ -49,7 +49,9 @@ async function signSmartAccountAuth(auth, saSigner, validUntil) {
     const isSa =
       creds.switch().name === 'sorobanCredentialsAddress' &&
       Address.fromScAddress(creds.address().address()).toString() === saSigner.smartAccount;
-    out.push(isSa ? await authorizeSmartAccountEntry(saSigner, entry, validUntil, cfg.passphrase) : entry);
+    out.push(
+      isSa ? await authorizeSmartAccountEntry(saSigner, entry, validUntil, cfg.passphrase) : entry,
+    );
   }
   return out;
 }
@@ -57,7 +59,9 @@ async function signSmartAccountAuth(auth, saSigner, validUntil) {
 function simulationError(sim) {
   const detail = String(sim.error);
   const code = parseContractErrorCode(detail);
-  const err = new Error(`simulation failed${code ? ` (Contract #${code})` : ''}: ${detail.split('\n')[0]}`);
+  const err = new Error(
+    `simulation failed${code ? ` (Contract #${code})` : ''}: ${detail.split('\n')[0]}`,
+  );
   err.code = code;
   err.detail = detail;
   return err;
@@ -78,7 +82,10 @@ export async function prepareInvoke({ source, contractId, method, args, saSigner
     const latest = await server.getLatestLedger();
     const auth = await signSmartAccountAuth(sim.result?.auth ?? [], saSigner, latest.sequence + 60);
     const func = tx.operations[0].func;
-    tx = buildTx(await freshAccount(source.publicKey()), Operation.invokeHostFunction({ func, auth }));
+    tx = buildTx(
+      await freshAccount(source.publicKey()),
+      Operation.invokeHostFunction({ func, auth }),
+    );
     sim = await server.simulateTransaction(tx);
     if (rpc.Api.isSimulationError(sim)) throw simulationError(sim);
   }
@@ -115,7 +122,12 @@ export function assembleAndSign(tx, sim, signer) {
   env.v1().tx().fee(Number(UINT32_MAX));
   const inner = new Transaction(env, cfg.passphrase);
   inner.sign(signer);
-  const bump = TransactionBuilder.buildFeeBumpTransaction(signer, (fee + 100_000n).toString(), inner, cfg.passphrase);
+  const bump = TransactionBuilder.buildFeeBumpTransaction(
+    signer,
+    (fee + 100_000n).toString(),
+    inner,
+    cfg.passphrase,
+  );
   bump.sign(signer);
   return bump;
 }
@@ -172,7 +184,14 @@ export function failureCode(got) {
  * válida. Sirve para dejar evidencia on-chain de un rechazo de la política:
  * la tx entra al ledger y falla dentro de `__check_auth`.
  */
-export async function submitExpectingRejection({ source, contractId, method, args, saSigner, footprints: borrowed }) {
+export async function submitExpectingRejection({
+  source,
+  contractId,
+  method,
+  args,
+  saSigner,
+  footprints: borrowed,
+}) {
   let footprints = borrowed;
   const op = new Contract(contractId).call(method, ...args);
   const latest = await server.getLatestLedger();
@@ -180,7 +199,11 @@ export async function submitExpectingRejection({ source, contractId, method, arg
   // footprint de lo que toca el transfer; el resto (reglas, política,
   // verifier) sale de las simulaciones válidas prestadas.
   const recorded = await recordingSim({ source, op });
-  const auth = await signSmartAccountAuth(recorded.result?.auth ?? [], saSigner, latest.sequence + 60);
+  const auth = await signSmartAccountAuth(
+    recorded.result?.auth ?? [],
+    saSigner,
+    latest.sequence + 60,
+  );
   footprints = [recorded.transactionData.build(), ...footprints];
 
   const readOnly = new Map();
@@ -197,7 +220,10 @@ export async function submitExpectingRejection({ source, contractId, method, arg
     instructions = Math.max(instructions, data.resources().instructions());
     diskRead += data.resources().diskReadBytes();
     write += data.resources().writeBytes();
-    resourceFee = resourceFee > BigInt(data.resourceFee().toString()) ? resourceFee : BigInt(data.resourceFee().toString());
+    resourceFee =
+      resourceFee > BigInt(data.resourceFee().toString())
+        ? resourceFee
+        : BigInt(data.resourceFee().toString());
   }
   for (const k of readWrite.keys()) readOnly.delete(k);
 
@@ -212,7 +238,9 @@ export async function submitExpectingRejection({ source, contractId, method, arg
     fee: (BigInt(BASE_FEE) + resourceFee * 3n).toString(),
     networkPassphrase: cfg.passphrase,
   })
-    .addOperation(Operation.invokeHostFunction({ func: op.body().invokeHostFunctionOp().hostFunction(), auth }))
+    .addOperation(
+      Operation.invokeHostFunction({ func: op.body().invokeHostFunctionOp().hostFunction(), auth }),
+    )
     .setSorobanData(sorobanData)
     .setTimeout(300)
     .build();
@@ -304,7 +332,12 @@ export async function restoreCodeIfArchived(payer, wasmHashHex) {
   env.v1().tx().fee(4294967295);
   const inner = new Transaction(env, cfg.passphrase);
   inner.sign(payer);
-  const bump = TransactionBuilder.buildFeeBumpTransaction(payer, (fee + 100_000n).toString(), inner, cfg.passphrase);
+  const bump = TransactionBuilder.buildFeeBumpTransaction(
+    payer,
+    (fee + 100_000n).toString(),
+    inner,
+    cfg.passphrase,
+  );
   bump.sign(payer);
   return submit(bump);
 }

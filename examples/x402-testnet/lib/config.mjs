@@ -31,7 +31,8 @@ export const cfg = {
 
   // smart-account-v3.2.0: mismo hash que el WASM desplegado en mainnet el 5 jul 2026.
   smartAccountWasmHash:
-    process.env.SMART_ACCOUNT_WASM_HASH ?? 'f1c549e2491e0f8d9cc7683f6056da2edd8a8c3d6786723ab1c86dae74a96b0e',
+    process.env.SMART_ACCOUNT_WASM_HASH ??
+    'f1c549e2491e0f8d9cc7683f6056da2edd8a8c3d6786723ab1c86dae74a96b0e',
 
   // Servicios (facilitador, bóveda F2, agente). En el Hetzner van detrás de Caddy.
   serviceUrl: process.env.SERVICE_URL ?? 'http://localhost:4021',

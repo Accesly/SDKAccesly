@@ -3,7 +3,11 @@
  * signers que soporta Accesly (MPC 2-de-3 y session key).
  */
 
-import { AcceslyExactStellarScheme, type AcceslyX402SchemeOptions, type AcceslyX402Signer } from './x402.js';
+import {
+  AcceslyExactStellarScheme,
+  type AcceslyX402SchemeOptions,
+  type AcceslyX402Signer,
+} from './x402.js';
 
 export interface MpcX402SignerParams {
   readonly smartAccount: string;
@@ -67,6 +71,9 @@ export async function createAcceslyX402Fetch(
     import('@x402/core/client'),
     import('@x402/fetch'),
   ]);
-  const client = new x402Client().register('stellar:*', new AcceslyExactStellarScheme(signer, options));
+  const client = new x402Client().register(
+    'stellar:*',
+    new AcceslyExactStellarScheme(signer, options),
+  );
   return wrapFetchWithPayment(options.fetch ?? globalThis.fetch, client) as typeof globalThis.fetch;
 }

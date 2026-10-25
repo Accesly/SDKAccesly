@@ -30,7 +30,8 @@ export function facilitatorRouter({ dataDir, secret, network, rpcUrl, maxFeeStro
       maxTransactionFeeStroops: maxFeeStroops,
     }),
   );
-  const log = (rec) => appendFileSync(join(dataDir, 'settlements.jsonl'), JSON.stringify(rec) + '\n');
+  const log = (rec) =>
+    appendFileSync(join(dataDir, 'settlements.jsonl'), JSON.stringify(rec) + '\n');
 
   const r = express.Router();
   r.use(express.json({ limit: '256kb' }));
@@ -41,7 +42,13 @@ export function facilitatorRouter({ dataDir, secret, network, rpcUrl, maxFeeStro
     try {
       res.json(await facilitator.verify(req.body.paymentPayload, req.body.paymentRequirements));
     } catch (err) {
-      res.status(500).json({ isValid: false, invalidReason: 'unexpected_verify_error', invalidMessage: String(err.message) });
+      res
+        .status(500)
+        .json({
+          isValid: false,
+          invalidReason: 'unexpected_verify_error',
+          invalidMessage: String(err.message),
+        });
     }
   });
 
@@ -63,7 +70,13 @@ export function facilitatorRouter({ dataDir, secret, network, rpcUrl, maxFeeStro
       res.json(out);
     } catch (err) {
       log({ at: new Date().toISOString(), success: false, errorReason: String(err.message) });
-      res.status(500).json({ success: false, errorReason: 'unexpected_settle_error', errorMessage: String(err.message) });
+      res
+        .status(500)
+        .json({
+          success: false,
+          errorReason: 'unexpected_settle_error',
+          errorMessage: String(err.message),
+        });
     }
   });
 

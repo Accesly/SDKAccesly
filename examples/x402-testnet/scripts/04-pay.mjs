@@ -14,14 +14,21 @@
  */
 
 import { decodePaymentResponseHeader } from '@x402/core/http';
-import { createAcceslyX402Fetch, mpcX402Signer, sessionKeyX402Signer } from '@accesly/core/payments';
+import {
+  createAcceslyX402Fetch,
+  mpcX402Signer,
+  sessionKeyX402Signer,
+} from '@accesly/core/payments';
 import { cfg, loadJson, state, usd } from '../lib/config.mjs';
 import { otpLogin, reconstructOwnerSeed, unb64 } from '../lib/wallet.mjs';
 
 const AGENT_URL = process.env.AGENT_URL ?? `${cfg.serviceUrl}/demo/agent`;
 const COUNT = Number(process.env.COUNT ?? '3');
 const SIGNER = process.env.SIGNER ?? 'session';
-const QUERIES = (process.env.QUERIES ?? 'vacantes de analista de datos en CDMX|practicas de marketing remotas|desarrollador junior en Bogota').split('|');
+const QUERIES = (
+  process.env.QUERIES ??
+  'vacantes de analista de datos en CDMX|practicas de marketing remotas|desarrollador junior en Bogota'
+).split('|');
 
 const device = loadJson('.secrets', 'device');
 const s = state.get();
@@ -71,7 +78,9 @@ for (let i = 0; i < COUNT; i += 1) {
         resource: url.pathname,
         ms: Date.now() - started,
       });
-      console.log(`#${i + 1} paid ${settle.transaction} (${Date.now() - started} ms) → ${JSON.stringify(body).slice(0, 80)}`);
+      console.log(
+        `#${i + 1} paid ${settle.transaction} (${Date.now() - started} ms) → ${JSON.stringify(body).slice(0, 80)}`,
+      );
     } else {
       console.log(`#${i + 1} not paid: HTTP ${res.status} ${JSON.stringify(body).slice(0, 200)}`);
     }

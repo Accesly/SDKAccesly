@@ -128,7 +128,8 @@ export class X402PolicyRejectedError extends X402PaymentError {
   readonly reason: string;
 
   constructor(code: number | undefined, detail: string) {
-    const reason = code !== undefined ? (X402_POLICY_ERRORS[code] ?? `Contract#${code}`) : 'Unknown';
+    const reason =
+      code !== undefined ? (X402_POLICY_ERRORS[code] ?? `Contract#${code}`) : 'Unknown';
     super(`x402 payment rejected by on-chain policy: ${reason}. ${detail}`);
     this.name = 'X402PolicyRejectedError';
     this.code = code;
@@ -176,7 +177,8 @@ export class AcceslyExactStellarScheme implements SchemeNetworkClient {
     const { network, payTo, asset, amount, maxTimeoutSeconds, extra } = requirements;
     this.validate(requirements);
 
-    const networkPassphrase = NETWORK_PASSPHRASES[network]!;
+    const networkPassphrase = NETWORK_PASSPHRASES[network];
+    if (!networkPassphrase) throw new X402PaymentError(`unsupported network: ${network}`);
     const rpcUrl = this.options.rpcUrl ?? DEFAULT_RPC_URLS[network];
     if (!rpcUrl) {
       throw new X402PaymentError(`rpcUrl is required for network ${network}`);
@@ -216,7 +218,12 @@ export class AcceslyExactStellarScheme implements SchemeNetworkClient {
       address: this.signer.smartAccount,
       expiration: maxLedger,
       authorizeEntry: (entry, _signer, validUntilLedgerSeq, passphrase) =>
-        authorizeSmartAccountEntry(this.signer, entry, validUntilLedgerSeq, passphrase ?? networkPassphrase),
+        authorizeSmartAccountEntry(
+          this.signer,
+          entry,
+          validUntilLedgerSeq,
+          passphrase ?? networkPassphrase,
+        ),
     });
 
     if (this.options.preflight !== false) {
@@ -224,7 +231,8 @@ export class AcceslyExactStellarScheme implements SchemeNetworkClient {
       throwOnSimulationError(tx.simulation, rpc);
     }
 
-    return { x402Version, payload: { transaction: tx.built!.toXDR() } };
+    if (!tx.built) throw new X402PaymentError('transaction was not assembled');
+    return { x402Version, payload: { transaction: tx.built.toXDR() } };
   }
 
   private validate(req: PaymentRequirements): void {

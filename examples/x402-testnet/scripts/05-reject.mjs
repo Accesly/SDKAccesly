@@ -23,7 +23,14 @@ import {
   sessionKeyX402Signer,
 } from '@accesly/core/payments';
 import { cfg, loadJson, state, usd } from '../lib/config.mjs';
-import { footprintOf, invoke, prepareInvoke, read, scv, submitExpectingRejection } from '../lib/stellar.mjs';
+import {
+  footprintOf,
+  invoke,
+  prepareInvoke,
+  read,
+  scv,
+  submitExpectingRejection,
+} from '../lib/stellar.mjs';
 import { otpLogin, reconstructOwnerSeed, unb64 } from '../lib/wallet.mjs';
 
 const accounts = loadJson('.secrets', 'accounts');
@@ -73,7 +80,9 @@ async function reject(label, expectedCode, params, footprints) {
     simulatedCode: code,
     onChainCode: res.contractErrorCode,
   });
-  console.log(`${label}: on-chain ${res.status} ${res.hash} (simulation → #${code}, expected #${expectedCode})`);
+  console.log(
+    `${label}: on-chain ${res.status} ${res.hash} (simulation → #${code}, expected #${expectedCode})`,
+  );
   return res;
 }
 
@@ -150,7 +159,9 @@ try {
   console.log('x402 client: unexpectedly built a payload');
 } catch (err) {
   const ok = err instanceof X402PolicyRejectedError;
-  state.merge({ clientPreflightRejection: { reason: err.reason, code: err.code, message: err.message } });
+  state.merge({
+    clientPreflightRejection: { reason: err.reason, code: err.code, message: err.message },
+  });
   console.log(`x402 client preflight: ${ok ? `rejected (${err.reason})` : err.message}`);
 }
 
@@ -159,8 +170,18 @@ const restore = await invoke({
   source: funder,
   contractId: cfg.x402Policy,
   method: 'set_caps',
-  args: [scv.u32(session.ruleId), scv.address(SA), scv.i128(BigInt(s.session.maxPerRequest)), scv.i128(BigInt(s.session.monthlyCap))],
+  args: [
+    scv.u32(session.ruleId),
+    scv.address(SA),
+    scv.i128(BigInt(s.session.maxPerRequest)),
+    scv.i128(BigInt(s.session.monthlyCap)),
+  ],
   saSigner: owner,
 });
-state.logTx({ kind: 'policy', label: 'owner restores caps ($0.05/payment, $5/month)', hash: restore.hash, status: restore.status });
+state.logTx({
+  kind: 'policy',
+  label: 'owner restores caps ($0.05/payment, $5/month)',
+  hash: restore.hash,
+  status: restore.status,
+});
 console.log(`restore caps ${restore.status} ${restore.hash}`);

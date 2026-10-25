@@ -38,7 +38,10 @@ async function exists(pub) {
 
 async function send(kp, ops) {
   const acc = await horizon.loadAccount(kp.publicKey());
-  const b = new TransactionBuilder(acc, { fee: '10000', networkPassphrase: cfg.passphrase }).setTimeout(120);
+  const b = new TransactionBuilder(acc, {
+    fee: '10000',
+    networkPassphrase: cfg.passphrase,
+  }).setTimeout(120);
   ops.forEach((op) => b.addOperation(op));
   const tx = b.build();
   tx.sign(kp);
@@ -54,7 +57,9 @@ for (const role of ROLES) {
   }
   if (role !== 'facilitator') {
     const acc = await horizon.loadAccount(publicKey);
-    const hasTrust = acc.balances.some((b) => b.asset_code === cfg.usdcCode && b.asset_issuer === cfg.usdcIssuer);
+    const hasTrust = acc.balances.some(
+      (b) => b.asset_code === cfg.usdcCode && b.asset_issuer === cfg.usdcIssuer,
+    );
     if (!hasTrust) {
       const hash = await send(Keypair.fromSecret(secret), [Operation.changeTrust({ asset: USDC })]);
       state.logTx({ kind: 'setup', label: `USDC trustline (${role})`, hash, status: 'SUCCESS' });
@@ -78,7 +83,12 @@ if (usdcBal < Number(USDC_TO_BUY)) {
       path: [],
     }),
   ]);
-  state.logTx({ kind: 'setup', label: `buy ${USDC_TO_BUY} test USDC on testnet DEX`, hash, status: 'SUCCESS' });
+  state.logTx({
+    kind: 'setup',
+    label: `buy ${USDC_TO_BUY} test USDC on testnet DEX`,
+    hash,
+    status: 'SUCCESS',
+  });
   console.log(`bought ${USDC_TO_BUY} USDC: ${hash}`);
 }
 

@@ -27,7 +27,8 @@ const DATA_DIR = env.DATA_DIR ?? new URL('../.state/server', import.meta.url).pa
 const NETWORK = 'stellar:testnet';
 const RPC_URL = env.RPC_URL ?? 'https://soroban-testnet.stellar.org';
 const devEcho = env.DEV_OTP_ECHO === '1';
-if (devEcho && env.NODE_ENV === 'production') throw new Error('DEV_OTP_ECHO is not allowed in production');
+if (devEcho && env.NODE_ENV === 'production')
+  throw new Error('DEV_OTP_ECHO is not allowed in production');
 mkdirSync(DATA_DIR, { recursive: true });
 
 const app = express();
@@ -77,10 +78,15 @@ if (env.MERCHANT_PUBLIC) {
     ),
   );
   app.get('/demo/agent', (req, res) => {
-    res.json({ answer: `Paid query received: ${String(req.query.q ?? '')}`, at: new Date().toISOString() });
+    res.json({
+      answer: `Paid query received: ${String(req.query.q ?? '')}`,
+      at: new Date().toISOString(),
+    });
   });
 }
 
 app.listen(PORT, () => {
-  console.log(`x402 testnet service on :${PORT} (facilitator ${facilitator.address}${devEcho ? ', DEV_OTP_ECHO' : ''})`);
+  console.log(
+    `x402 testnet service on :${PORT} (facilitator ${facilitator.address}${devEcho ? ', DEV_OTP_ECHO' : ''})`,
+  );
 });

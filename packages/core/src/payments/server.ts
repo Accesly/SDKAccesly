@@ -86,7 +86,13 @@ export function withX402Payment(
     const url = new URL(req.url);
     const query = Object.fromEntries(url.searchParams.entries());
     const header = (name: string) => req.headers.get(name) ?? undefined;
-    const body = req.method === 'GET' || req.method === 'HEAD' ? undefined : await req.clone().json().catch(() => undefined);
+    const body =
+      req.method === 'GET' || req.method === 'HEAD'
+        ? undefined
+        : await req
+            .clone()
+            .json()
+            .catch(() => undefined);
     const context = {
       adapter: {
         getHeader: header,
@@ -109,7 +115,13 @@ export function withX402Payment(
     if (result.type === 'no-payment-required') return handler(req);
     if (result.type === 'payment-error') return toResponse(result.response);
 
-    const { cancellationDispatcher, beforeHandlerSettlement, paymentPayload, paymentRequirements, declaredExtensions } = result;
+    const {
+      cancellationDispatcher,
+      beforeHandlerSettlement,
+      paymentPayload,
+      paymentRequirements,
+      declaredExtensions,
+    } = result;
     let res: Response;
     try {
       res = await handler(req);
@@ -135,13 +147,19 @@ export function withX402Payment(
     if (!settle.success) return toResponse(settle.response);
 
     const headers = new Headers(res.headers);
-    for (const [k, v] of Object.entries(settle.headers as Record<string, string>)) headers.set(k, v);
+    for (const [k, v] of Object.entries(settle.headers as Record<string, string>))
+      headers.set(k, v);
     headers.set('Cache-Control', 'private, no-store');
     return new Response(responseBody, { status: res.status, headers });
   };
 }
 
-function toResponse(r: { status: number; headers: Record<string, string>; body?: unknown; isHtml?: boolean }) {
+function toResponse(r: {
+  status: number;
+  headers: Record<string, string>;
+  body?: unknown;
+  isHtml?: boolean;
+}) {
   const headers = new Headers(r.headers);
   if (r.isHtml) {
     headers.set('Content-Type', 'text/html; charset=utf-8');
@@ -171,10 +189,9 @@ export interface CreateResourceServerParams {
  * Carga `@x402/core` y `@x402/stellar` en runtime (peer deps opcionales).
  */
 export async function createAcceslyResourceServer(params: CreateResourceServerParams) {
-  const [{ x402ResourceServer, HTTPFacilitatorClient }, { ExactStellarScheme }] = await Promise.all([
-    import('@x402/core/server'),
-    import('@x402/stellar/exact/server'),
-  ]);
+  const [{ x402ResourceServer, HTTPFacilitatorClient }, { ExactStellarScheme }] = await Promise.all(
+    [import('@x402/core/server'), import('@x402/stellar/exact/server')],
+  );
   const server = new x402ResourceServer(new HTTPFacilitatorClient({ url: params.facilitatorUrl }));
   for (const network of params.networks ?? ['stellar:testnet']) {
     server.register(network as `${string}:${string}`, new ExactStellarScheme());

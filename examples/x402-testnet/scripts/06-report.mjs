@@ -74,7 +74,8 @@ writeFileSync(join(OUT, 'evidence.json'), JSON.stringify(evidence, null, 2) + '\
 
 const row = (t) =>
   `| ${t.at.slice(0, 16).replace('T', ' ')} | ${t.label.replace(/\|/g, '/')} | ${t.onChain.status}${t.onChain.contractErrorCode ? ` (#${t.onChain.contractErrorCode})` : ''} | [${t.hash.slice(0, 10)}…](${t.link}) |`;
-const table = (rows) => ['| UTC | What | On-chain | Tx |', '|---|---|---|---|', ...rows.map(row)].join('\n');
+const table = (rows) =>
+  ['| UTC | What | On-chain | Tx |', '|---|---|---|---|', ...rows.map(row)].join('\n');
 
 const md = `# Evidence — x402 on Stellar testnet
 
@@ -94,7 +95,10 @@ ${table(txs.filter((t) => ['setup', 'deploy', 'policy'].includes(t.kind)))}
 
 ${table(rejections)}
 
-${rejections.filter((t) => t.invalidEvidence).map((t) => `- ${t.hash.slice(0, 10)}… is **not** evidence: ${t.invalidEvidence}.`).join('\n')}
+${rejections
+  .filter((t) => t.invalidEvidence)
+  .map((t) => `- ${t.hash.slice(0, 10)}… is **not** evidence: ${t.invalidEvidence}.`)
+  .join('\n')}
 
 ## Payments
 
