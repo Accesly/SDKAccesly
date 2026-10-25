@@ -34,6 +34,7 @@ export {
 
 export {
   createAcceslyResourceServer,
+  withX402Payment,
   priceEndpoint,
   type CreateResourceServerParams,
   type PriceEndpointParams,
