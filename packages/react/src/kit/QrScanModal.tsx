@@ -98,7 +98,6 @@ export function QrScanModal(props: QrScanModalProps): JSX.Element {
       }
     };
     // Solo montamos el scanner una vez por instancia del modal.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

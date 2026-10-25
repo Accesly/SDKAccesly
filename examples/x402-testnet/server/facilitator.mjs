@@ -42,13 +42,11 @@ export function facilitatorRouter({ dataDir, secret, network, rpcUrl, maxFeeStro
     try {
       res.json(await facilitator.verify(req.body.paymentPayload, req.body.paymentRequirements));
     } catch (err) {
-      res
-        .status(500)
-        .json({
-          isValid: false,
-          invalidReason: 'unexpected_verify_error',
-          invalidMessage: String(err.message),
-        });
+      res.status(500).json({
+        isValid: false,
+        invalidReason: 'unexpected_verify_error',
+        invalidMessage: String(err.message),
+      });
     }
   });
 
@@ -70,13 +68,11 @@ export function facilitatorRouter({ dataDir, secret, network, rpcUrl, maxFeeStro
       res.json(out);
     } catch (err) {
       log({ at: new Date().toISOString(), success: false, errorReason: String(err.message) });
-      res
-        .status(500)
-        .json({
-          success: false,
-          errorReason: 'unexpected_settle_error',
-          errorMessage: String(err.message),
-        });
+      res.status(500).json({
+        success: false,
+        errorReason: 'unexpected_settle_error',
+        errorMessage: String(err.message),
+      });
     }
   });
 

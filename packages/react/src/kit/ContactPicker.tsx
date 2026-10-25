@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { useContacts } from '../hooks/useContacts.js';
 import type { ContactRecord } from '@accesly/core';
 

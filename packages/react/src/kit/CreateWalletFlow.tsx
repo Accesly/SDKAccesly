@@ -90,9 +90,8 @@ export function CreateWalletFlow(props: CreateWalletFlowProps): JSX.Element {
         </Tile>
         <Title>Crea tu wallet</Title>
         <Subtitle>
-          Usaremos tu biométrico (Face ID, Touch ID o Windows Hello) como la única
-          llave de tu wallet. Sin frases semilla — tu cuenta vive on-chain y tú
-          firmas con tu huella.
+          Usaremos tu biométrico (Face ID, Touch ID o Windows Hello) como la única llave de tu
+          wallet. Sin frases semilla — tu cuenta vive on-chain y tú firmas con tu huella.
         </Subtitle>
         <PrimaryButton onClick={start} style={{ marginTop: 24 }}>
           Crear mi wallet
@@ -105,8 +104,8 @@ export function CreateWalletFlow(props: CreateWalletFlowProps): JSX.Element {
             color: 'var(--accesly-muted2, var(--ink3, #9E95A7))',
           }}
         >
-          Tu llave se split en 3 partes (Shamir 2-of-3): 2 en tu dispositivo, 1 en el servidor.
-          El servidor nunca tiene la llave completa.
+          Tu llave se split en 3 partes (Shamir 2-of-3): 2 en tu dispositivo, 1 en el servidor. El
+          servidor nunca tiene la llave completa.
         </p>
       </div>
     );
@@ -118,8 +117,8 @@ export function CreateWalletFlow(props: CreateWalletFlowProps): JSX.Element {
         <Spinner />
         <Title style={{ marginTop: 18 }}>Creando tu wallet…</Title>
         <Subtitle>
-          Aprueba el biométrico cuando aparezca. Esto puede tardar unos segundos —
-          estamos desplegando tu Smart Account en Stellar.
+          Aprueba el biométrico cuando aparezca. Esto puede tardar unos segundos — estamos
+          desplegando tu Smart Account en Stellar.
         </Subtitle>
       </div>
     );
@@ -168,9 +167,8 @@ export function CreateWalletFlow(props: CreateWalletFlowProps): JSX.Element {
         </Tile>
         <Title>Ya tienes una wallet</Title>
         <Subtitle>
-          Detectamos que ya creaste una wallet con este correo. Como este
-          dispositivo no tiene la llave, tenés que <strong>recuperarla</strong>
-          {' '}en vez de crear una nueva.
+          Detectamos que ya creaste una wallet con este correo. Como este dispositivo no tiene la
+          llave, tenés que <strong>recuperarla</strong> en vez de crear una nueva.
         </Subtitle>
         {existingWallet && (
           <code
@@ -270,13 +268,14 @@ function Tile({
         : color === 'error'
           ? 'rgba(244,113,116,.14)'
           : 'var(--accesly-grad, var(--grad, linear-gradient(135deg, #A98DF0, #45C9A8)))';
-  const shadow = gradient || color === 'lav'
-    ? '0 12px 32px rgba(139,108,231,.28)'
-    : color === 'mint'
-      ? '0 12px 32px rgba(69,201,168,.28)'
-      : color === 'amber'
-        ? '0 12px 32px rgba(245,200,66,.32)'
-        : 'none';
+  const shadow =
+    gradient || color === 'lav'
+      ? '0 12px 32px rgba(139,108,231,.28)'
+      : color === 'mint'
+        ? '0 12px 32px rgba(69,201,168,.28)'
+        : color === 'amber'
+          ? '0 12px 32px rgba(245,200,66,.32)'
+          : 'none';
   const iconColor = color === 'error' ? '#c92a2a' : '#fff';
   return (
     <div
@@ -343,8 +342,7 @@ function PrimaryButton(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
         height: 52,
         borderRadius: 14,
         border: 'none',
-        background:
-          'var(--accesly-grad, var(--grad, linear-gradient(135deg, #A98DF0, #45C9A8)))',
+        background: 'var(--accesly-grad, var(--grad, linear-gradient(135deg, #A98DF0, #45C9A8)))',
         color: '#FFFFFF',
         fontSize: 15,
         fontWeight: 700,
@@ -387,8 +385,19 @@ function Spinner() {
 function ShieldIcon() {
   return (
     <svg width={28} height={28} viewBox="0 0 24 24" fill="none">
-      <path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6l8-3z" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" />
-      <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6l8-3z"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9 12l2 2 4-4"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -396,7 +405,13 @@ function ShieldIcon() {
 function CheckIcon() {
   return (
     <svg width={30} height={30} viewBox="0 0 24 24" fill="none">
-      <path d="M5 12l5 5 9-11" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M5 12l5 5 9-11"
+        stroke="currentColor"
+        strokeWidth={2.6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

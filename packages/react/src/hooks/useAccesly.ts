@@ -12,7 +12,7 @@
 
 import { useContext, useMemo } from 'react';
 import {
-  AccesslyEndpoints,
+  type AccesslyEndpoints,
   computeSmartAccountAddress,
   createWallet as coreCreateWallet,
   decryptAesGcm,
@@ -1101,9 +1101,7 @@ function defaultCallbackUri(authCallbackPath: string | undefined): string {
   }
   if (authCallbackPath) {
     // Defensa contra typos del integrador: si no empieza con `/`, lo agregamos.
-    const normalized = authCallbackPath.startsWith('/')
-      ? authCallbackPath
-      : `/${authCallbackPath}`;
+    const normalized = authCallbackPath.startsWith('/') ? authCallbackPath : `/${authCallbackPath}`;
     return `${window.location.origin}${normalized}`;
   }
   return `${window.location.origin}/auth/callback`;
@@ -3076,10 +3074,7 @@ export function useAccesly(): AcceslyHook {
               newEmailCommitment: newEmailCommitHex,
             });
           } catch (err) {
-            if (
-              err instanceof RotateWriteCapExceededError &&
-              err.rotatableRuleIds.length > 0
-            ) {
+            if (err instanceof RotateWriteCapExceededError && err.rotatableRuleIds.length > 0) {
               finalizeResp = await runPartialRotateFlow({
                 endpoints: ctx.endpoints,
                 recoveryJwt: input.recoveryJwt,

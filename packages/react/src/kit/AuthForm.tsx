@@ -42,7 +42,7 @@ export interface AuthFormProps {
 export function AuthForm(props: AuthFormProps): JSX.Element {
   const { auth } = useAccesly();
   const providers = useAuthProviders();
-  const branding = useBranding();
+  useBranding();
   const mode = props.mode ?? 'sign-in';
 
   const [email, setEmail] = useState('');
@@ -103,7 +103,8 @@ export function AuthForm(props: AuthFormProps): JSX.Element {
             width: 56,
             height: 56,
             borderRadius: 18,
-            background: 'var(--accesly-grad, var(--grad, linear-gradient(135deg, #A98DF0, #45C9A8)))',
+            background:
+              'var(--accesly-grad, var(--grad, linear-gradient(135deg, #A98DF0, #45C9A8)))',
             boxShadow: '0 12px 32px rgba(139,108,231,.28)',
             margin: '0 auto 14px',
             display: 'flex',
@@ -187,11 +188,7 @@ export function AuthForm(props: AuthFormProps): JSX.Element {
               />
               {error && <ErrorPill>{error}</ErrorPill>}
               <PrimaryButton type="submit" disabled={submitting}>
-                {submitting
-                  ? '…'
-                  : mode === 'sign-up'
-                    ? 'Crear cuenta'
-                    : 'Iniciar sesión'}
+                {submitting ? '…' : mode === 'sign-up' ? 'Crear cuenta' : 'Iniciar sesión'}
               </PrimaryButton>
             </form>
           )}
@@ -246,8 +243,7 @@ export function AuthForm(props: AuthFormProps): JSX.Element {
                   'var(--accesly-card2, var(--card2, rgba(0,0,0,.025)))';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background =
-                  'var(--accesly-card, var(--card, #FFFFFF))';
+                e.currentTarget.style.background = 'var(--accesly-card, var(--card, #FFFFFF))';
               }}
             >
               <GoogleG />
@@ -293,14 +289,12 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
         ...style,
       }}
       onFocus={(e) => {
-        e.currentTarget.style.borderColor =
-          'var(--accesly-primary, var(--lav, #8B6CE7))';
+        e.currentTarget.style.borderColor = 'var(--accesly-primary, var(--lav, #8B6CE7))';
         e.currentTarget.style.boxShadow =
           '0 0 0 3px var(--accesly-primary-soft, var(--lav-soft, rgba(139,108,231,.18)))';
       }}
       onBlur={(e) => {
-        e.currentTarget.style.borderColor =
-          'var(--accesly-line, var(--line, rgba(38,30,51,.10)))';
+        e.currentTarget.style.borderColor = 'var(--accesly-line, var(--line, rgba(38,30,51,.10)))';
         e.currentTarget.style.boxShadow = 'none';
       }}
     />
@@ -383,12 +377,7 @@ function KeyIcon() {
 function PlusIcon() {
   return (
     <svg width={28} height={28} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M12 5v14M5 12h14"
-        stroke="currentColor"
-        strokeWidth={2.2}
-        strokeLinecap="round"
-      />
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" />
     </svg>
   );
 }

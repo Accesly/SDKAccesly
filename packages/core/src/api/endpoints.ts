@@ -256,10 +256,10 @@ export class AccesslyEndpoints {
    * biometric-tx del asset de entrada.
    */
   swapSimulate(req: SimulateSwapRequest): Promise<SimulateSwapResponse> {
-    return this.client.post<SimulateSwapResponse>(
-      '/tx/swap',
-      { action: 'simulate', ...req } as unknown as Json,
-    );
+    return this.client.post<SimulateSwapResponse>('/tx/swap', {
+      action: 'simulate',
+      ...req,
+    } as unknown as Json);
   }
 
   /**
@@ -271,18 +271,18 @@ export class AccesslyEndpoints {
    * Uso: preview live en el composer del swap (debounced ~500ms).
    */
   swapQuote(req: SwapQuoteRequest): Promise<SwapQuoteResponse> {
-    return this.client.post<SwapQuoteResponse>(
-      '/tx/swap',
-      { action: 'quote', ...req } as unknown as Json,
-    );
+    return this.client.post<SwapQuoteResponse>('/tx/swap', {
+      action: 'quote',
+      ...req,
+    } as unknown as Json);
   }
 
   /** Cognito-auth. Submit del swap firmado (mismo shape que submitTx). */
   swapSubmit(req: SubmitTxRequest): Promise<SubmitTxResponse> {
-    return this.client.post<SubmitTxResponse>(
-      '/tx/swap',
-      { action: 'submit', ...req } as unknown as Json,
-    );
+    return this.client.post<SubmitTxResponse>('/tx/swap', {
+      action: 'submit',
+      ...req,
+    } as unknown as Json);
   }
 
   /**
@@ -292,10 +292,10 @@ export class AccesslyEndpoints {
    * submit.
    */
   swapSdexSimulate(req: SimulateSwapRequest): Promise<SimulateSwapSdexResponse> {
-    return this.client.post<SimulateSwapSdexResponse>(
-      '/tx/swap-sdex',
-      { action: 'simulate', ...req } as unknown as Json,
-    );
+    return this.client.post<SimulateSwapSdexResponse>('/tx/swap-sdex', {
+      action: 'simulate',
+      ...req,
+    } as unknown as Json);
   }
 
   /**
@@ -304,10 +304,10 @@ export class AccesslyEndpoints {
    * KMS). Devuelve los 3 hashes para auditoría / explorer linking.
    */
   swapSdexSubmit(req: SubmitSwapSdexRequest): Promise<SubmitSwapSdexResponse> {
-    return this.client.post<SubmitSwapSdexResponse>(
-      '/tx/swap-sdex',
-      { action: 'submit', ...req } as unknown as Json,
-    );
+    return this.client.post<SubmitSwapSdexResponse>('/tx/swap-sdex', {
+      action: 'submit',
+      ...req,
+    } as unknown as Json);
   }
 
   /**
@@ -315,10 +315,10 @@ export class AccesslyEndpoints {
    * ejecuta tx3 (G→SA) fee-bumped por channels-fund.
    */
   swapSdexFinalize(req: FinalizeSwapSdexRequest): Promise<FinalizeSwapSdexResponse> {
-    return this.client.post<FinalizeSwapSdexResponse>(
-      '/tx/swap-sdex',
-      { action: 'finalize', ...req } as unknown as Json,
-    );
+    return this.client.post<FinalizeSwapSdexResponse>('/tx/swap-sdex', {
+      action: 'finalize',
+      ...req,
+    } as unknown as Json);
   }
 
   /**

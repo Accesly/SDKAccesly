@@ -281,7 +281,10 @@ function extractNumber(body: unknown, key: string): number | undefined {
 function extractNumberArray(body: unknown, key: string): readonly number[] | undefined {
   if (body && typeof body === 'object') {
     const v = (body as Record<string, unknown>)[key];
-    if (Array.isArray(v) && v.every((x) => typeof x === 'number' && Number.isInteger(x) && x >= 0)) {
+    if (
+      Array.isArray(v) &&
+      v.every((x) => typeof x === 'number' && Number.isInteger(x) && x >= 0)
+    ) {
       return v as number[];
     }
   }

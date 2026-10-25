@@ -71,7 +71,10 @@ export function HandleShareCard(props: HandleShareCardProps): JSX.Element | null
   if (handle) {
     return (
       <div
-        className={props.className ?? 'rounded-xl border border-neutral-200 dark:border-neutral-700 p-3 flex items-center justify-between gap-2'}
+        className={
+          props.className ??
+          'rounded-xl border border-neutral-200 dark:border-neutral-700 p-3 flex items-center justify-between gap-2'
+        }
       >
         <div>
           <div className="text-[10px] uppercase tracking-wider text-neutral-500">Tu handle</div>
@@ -89,12 +92,17 @@ export function HandleShareCard(props: HandleShareCardProps): JSX.Element | null
   }
 
   return (
-    <div className={props.className ?? 'rounded-xl border border-neutral-200 dark:border-neutral-700 p-3 space-y-2'}>
-      <div className="text-[10px] uppercase tracking-wider text-neutral-500">
-        Reserva tu handle
-      </div>
+    <div
+      className={
+        props.className ??
+        'rounded-xl border border-neutral-200 dark:border-neutral-700 p-3 space-y-2'
+      }
+    >
+      <div className="text-[10px] uppercase tracking-wider text-neutral-500">Reserva tu handle</div>
       <div className="flex gap-2">
-        <div className="flex items-center px-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-500">@</div>
+        <div className="flex items-center px-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-500">
+          @
+        </div>
         <input
           type="text"
           value={draft}

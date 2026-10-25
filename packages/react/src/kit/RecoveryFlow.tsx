@@ -100,7 +100,6 @@ export function RecoveryFlow(props: RecoveryFlowProps): JSX.Element {
         setSubmitting(false);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.status, auth.username]);
 
   function chooseMethod(m: Method) {
@@ -117,11 +116,7 @@ export function RecoveryFlow(props: RecoveryFlowProps): JSX.Element {
       auth.signInWithGoogle();
     } catch (err) {
       setGoogleIntent(false);
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'No se pudo iniciar el sign-in con Google.',
-      );
+      setError(err instanceof Error ? err.message : 'No se pudo iniciar el sign-in con Google.');
     }
   }
 
@@ -272,11 +267,11 @@ export function RecoveryFlow(props: RecoveryFlowProps): JSX.Element {
   // ─── Email path: pedir email ────────────────────────────────────────────────
   if (step === 'email-input') {
     return (
-      <form
-        onSubmit={requestOtp}
-        className={props.className ?? 'w-full max-w-sm mx-auto'}
-      >
-        <StepHeader title="Recuperar wallet" subtitle="Te mandaremos un código a tu email. Necesitarás tu password de Cognito." />
+      <form onSubmit={requestOtp} className={props.className ?? 'w-full max-w-sm mx-auto'}>
+        <StepHeader
+          title="Recuperar wallet"
+          subtitle="Te mandaremos un código a tu email. Necesitarás tu password de Cognito."
+        />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <FieldInput
             type="email"
@@ -318,10 +313,7 @@ export function RecoveryFlow(props: RecoveryFlowProps): JSX.Element {
   if (step === 'otp') {
     const isGoogle = method === 'google';
     return (
-      <form
-        onSubmit={verifyAndFinalize}
-        className={props.className ?? 'w-full max-w-sm mx-auto'}
-      >
+      <form onSubmit={verifyAndFinalize} className={props.className ?? 'w-full max-w-sm mx-auto'}>
         <StepHeader
           title="Verifica + nueva passkey"
           subtitle={
@@ -385,9 +377,15 @@ export function RecoveryFlow(props: RecoveryFlowProps): JSX.Element {
         >
           Rotando signer…
         </h2>
-        <p style={{ fontSize: 13.5, color: 'var(--accesly-muted, var(--ink2, #6B5F78))', lineHeight: 1.5 }}>
-          Aprueba el biométrico nuevo cuando aparezca. Estamos firmando la rotación
-          on-chain con la llave reconstruida.
+        <p
+          style={{
+            fontSize: 13.5,
+            color: 'var(--accesly-muted, var(--ink2, #6B5F78))',
+            lineHeight: 1.5,
+          }}
+        >
+          Aprueba el biométrico nuevo cuando aparezca. Estamos firmando la rotación on-chain con la
+          llave reconstruida.
         </p>
       </div>
     );
@@ -412,7 +410,13 @@ export function RecoveryFlow(props: RecoveryFlowProps): JSX.Element {
           }}
         >
           <svg width={28} height={28} viewBox="0 0 24 24" fill="none">
-            <path d="M5 12l5 5 9-11" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
+            <path
+              d="M5 12l5 5 9-11"
+              stroke="currentColor"
+              strokeWidth={2.6}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         </div>
         <h2
@@ -426,7 +430,13 @@ export function RecoveryFlow(props: RecoveryFlowProps): JSX.Element {
         >
           Wallet recuperada
         </h2>
-        <p style={{ fontSize: 13.5, color: 'var(--accesly-muted, var(--ink2, #6B5F78))', lineHeight: 1.5 }}>
+        <p
+          style={{
+            fontSize: 13.5,
+            color: 'var(--accesly-muted, var(--ink2, #6B5F78))',
+            lineHeight: 1.5,
+          }}
+        >
           Este dispositivo ya tiene tu nueva llave. Ya puedes operar normal.
         </p>
         {result?.txHash && (
@@ -467,7 +477,12 @@ export function RecoveryFlow(props: RecoveryFlowProps): JSX.Element {
         }}
       >
         <svg width={28} height={28} viewBox="0 0 24 24" fill="none">
-          <path d="M12 8v5M12 16.5v.5" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" />
+          <path
+            d="M12 8v5M12 16.5v.5"
+            stroke="currentColor"
+            strokeWidth={2.4}
+            strokeLinecap="round"
+          />
           <circle cx={12} cy={12} r={9.5} stroke="currentColor" strokeWidth={2} />
         </svg>
       </div>
@@ -570,8 +585,7 @@ function FieldInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
           '0 0 0 3px var(--accesly-primary-soft, var(--lav-soft, rgba(139,108,231,.18)))';
       }}
       onBlur={(e) => {
-        e.currentTarget.style.borderColor =
-          'var(--accesly-line, var(--line, rgba(38,30,51,.10)))';
+        e.currentTarget.style.borderColor = 'var(--accesly-line, var(--line, rgba(38,30,51,.10)))';
         e.currentTarget.style.boxShadow = 'none';
       }}
     />
@@ -588,8 +602,7 @@ function PrimaryButton(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
         marginTop: 2,
         borderRadius: 14,
         border: 'none',
-        background:
-          'var(--accesly-grad, var(--grad, linear-gradient(135deg, #A98DF0, #45C9A8)))',
+        background: 'var(--accesly-grad, var(--grad, linear-gradient(135deg, #A98DF0, #45C9A8)))',
         color: '#FFFFFF',
         fontSize: 15,
         fontWeight: 700,
@@ -687,16 +700,13 @@ function MethodCard(props: {
       }}
       onMouseEnter={(e) => {
         if (props.disabled) return;
-        e.currentTarget.style.borderColor =
-          'var(--accesly-primary, var(--lav, #8B6CE7))';
+        e.currentTarget.style.borderColor = 'var(--accesly-primary, var(--lav, #8B6CE7))';
         e.currentTarget.style.background =
           'var(--accesly-card2, var(--card2, rgba(139,108,231,.04)))';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor =
-          'var(--accesly-line, var(--line, rgba(38,30,51,.10)))';
-        e.currentTarget.style.background =
-          'var(--accesly-card, var(--card, #FFFFFF))';
+        e.currentTarget.style.borderColor = 'var(--accesly-line, var(--line, rgba(38,30,51,.10)))';
+        e.currentTarget.style.background = 'var(--accesly-card, var(--card, #FFFFFF))';
       }}
       onMouseDown={(e) => {
         if (!props.disabled) e.currentTarget.style.transform = 'scale(.985)';
@@ -722,9 +732,7 @@ function MethodCard(props: {
         {props.icon}
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14.5, fontWeight: 700, lineHeight: 1.2 }}>
-          {props.title}
-        </div>
+        <div style={{ fontSize: 14.5, fontWeight: 700, lineHeight: 1.2 }}>{props.title}</div>
         <div
           style={{
             fontSize: 12,
