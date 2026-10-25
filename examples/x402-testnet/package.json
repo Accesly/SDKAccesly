@@ -1,0 +1,27 @@
+{
+  "name": "@accesly/example-x402-testnet",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Flujo completo x402 en Stellar testnet: Smart Account de Accesly (MPC 2-de-3) paga a un agente por uso, con topes on-chain.",
+  "type": "module",
+  "scripts": {
+    "setup": "node scripts/01-setup.mjs",
+    "create-wallet": "node scripts/02-create-wallet.mjs",
+    "session-key": "node scripts/03-session-key.mjs",
+    "pay": "node scripts/04-pay.mjs",
+    "reject": "node scripts/05-reject.mjs",
+    "report": "node scripts/06-report.mjs",
+    "server": "node server/index.mjs"
+  },
+  "dependencies": {
+    "@accesly/core": "workspace:*",
+    "@noble/curves": "^1.7.0",
+    "@stellar/stellar-sdk": "^16.4.1",
+    "@x402/core": "^2.28.0",
+    "@x402/express": "^2.28.0",
+    "@x402/fetch": "^2.28.0",
+    "@x402/stellar": "^2.28.0",
+    "express": "^4.21.2",
+    "nodemailer": "^6.9.16"
+  }
+}

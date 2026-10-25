@@ -3,10 +3,7 @@
 import { useContext, useEffect, useState } from 'react';
 import { AcceslyContext } from '../context.js';
 import { ENVIRONMENT_DEFAULTS } from '../config.js';
-import {
-  subscribeToWalletEvent,
-  type WalletStreamBootstrapPayload,
-} from './walletSubscription.js';
+import { subscribeToWalletEvent, type WalletStreamBootstrapPayload } from './walletSubscription.js';
 import { useAppConfig } from './useAppConfig.js';
 import { getAppNetwork } from '@accesly/core';
 
@@ -68,9 +65,7 @@ export function useWalletBootstrap(
         setState({
           status: payload.status,
           ...(payload.txHash ? { txHash: payload.txHash } : {}),
-          ...(payload.attemptCount !== undefined
-            ? { attemptCount: payload.attemptCount }
-            : {}),
+          ...(payload.attemptCount !== undefined ? { attemptCount: payload.attemptCount } : {}),
         });
       },
     );

@@ -1,0 +1,18 @@
+# Bloque para el Caddy del servidor. /api/agente va al agente de Opportuni y el
+# resto (facilitador, bóveda, health) al servicio x402. Solo testnet.
+x402-testnet.accesly.xyz {
+	encode zstd gzip
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+	}
+
+	handle /api/agente* {
+		reverse_proxy accesly-x402-agente:3000
+	}
+
+	handle {
+		reverse_proxy accesly-x402-servicio:4021
+	}
+}

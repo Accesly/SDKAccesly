@@ -193,8 +193,8 @@ export function SwapFlow(props: SwapFlowProps): JSX.Element {
         <div className="text-4xl animate-pulse">⏳</div>
         <h2 className="text-lg font-semibold">Firmando swap…</h2>
         <p className="text-sm text-neutral-500">
-          Aprueba con tu biométrico. El swap se ejecuta vía Soroswap Aggregator
-          que rutea al mejor precio disponible.
+          Aprueba con tu biométrico. El swap se ejecuta vía Soroswap Aggregator que rutea al mejor
+          precio disponible.
         </p>
       </div>
     );
@@ -250,7 +250,10 @@ export function SwapFlow(props: SwapFlowProps): JSX.Element {
   }
 
   return (
-    <form onSubmit={onSubmit} className={props.className ?? 'w-full max-w-sm mx-auto p-6 space-y-4'}>
+    <form
+      onSubmit={onSubmit}
+      className={props.className ?? 'w-full max-w-sm mx-auto p-6 space-y-4'}
+    >
       <header>
         <h2 className="text-lg font-semibold">Swap</h2>
         <p className="text-xs text-neutral-500 mt-1">

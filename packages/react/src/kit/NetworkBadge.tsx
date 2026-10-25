@@ -41,9 +41,7 @@ export function NetworkBadge(props: NetworkBadgeProps): JSX.Element | null {
         fontWeight: 600,
         letterSpacing: '0.05em',
         textTransform: 'uppercase',
-        background: isMainnet
-          ? 'rgba(167, 139, 250, 0.12)'
-          : 'rgba(160, 160, 170, 0.12)',
+        background: isMainnet ? 'rgba(167, 139, 250, 0.12)' : 'rgba(160, 160, 170, 0.12)',
         color: isMainnet ? 'var(--accesly-primary, #a78bfa)' : 'var(--accesly-muted, #71717a)',
         border: `1px solid ${
           isMainnet ? 'rgba(167, 139, 250, 0.25)' : 'rgba(160, 160, 170, 0.15)'

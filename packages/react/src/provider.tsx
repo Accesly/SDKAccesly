@@ -33,14 +33,7 @@ import {
   type SessionStorage,
   type TelemetrySink,
 } from '@accesly/core';
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AcceslyContext, type AcceslyContextValue } from './context.js';
 import { ENVIRONMENT_DEFAULTS } from './config.js';
 
@@ -151,15 +144,17 @@ export function AcceslyProvider(props: AcceslyProviderProps): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [apiUrl, props.appId, props.cognitoConfig, defaults.cognito.region, defaults.cognito.hostedUiDomain]);
+  }, [
+    apiUrl,
+    props.appId,
+    props.cognitoConfig,
+    defaults.cognito.region,
+    defaults.cognito.hostedUiDomain,
+  ]);
 
   if (bootstrapError) {
     return (
-      <>
-        {props.errorFallback?.(bootstrapError) ?? (
-          <DefaultErrorFallback err={bootstrapError} />
-        )}
-      </>
+      <>{props.errorFallback?.(bootstrapError) ?? <DefaultErrorFallback err={bootstrapError} />}</>
     );
   }
   if (!resolvedCognito) {
@@ -341,9 +336,7 @@ function DefaultErrorFallback({ err }: { err: Error }): JSX.Element {
         fontFamily: 'system-ui, sans-serif',
       }}
     >
-      <h2 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>
-        Accesly: configuración incompleta
-      </h2>
+      <h2 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Accesly: configuración incompleta</h2>
       <p style={{ fontSize: '14px', lineHeight: 1.5 }}>{err.message}</p>
     </div>
   );

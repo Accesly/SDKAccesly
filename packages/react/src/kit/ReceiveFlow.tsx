@@ -64,7 +64,7 @@ export function ReceiveFlow(props: ReceiveFlowProps): JSX.Element {
   }
 
   const qr = resolved
-    ? props.renderQr?.(resolved) ?? (
+    ? (props.renderQr?.(resolved) ?? (
         <img
           alt={`QR de ${resolved}`}
           src={qrDataUrl(resolved)}
@@ -72,7 +72,7 @@ export function ReceiveFlow(props: ReceiveFlowProps): JSX.Element {
           height={240}
           className="rounded-xl bg-white"
         />
-      )
+      ))
     : null;
 
   return (
@@ -86,11 +86,13 @@ export function ReceiveFlow(props: ReceiveFlowProps): JSX.Element {
 
       <HandleShareCard walletAddress={resolved} />
 
-      <div className="flex justify-center">{qr ?? <div className="w-60 h-60 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse" />}</div>
+      <div className="flex justify-center">
+        {qr ?? (
+          <div className="w-60 h-60 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse" />
+        )}
+      </div>
 
-      {auth.username && (
-        <div className="text-xs text-neutral-500 font-mono">{auth.username}</div>
-      )}
+      {auth.username && <div className="text-xs text-neutral-500 font-mono">{auth.username}</div>}
 
       {resolved && (
         <button

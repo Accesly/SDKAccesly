@@ -1,0 +1,139 @@
+{
+  "generatedAt": "2026-10-25T03:12:42.301Z",
+  "network": "stellar:testnet",
+  "explorer": "https://stellar.expert/explorer/testnet",
+  "contracts": {
+    "x402SpendingPolicy": {
+      "id": "CBWNUGXOJWNNQ5FGLRD3HCREU7XD2RTZNFPZDDRKE3RL4JEH3N75VZZV",
+      "link": "https://stellar.expert/explorer/testnet/contract/CBWNUGXOJWNNQ5FGLRD3HCREU7XD2RTZNFPZDDRKE3RL4JEH3N75VZZV"
+    },
+    "customerSmartAccount": {
+      "id": "CBZHNU3CWXVPAPOUJUOWZG26MHEDW7WDFTFJ2QKYTX3CT4WZLLOGKK5G",
+      "link": "https://stellar.expert/explorer/testnet/contract/CBZHNU3CWXVPAPOUJUOWZG26MHEDW7WDFTFJ2QKYTX3CT4WZLLOGKK5G"
+    },
+    "smartAccountWasmHash": "f1c549e2491e0f8d9cc7683f6056da2edd8a8c3d6786723ab1c86dae74a96b0e",
+    "ed25519Verifier": "CALVIIGIOMODZMWTMKZLSD4PZFFEPWQBSYERHUFM6MH5FLWKCHW4E4G5",
+    "usdc": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA"
+  },
+  "rules": {
+    "biometricTx": 0,
+    "adminCfg": 1,
+    "sep10Auth": 2
+  },
+  "sessionRule": {
+    "ruleId": 3,
+    "pubkey": "9f559eb1afd7dbdbde754ca2b78957bf9ad0ad592947bed9bccafe2a5fe7a2d1",
+    "validUntil": 5893203,
+    "maxPerRequest": "500000",
+    "monthlyCap": "50000000",
+    "allowlist": [
+      "GAXGBFA5K6IOTHNMXAFOD2NIMYM5PZQCOJLADBMICR4G3TR7WEE6OEPD"
+    ]
+  },
+  "totals": {
+    "payments": 3,
+    "paymentsSucceededOnChain": 3,
+    "agentPayments": 3,
+    "rejectionsValid": 0,
+    "rejectionsConfirmedOnChain": 0
+  },
+  "txs": [
+    {
+      "at": "2026-10-25T03:06:32.225Z",
+      "kind": "deploy",
+      "label": "deploy customer Smart Account v3",
+      "hash": "e6ac7adb884f7d5fae6bfb497165c0682f08bcecf8333135b1c97a03941e52e6",
+      "status": "SUCCESS",
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374801,
+        "closedAt": "2026-10-25T03:06:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/e6ac7adb884f7d5fae6bfb497165c0682f08bcecf8333135b1c97a03941e52e6"
+    },
+    {
+      "at": "2026-10-25T03:06:37.830Z",
+      "kind": "deploy",
+      "label": "bootstrap Smart Account (owner = MPC 2-of-3 key)",
+      "hash": "fd22b8262ef900311fa8b67536d0f0c9faa24519384427bb707116251d24ccae",
+      "status": "SUCCESS",
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374802,
+        "closedAt": "2026-10-25T03:06:37.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/fd22b8262ef900311fa8b67536d0f0c9faa24519384427bb707116251d24ccae"
+    },
+    {
+      "at": "2026-10-25T03:06:43.035Z",
+      "kind": "setup",
+      "label": "fund Smart Account with 5 test USDC",
+      "hash": "c8423938178ec1fca90e708c9e582f0166618a427e3981a581f6ad6a0e1dd194",
+      "status": "SUCCESS",
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374803,
+        "closedAt": "2026-10-25T03:06:42.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/c8423938178ec1fca90e708c9e582f0166618a427e3981a581f6ad6a0e1dd194"
+    },
+    {
+      "at": "2026-10-25T03:06:53.166Z",
+      "kind": "policy",
+      "label": "install x402 rule 3 for session key: cap $0.05/payment, $5/month, allowlist = merchant; signed by the owner under MPC 2-of-3 after email OTP",
+      "hash": "540b3fd847ec1f5e592da53e4bd80f9b7c026cd6042f8e7f778fdb3e88e8cfda",
+      "status": "SUCCESS",
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374805,
+        "closedAt": "2026-10-25T03:06:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/540b3fd847ec1f5e592da53e4bd80f9b7c026cd6042f8e7f778fdb3e88e8cfda"
+    },
+    {
+      "at": "2026-10-25T03:07:07.878Z",
+      "kind": "payment",
+      "label": "x402 payment #1 ($0.01 USDC, signer=session) for \"ventas en CDMX\"",
+      "hash": "def4ea5959a80532b94dc7036c2b1a1e483d302a70bb3c7a264d16a6d56c8e22",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 8305,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374808,
+        "closedAt": "2026-10-25T03:07:07.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/def4ea5959a80532b94dc7036c2b1a1e483d302a70bb3c7a264d16a6d56c8e22"
+    },
+    {
+      "at": "2026-10-25T03:07:17.687Z",
+      "kind": "payment",
+      "label": "x402 payment #2 ($0.01 USDC, signer=session) for \"community manager\"",
+      "hash": "ae261e8a7dbb1cce21a84fd45992d8a86fa1eda39cceca01bda5dac4c00bf9fc",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9808,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374810,
+        "closedAt": "2026-10-25T03:07:17.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/ae261e8a7dbb1cce21a84fd45992d8a86fa1eda39cceca01bda5dac4c00bf9fc"
+    },
+    {
+      "at": "2026-10-25T03:07:27.568Z",
+      "kind": "payment",
+      "label": "x402 payment #3 ($0.01 USDC, signer=session) for \"analista de datos\"",
+      "hash": "4ddceac2cfbcca92fc3fc404bfd50b96a4935332124575fe5185d2edcc655e66",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9879,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374812,
+        "closedAt": "2026-10-25T03:07:27.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/4ddceac2cfbcca92fc3fc404bfd50b96a4935332124575fe5185d2edcc655e66"
+    }
+  ]
+}

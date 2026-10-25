@@ -76,17 +76,21 @@ const DEFAULT_SECONDARY = '#45C9A8';
  *  - Brace escape: `{{` y `}}` no se interpretan (idiomático tipo Python).
  */
 function interpolate(template: string, vars: Record<string, string>): string {
-  return template
-    .replace(/\{\{/g, '\x00OPEN\x00')
-    .replace(/\}\}/g, '\x00CLOSE\x00')
-    .replace(/\{(\w+)\}/g, (match, key: string) => {
-      const v = vars[key];
-      // Si la var existe pero está vacía, dejar el placeholder visible
-      // — es más útil para el dev que un texto roto.
-      return v && v.length > 0 ? v : match;
-    })
-    .replace(/\x00OPEN\x00/g, '{')
-    .replace(/\x00CLOSE\x00/g, '}');
+  return (
+    template
+      .replace(/\{\{/g, '\x00OPEN\x00')
+      .replace(/\}\}/g, '\x00CLOSE\x00')
+      .replace(/\{(\w+)\}/g, (match, key: string) => {
+        const v = vars[key];
+        // Si la var existe pero está vacía, dejar el placeholder visible
+        // — es más útil para el dev que un texto roto.
+        return v && v.length > 0 ? v : match;
+      })
+      // eslint-disable-next-line no-control-regex
+      .replace(/\x00OPEN\x00/g, '{')
+      // eslint-disable-next-line no-control-regex
+      .replace(/\x00CLOSE\x00/g, '}')
+  );
 }
 
 export function useBranding(): UseBrandingResult {
@@ -118,7 +122,10 @@ export function useBranding(): UseBrandingResult {
     // Esto deja `var(--accesly-grad)` listo para usar en cualquier `background:`
     // sin que el integrador tenga que componer el linear-gradient a mano.
     if (primary) {
-      set('--accesly-grad', `linear-gradient(135deg, ${primary}, ${secondary ?? DEFAULT_SECONDARY})`);
+      set(
+        '--accesly-grad',
+        `linear-gradient(135deg, ${primary}, ${secondary ?? DEFAULT_SECONDARY})`,
+      );
     }
 
     return () => {
@@ -150,13 +157,11 @@ export function useBranding(): UseBrandingResult {
     [branding?.landingTitle, vars],
   );
   const landingHighlight = useMemo(
-    () =>
-      branding?.landingHighlight ? interpolate(branding.landingHighlight, vars) : null,
+    () => (branding?.landingHighlight ? interpolate(branding.landingHighlight, vars) : null),
     [branding?.landingHighlight, vars],
   );
   const landingSubtitle = useMemo(
-    () =>
-      branding?.landingSubtitle ? interpolate(branding.landingSubtitle, vars) : null,
+    () => (branding?.landingSubtitle ? interpolate(branding.landingSubtitle, vars) : null),
     [branding?.landingSubtitle, vars],
   );
   const loginButtonText = useMemo(

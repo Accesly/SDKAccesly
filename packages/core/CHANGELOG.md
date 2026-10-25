@@ -1,5 +1,17 @@
 # @accesly/core
 
+## 1.29.0
+
+### Minor Changes
+
+- feat(payments): nuevo subpath `@accesly/core/payments` — cobro por uso con x402 en USDC sobre Stellar (testnet y pubnet).
+  - `AcceslyExactStellarScheme`: client scheme "exact" de x402 para Smart Accounts. Ante un 402 arma `transfer(from = Smart Account)` y firma la `SorobanAuthorizationEntry` con el `AuthPayload` del Smart Account. Re-simula para que la política on-chain rechace antes de mandar (`X402PolicyRejectedError` con el código del contrato).
+  - `mpcX402Signer` (llave maestra 2-de-3 reconstruida por el caller) y `sessionKeyX402Signer` (session key acotada por `x402-spending-policy`). El módulo no reconstruye llaves; la seed que recibe se zero-iza al firmar.
+  - `createAcceslyX402Fetch`: `fetch` que resuelve 402 solo.
+  - Lado agente: `priceEndpoint`, `createAcceslyResourceServer` y `withX402Payment` (wrapper Request/Response para cualquier runtime, incluido Next.js < 16).
+  - `@x402/core`, `@x402/fetch` y `@x402/stellar` entran como peer deps opcionales.
+- chore(deps): `@stellar/stellar-sdk` ^13 → ^16.4.1 (protocolo 29 de testnet; misma versión que `@x402/stellar`). La suite completa sigue en verde.
+
 ## 1.28.0
 
 ### Minor Changes
@@ -26,7 +38,7 @@
 
 ### Patch Changes
 
-- feat(api): `SubmitSessionKeyResponse` ahora incluye `sessionKeyRuleId?: number` — el backend lo resuelve post-apply con `findContextRuleIdByName`. El SDK lo persiste junto al `sessionPrivateSeed` y lo pasa a `tx.sendWithSessionKey({ sessionKeyRuleId })` para que Soroban __check_auth evalúe la rule correcta (biometric-tx del asset matchearía primero si no se fuerza este ID).
+- feat(api): `SubmitSessionKeyResponse` ahora incluye `sessionKeyRuleId?: number` — el backend lo resuelve post-apply con `findContextRuleIdByName`. El SDK lo persiste junto al `sessionPrivateSeed` y lo pasa a `tx.sendWithSessionKey({ sessionKeyRuleId })` para que Soroban \_\_check_auth evalúe la rule correcta (biometric-tx del asset matchearía primero si no se fuerza este ID).
 
 ## 1.26.0
 

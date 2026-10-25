@@ -73,9 +73,7 @@ export class AcceslyRestClient {
     this.fetchFn = opts.fetch ?? globalThis.fetch;
     this.timeoutMs = opts.timeoutMs ?? 15_000;
     if (!this.fetchFn) {
-      throw new Error(
-        'AcceslyRestClient: global `fetch` is not available — pass `opts.fetch`',
-      );
+      throw new Error('AcceslyRestClient: global `fetch` is not available — pass `opts.fetch`');
     }
   }
 
@@ -97,11 +95,7 @@ export class AcceslyRestClient {
     return this.request<{ queued: true; note: string }>('POST', '/v1/webhooks/test', input);
   }
 
-  private async request<T>(
-    method: 'GET' | 'POST',
-    path: string,
-    body?: unknown,
-  ): Promise<T> {
+  private async request<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {

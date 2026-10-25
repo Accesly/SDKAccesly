@@ -1,0 +1,2770 @@
+{
+  "generatedAt": "2026-10-25T02:43:14.312Z",
+  "network": "stellar:testnet",
+  "explorer": "https://stellar.expert/explorer/testnet",
+  "contracts": {
+    "x402SpendingPolicy": {
+      "id": "CBWNUGXOJWNNQ5FGLRD3HCREU7XD2RTZNFPZDDRKE3RL4JEH3N75VZZV",
+      "link": "https://stellar.expert/explorer/testnet/contract/CBWNUGXOJWNNQ5FGLRD3HCREU7XD2RTZNFPZDDRKE3RL4JEH3N75VZZV"
+    },
+    "customerSmartAccount": {
+      "id": "CBAKTA2GZCRT6WEOEVEAN5Z23QEMBKL27KRLADHB36S5JPMZMTFUSUDI",
+      "link": "https://stellar.expert/explorer/testnet/contract/CBAKTA2GZCRT6WEOEVEAN5Z23QEMBKL27KRLADHB36S5JPMZMTFUSUDI"
+    },
+    "smartAccountWasmHash": "f1c549e2491e0f8d9cc7683f6056da2edd8a8c3d6786723ab1c86dae74a96b0e",
+    "ed25519Verifier": "CALVIIGIOMODZMWTMKZLSD4PZFFEPWQBSYERHUFM6MH5FLWKCHW4E4G5",
+    "usdc": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA"
+  },
+  "accounts": {
+    "funder": "GABEXFLJUMGT2P6HG4S6CQ3O7HASKYX6TXLLXSP5WAQMTQSFWRYODZMF",
+    "facilitator": "GDZ7X33G3KTQEYA3OQGZUDJXMQNH47SBITYD3RJ2F33XKZCBTFUR3HNN",
+    "merchant": "GAXGBFA5K6IOTHNMXAFOD2NIMYM5PZQCOJLADBMICR4G3TR7WEE6OEPD",
+    "outsider": "GBLJYK4ID5Q74APWSFBIAVQCTECB77K2MB2NNTHIYWQDTCOLXM7QTP7V"
+  },
+  "rules": {
+    "biometricTx": 0,
+    "adminCfg": 1,
+    "sep10Auth": 2,
+    "x402Owner": 4
+  },
+  "sessionRule": {
+    "ruleId": 3,
+    "pubkey": "c1c774205ee09609e0f0383229e538804c13b726b7670dc0513611ba6b43b5be",
+    "validUntil": 5892080,
+    "maxPerRequest": "500000",
+    "monthlyCap": "50000000",
+    "allowlist": [
+      "GAXGBFA5K6IOTHNMXAFOD2NIMYM5PZQCOJLADBMICR4G3TR7WEE6OEPD"
+    ]
+  },
+  "ownerX402Rule": {
+    "ruleId": 4,
+    "pubkey": "3bb8dde95fa400bf90898c480250449710a749bf04c2c9a43f3abef730640b41",
+    "validUntil": 5892117,
+    "maxPerRequest": "500000",
+    "monthlyCap": "50000000",
+    "allowlist": [
+      "GAXGBFA5K6IOTHNMXAFOD2NIMYM5PZQCOJLADBMICR4G3TR7WEE6OEPD"
+    ]
+  },
+  "totals": {
+    "payments": 160,
+    "paymentsSucceededOnChain": 160,
+    "agentPayments": 158,
+    "rejectionsValid": 5,
+    "rejectionsConfirmedOnChain": 5
+  },
+  "clientPreflightRejection": {
+    "reason": "MonthlyCapExceeded",
+    "code": 10009,
+    "message": "x402 payment rejected by on-chain policy: MonthlyCapExceeded. HostError: Error(Auth, InvalidAction)"
+  },
+  "txs": [
+    {
+      "at": "2026-10-25T01:25:37.429Z",
+      "kind": "setup",
+      "label": "USDC trustline (funder)",
+      "hash": "d95645cc1ba374f52da39812958e735b2af2c287ea84292c68f1ee05cc6084b5",
+      "status": "SUCCESS",
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5373590,
+        "closedAt": "2026-10-25T01:25:37.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/d95645cc1ba374f52da39812958e735b2af2c287ea84292c68f1ee05cc6084b5"
+    },
+    {
+      "at": "2026-10-25T01:25:52.367Z",
+      "kind": "setup",
+      "label": "USDC trustline (merchant)",
+      "hash": "ca8ace45e4c70d6706941bc019c0c0ef13a8620fd03b9d85e4e0a15d8a771138",
+      "status": "SUCCESS",
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5373593,
+        "closedAt": "2026-10-25T01:25:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/ca8ace45e4c70d6706941bc019c0c0ef13a8620fd03b9d85e4e0a15d8a771138"
+    },
+    {
+      "at": "2026-10-25T01:26:02.430Z",
+      "kind": "setup",
+      "label": "USDC trustline (outsider)",
+      "hash": "0dab3d30320a9366e108496e7a7fdc8cbde7b6e32814f0c05b413a6ba69d02ea",
+      "status": "SUCCESS",
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5373595,
+        "closedAt": "2026-10-25T01:26:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/0dab3d30320a9366e108496e7a7fdc8cbde7b6e32814f0c05b413a6ba69d02ea"
+    },
+    {
+      "at": "2026-10-25T01:26:07.367Z",
+      "kind": "setup",
+      "label": "buy 20 test USDC on testnet DEX",
+      "hash": "b60df78c26b2fe761f4586d580a5d66539e96eb71de0e200ff7d8c58a23e6fcb",
+      "status": "SUCCESS",
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5373596,
+        "closedAt": "2026-10-25T01:26:07.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/b60df78c26b2fe761f4586d580a5d66539e96eb71de0e200ff7d8c58a23e6fcb"
+    },
+    {
+      "at": "2026-10-25T01:30:56.511Z",
+      "kind": "deploy",
+      "label": "restore archived smart-account-v3.2.0 WASM (same hash as mainnet) via fee-bump",
+      "hash": "af5570359369d86454a5a347e2e264b345dbc2a7b515686f937a8085ec465efb",
+      "status": "SUCCESS",
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5373652,
+        "closedAt": "2026-10-25T01:30:47.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/af5570359369d86454a5a347e2e264b345dbc2a7b515686f937a8085ec465efb"
+    },
+    {
+      "at": "2026-10-25T01:31:27.989Z",
+      "kind": "deploy",
+      "label": "deploy customer Smart Account v3",
+      "hash": "ee1fde3b3a33942ba95867c0b3d3ad9f71458a51d05a4b7a9a1d3b9959600583",
+      "status": "SUCCESS",
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5373660,
+        "closedAt": "2026-10-25T01:31:27.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/ee1fde3b3a33942ba95867c0b3d3ad9f71458a51d05a4b7a9a1d3b9959600583"
+    },
+    {
+      "at": "2026-10-25T01:32:37.673Z",
+      "kind": "deploy",
+      "label": "bootstrap Smart Account (owner = MPC 2-of-3 key)",
+      "hash": "689f59b39001b10117b5c82ebb3049ad8721cc275e982871963bae80981cc820",
+      "status": "SUCCESS",
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5373674,
+        "closedAt": "2026-10-25T01:32:37.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/689f59b39001b10117b5c82ebb3049ad8721cc275e982871963bae80981cc820"
+    },
+    {
+      "at": "2026-10-25T01:32:42.879Z",
+      "kind": "setup",
+      "label": "fund Smart Account with 5 test USDC",
+      "hash": "a024aafc34c1fc8bd0da279f9397a5b6e162a01034d5dfa86efc895dca269914",
+      "status": "SUCCESS",
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5373675,
+        "closedAt": "2026-10-25T01:32:42.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/a024aafc34c1fc8bd0da279f9397a5b6e162a01034d5dfa86efc895dca269914"
+    },
+    {
+      "at": "2026-10-25T01:33:17.963Z",
+      "kind": "policy",
+      "label": "install x402 session key (rule 3): cap $0.05/payment, $5/month, allowlist = merchant — owner signed under MPC 2-of-3 after email OTP",
+      "hash": "0b6cc1a1a8e746f477e71445c682737231c0e8e9b42dbfd3ef1a3bc1987ce28d",
+      "status": "SUCCESS",
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5373682,
+        "closedAt": "2026-10-25T01:33:17.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/0b6cc1a1a8e746f477e71445c682737231c0e8e9b42dbfd3ef1a3bc1987ce28d"
+    },
+    {
+      "at": "2026-10-25T01:35:02.879Z",
+      "kind": "payment",
+      "label": "x402 payment #1 ($0.01 USDC, signer=session) for \"vacantes de analista de datos en CDMX\"",
+      "hash": "b8703d6d8deaa52de6d3b41fce4b6633333408615db3a30c69c0904e740ed6e0",
+      "status": "SUCCESS",
+      "resource": "/demo/agent",
+      "ms": 6915,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5373703,
+        "closedAt": "2026-10-25T01:35:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/b8703d6d8deaa52de6d3b41fce4b6633333408615db3a30c69c0904e740ed6e0"
+    },
+    {
+      "at": "2026-10-25T01:36:17.872Z",
+      "kind": "policy",
+      "label": "install x402 rule 4 for owner key (MPC 2-of-3): cap $0.05/payment, $5/month, allowlist = merchant; signed by the owner under MPC 2-of-3 after email OTP",
+      "hash": "f1827599ae4500f87c81ee2ed9c2140afcf0477941f49fb58b52d830c9a01669",
+      "status": "SUCCESS",
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5373718,
+        "closedAt": "2026-10-25T01:36:17.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/f1827599ae4500f87c81ee2ed9c2140afcf0477941f49fb58b52d830c9a01669"
+    },
+    {
+      "at": "2026-10-25T01:36:27.317Z",
+      "kind": "payment",
+      "label": "x402 payment #1 ($0.01 USDC, signer=mpc) for \"vacantes de analista de datos en CDMX\"",
+      "hash": "ba2b268498ae5afc80d8e6184beeca09e15a6e306d362b2bc7de8159bf7c03b1",
+      "status": "SUCCESS",
+      "resource": "/demo/agent",
+      "ms": 9138,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5373720,
+        "closedAt": "2026-10-25T01:36:27.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/ba2b268498ae5afc80d8e6184beeca09e15a6e306d362b2bc7de8159bf7c03b1"
+    },
+    {
+      "at": "2026-10-25T01:37:12.245Z",
+      "kind": "rejection",
+      "label": "REJECTED on-chain: $0.06 payment over the $0.05 per-request cap",
+      "hash": "5f56f1d64523e1bb31cfed5c34f47db332364ada923137da6438d20f3242246c",
+      "status": "FAILED",
+      "expectedCode": 10007,
+      "simulatedCode": 10007,
+      "onChainCode": 10007,
+      "resultCode": "invokeHostFunctionTrapped",
+      "onChain": {
+        "status": "FAILED",
+        "ledger": 5373729,
+        "closedAt": "2026-10-25T01:37:12.000Z",
+        "contractErrorCode": 10007
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/5f56f1d64523e1bb31cfed5c34f47db332364ada923137da6438d20f3242246c"
+    },
+    {
+      "at": "2026-10-25T01:37:18.062Z",
+      "kind": "rejection",
+      "label": "REJECTED on-chain: $0.01 payment to a recipient outside the allowlist",
+      "hash": "43953b358b55edb929bf66fb7ff6ec6305888ddd991bce46dcaf38f7901502cf",
+      "status": "FAILED",
+      "expectedCode": 10008,
+      "simulatedCode": 10008,
+      "invalidEvidence": "failed on resource limit (script bug), not on the policy",
+      "resultCode": "invokeHostFunctionResourceLimitExceeded",
+      "onChain": {
+        "status": "FAILED",
+        "ledger": 5373730,
+        "closedAt": "2026-10-25T01:37:17.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/43953b358b55edb929bf66fb7ff6ec6305888ddd991bce46dcaf38f7901502cf"
+    },
+    {
+      "at": "2026-10-25T01:37:22.625Z",
+      "kind": "policy",
+      "label": "owner lowers caps to $0.005/payment and $0.015/month (first attempt: the per-request cap was lowered too, by mistake); signed under MPC 2-of-3 after email OTP",
+      "hash": "775060e15e30429ffa89eef1329fc7d9c1d5775ff716346d649d6c505d26eec1",
+      "status": "SUCCESS",
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5373731,
+        "closedAt": "2026-10-25T01:37:22.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/775060e15e30429ffa89eef1329fc7d9c1d5775ff716346d649d6c505d26eec1"
+    },
+    {
+      "at": "2026-10-25T01:37:27.692Z",
+      "kind": "rejection",
+      "label": "REJECTED on-chain: $0.01 payment over the monthly cap",
+      "hash": "9133cbc731904a06d9380b1c9f936ddcad281b4ab4e9299a3572443413a45ece",
+      "status": "FAILED",
+      "expectedCode": 10009,
+      "simulatedCode": 10007,
+      "invalidEvidence": "tripped per-request cap (#10007) because the script also lowered it; not the monthly cap",
+      "onChainCode": 10007,
+      "resultCode": "invokeHostFunctionTrapped",
+      "onChain": {
+        "status": "FAILED",
+        "ledger": 5373732,
+        "closedAt": "2026-10-25T01:37:27.000Z",
+        "contractErrorCode": 10007
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/9133cbc731904a06d9380b1c9f936ddcad281b4ab4e9299a3572443413a45ece"
+    },
+    {
+      "at": "2026-10-25T01:37:32.874Z",
+      "kind": "policy",
+      "label": "owner restores caps ($0.05/payment, $5/month)",
+      "hash": "5918e0d26ea463d72238b3900adfe993d37888735c6da545eb2e6b00182deaed",
+      "status": "SUCCESS",
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5373733,
+        "closedAt": "2026-10-25T01:37:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/5918e0d26ea463d72238b3900adfe993d37888735c6da545eb2e6b00182deaed"
+    },
+    {
+      "at": "2026-10-25T01:38:52.869Z",
+      "kind": "rejection",
+      "label": "REJECTED on-chain: $0.06 payment over the $0.05 per-request cap",
+      "hash": "a4f682de897d64b37117237f51876fa00367eed6c723171b1f79cba28c98759f",
+      "status": "FAILED",
+      "expectedCode": 10007,
+      "simulatedCode": 10007,
+      "onChainCode": 10007,
+      "resultCode": "invokeHostFunctionTrapped",
+      "onChain": {
+        "status": "FAILED",
+        "ledger": 5373749,
+        "closedAt": "2026-10-25T01:38:52.000Z",
+        "contractErrorCode": 10007
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/a4f682de897d64b37117237f51876fa00367eed6c723171b1f79cba28c98759f"
+    },
+    {
+      "at": "2026-10-25T01:38:57.278Z",
+      "kind": "rejection",
+      "label": "REJECTED on-chain: $0.01 payment to a recipient outside the allowlist",
+      "hash": "f377b7cb549470198ab9f7bd6c50693d48fa11375f0c1811fb70ae8259ad31db",
+      "status": "FAILED",
+      "expectedCode": 10008,
+      "simulatedCode": 10008,
+      "onChainCode": 10008,
+      "resultCode": "invokeHostFunctionTrapped",
+      "onChain": {
+        "status": "FAILED",
+        "ledger": 5373750,
+        "closedAt": "2026-10-25T01:38:57.000Z",
+        "contractErrorCode": 10008
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/f377b7cb549470198ab9f7bd6c50693d48fa11375f0c1811fb70ae8259ad31db"
+    },
+    {
+      "at": "2026-10-25T01:39:03.239Z",
+      "kind": "policy",
+      "label": "owner lowers caps to $0.01/payment and $0.015/month (already spent $0.01); signed under MPC 2-of-3 after email OTP",
+      "hash": "414889ebdde536fdbe8115ce05963cfaaecfdc2f998e2383ca7d43e5af94183d",
+      "status": "SUCCESS",
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5373751,
+        "closedAt": "2026-10-25T01:39:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/414889ebdde536fdbe8115ce05963cfaaecfdc2f998e2383ca7d43e5af94183d"
+    },
+    {
+      "at": "2026-10-25T01:39:07.297Z",
+      "kind": "rejection",
+      "label": "REJECTED on-chain: $0.01 payment over the monthly cap",
+      "hash": "c36e7045dd85878d7f355031d6aae4e954e4c06c699208775d11dc75da1c7a47",
+      "status": "FAILED",
+      "expectedCode": 10009,
+      "simulatedCode": 10009,
+      "onChainCode": 10009,
+      "resultCode": "invokeHostFunctionTrapped",
+      "onChain": {
+        "status": "FAILED",
+        "ledger": 5373752,
+        "closedAt": "2026-10-25T01:39:07.000Z",
+        "contractErrorCode": 10009
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/c36e7045dd85878d7f355031d6aae4e954e4c06c699208775d11dc75da1c7a47"
+    },
+    {
+      "at": "2026-10-25T01:39:12.177Z",
+      "kind": "policy",
+      "label": "owner restores caps ($0.05/payment, $5/month)",
+      "hash": "73e933b65eba79b6c1b03b7b6a1eeb9e3249e66799abfe1b936b1984583fec83",
+      "status": "SUCCESS",
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5373753,
+        "closedAt": "2026-10-25T01:39:12.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/73e933b65eba79b6c1b03b7b6a1eeb9e3249e66799abfe1b936b1984583fec83"
+    },
+    {
+      "at": "2026-10-25T01:45:47.272Z",
+      "kind": "payment",
+      "label": "x402 payment #1 ($0.01 USDC, signer=session) for \"practicas de marketing\"",
+      "hash": "0bf7e03fe47c06c0a172e3555960a331a345018ce7a6f0ee671423b54466482e",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 8095,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5373832,
+        "closedAt": "2026-10-25T01:45:47.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/0bf7e03fe47c06c0a172e3555960a331a345018ce7a6f0ee671423b54466482e"
+    },
+    {
+      "at": "2026-10-25T01:56:23.264Z",
+      "kind": "payment",
+      "label": "x402 payment #1 ($0.01 USDC, signer=session) for \"ventas en CDMX\"",
+      "hash": "7aa5f9503d3c90d8a7ab7cad71e20a19d2a6e40dac214aa3ad0daeb14b9a79c1",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 7477,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5373959,
+        "closedAt": "2026-10-25T01:56:22.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/7aa5f9503d3c90d8a7ab7cad71e20a19d2a6e40dac214aa3ad0daeb14b9a79c1"
+    },
+    {
+      "at": "2026-10-25T02:12:32.498Z",
+      "kind": "payment",
+      "label": "x402 payment #1 ($0.01 USDC, signer=session) for \"ventas en CDMX\"",
+      "hash": "e1033783e5a63207e9828a6fb55d440ff604b023748e1cc49af6d2f3f5c314fa",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10643,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374153,
+        "closedAt": "2026-10-25T02:12:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/e1033783e5a63207e9828a6fb55d440ff604b023748e1cc49af6d2f3f5c314fa"
+    },
+    {
+      "at": "2026-10-25T02:12:42.542Z",
+      "kind": "payment",
+      "label": "x402 payment #2 ($0.01 USDC, signer=session) for \"abogado junior\"",
+      "hash": "d04b744560b16445a72b5751caca78257d16e7a79739249713519734b79f4151",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10041,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374155,
+        "closedAt": "2026-10-25T02:12:42.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/d04b744560b16445a72b5751caca78257d16e7a79739249713519734b79f4151"
+    },
+    {
+      "at": "2026-10-25T02:12:52.688Z",
+      "kind": "payment",
+      "label": "x402 payment #3 ($0.01 USDC, signer=session) for \"becas de posgrado\"",
+      "hash": "5a7514aa8b8c93fd46e5390753a3bb2164450cf9a6ec35c332519a6e67928c96",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10144,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374157,
+        "closedAt": "2026-10-25T02:12:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/5a7514aa8b8c93fd46e5390753a3bb2164450cf9a6ec35c332519a6e67928c96"
+    },
+    {
+      "at": "2026-10-25T02:13:23.018Z",
+      "kind": "payment",
+      "label": "x402 payment #1 ($0.01 USDC, signer=session) for \"Ejecutivo de Ventas D2D\"",
+      "hash": "182cb111865d04571e54faa3ec8e03eee5d03bef7a272e031a77c519e9b5dbb8",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 8711,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374163,
+        "closedAt": "2026-10-25T02:13:22.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/182cb111865d04571e54faa3ec8e03eee5d03bef7a272e031a77c519e9b5dbb8"
+    },
+    {
+      "at": "2026-10-25T02:13:32.952Z",
+      "kind": "payment",
+      "label": "x402 payment #2 ($0.01 USDC, signer=session) for \"Abogado/a Junior\"",
+      "hash": "1dfe640b994237b09b4c30ab28d6f7b61cc29bd35137ffc02128f9040f3abc76",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9931,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374165,
+        "closedAt": "2026-10-25T02:13:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/1dfe640b994237b09b4c30ab28d6f7b61cc29bd35137ffc02128f9040f3abc76"
+    },
+    {
+      "at": "2026-10-25T02:13:43.474Z",
+      "kind": "payment",
+      "label": "x402 payment #3 ($0.01 USDC, signer=session) for \"Becas de posgrado Fulbright García Robles\"",
+      "hash": "a7708c93415144c9a36e8fd814a3bbd29a080bc4b886e69e605173c603dd7ab9",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10520,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374167,
+        "closedAt": "2026-10-25T02:13:42.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/a7708c93415144c9a36e8fd814a3bbd29a080bc4b886e69e605173c603dd7ab9"
+    },
+    {
+      "at": "2026-10-25T02:13:53.102Z",
+      "kind": "payment",
+      "label": "x402 payment #4 ($0.01 USDC, signer=session) for \"Liderazgo Emocional y cóctel de networking para mujeres en tecnología\"",
+      "hash": "d2b2a9187f3e60c6abf7d3152d88d28ef18ece576d3226e59ff8002f3072e5b1",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9627,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374169,
+        "closedAt": "2026-10-25T02:13:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/d2b2a9187f3e60c6abf7d3152d88d28ef18ece576d3226e59ff8002f3072e5b1"
+    },
+    {
+      "at": "2026-10-25T02:14:02.963Z",
+      "kind": "payment",
+      "label": "x402 payment #5 ($0.01 USDC, signer=session) for \"Devs House by Capital One, Mexico Tech Town\"",
+      "hash": "1168338b4ad10696025d6c6c4423457bd03b843875939683b6286c4240ddc87e",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9859,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374171,
+        "closedAt": "2026-10-25T02:14:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/1168338b4ad10696025d6c6c4423457bd03b843875939683b6286c4240ddc87e"
+    },
+    {
+      "at": "2026-10-25T02:14:12.432Z",
+      "kind": "payment",
+      "label": "x402 payment #6 ($0.01 USDC, signer=session) for \"ULIP 2027, Programa de Interns\"",
+      "hash": "c26c15eae5223da8d5ca5b0be8164b283b1ac7e9247ab917a95f486bf8cf24b0",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9467,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374173,
+        "closedAt": "2026-10-25T02:14:12.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/c26c15eae5223da8d5ca5b0be8164b283b1ac7e9247ab917a95f486bf8cf24b0"
+    },
+    {
+      "at": "2026-10-25T02:14:22.468Z",
+      "kind": "payment",
+      "label": "x402 payment #7 ($0.01 USDC, signer=session) for \"Accounting Specialist\"",
+      "hash": "81eefbe09ef5e3d4be3d717cdef674a62cecace7c2ff933bcd823abfca99b172",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10034,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374175,
+        "closedAt": "2026-10-25T02:14:22.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/81eefbe09ef5e3d4be3d717cdef674a62cecace7c2ff933bcd823abfca99b172"
+    },
+    {
+      "at": "2026-10-25T02:14:33.139Z",
+      "kind": "payment",
+      "label": "x402 payment #8 ($0.01 USDC, signer=session) for \"Analista de Datos Mid\"",
+      "hash": "38a792c0f2419b93c402118cb0474ebb2367355e2b18b6cb99c0c2c2e7604fe1",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10670,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374177,
+        "closedAt": "2026-10-25T02:14:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/38a792c0f2419b93c402118cb0474ebb2367355e2b18b6cb99c0c2c2e7604fe1"
+    },
+    {
+      "at": "2026-10-25T02:14:42.448Z",
+      "kind": "payment",
+      "label": "x402 payment #9 ($0.01 USDC, signer=session) for \"Internship Científico de Datos\"",
+      "hash": "5966c64ab5d60d3de67cb0cbf337dc5b4fe8691b459e868090fcdeac20a6f9d6",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9307,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374179,
+        "closedAt": "2026-10-25T02:14:42.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/5966c64ab5d60d3de67cb0cbf337dc5b4fe8691b459e868090fcdeac20a6f9d6"
+    },
+    {
+      "at": "2026-10-25T02:14:53.195Z",
+      "kind": "payment",
+      "label": "x402 payment #10 ($0.01 USDC, signer=session) for \"Líder de Diseño de Empaques de Nuestras Marcas\"",
+      "hash": "db0779506c2a668a351df26fd8cb8eb6db671a9f4dcaa243fd87a63c5b7e8ddc",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10745,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374181,
+        "closedAt": "2026-10-25T02:14:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/db0779506c2a668a351df26fd8cb8eb6db671a9f4dcaa243fd87a63c5b7e8ddc"
+    },
+    {
+      "at": "2026-10-25T02:15:02.737Z",
+      "kind": "payment",
+      "label": "x402 payment #11 ($0.01 USDC, signer=session) for \"Analista Sr. Assortment y Proyectos Especiales\"",
+      "hash": "a3196e0f1014fcf218cc0ba49ec21a8c9987dec23e1d00e6d384d52c4fcfe6d0",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9539,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374183,
+        "closedAt": "2026-10-25T02:15:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/a3196e0f1014fcf218cc0ba49ec21a8c9987dec23e1d00e6d384d52c4fcfe6d0"
+    },
+    {
+      "at": "2026-10-25T02:15:13.240Z",
+      "kind": "payment",
+      "label": "x402 payment #12 ($0.01 USDC, signer=session) for \"Business Analyst (Comercial)\"",
+      "hash": "aa0337a4264c0c975eccdd70b29f4d3f0a9a8e451b45f45fbb96490c56e12f3e",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10501,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374185,
+        "closedAt": "2026-10-25T02:15:12.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/aa0337a4264c0c975eccdd70b29f4d3f0a9a8e451b45f45fbb96490c56e12f3e"
+    },
+    {
+      "at": "2026-10-25T02:15:23.153Z",
+      "kind": "payment",
+      "label": "x402 payment #13 ($0.01 USDC, signer=session) for \"Chilangatón 2026\"",
+      "hash": "8a106f9a6dab41caf848813bbbd5487cde43a11b131b6f5dab99a404da81c11b",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9911,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374187,
+        "closedAt": "2026-10-25T02:15:22.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/8a106f9a6dab41caf848813bbbd5487cde43a11b131b6f5dab99a404da81c11b"
+    },
+    {
+      "at": "2026-10-25T02:15:33.103Z",
+      "kind": "payment",
+      "label": "x402 payment #14 ($0.01 USDC, signer=session) for \"Líder de Inteligencia de Negocios\"",
+      "hash": "c3c8d85bcdbc259bab66ebe3af03720311063de58026375a5cb068a30cebf474",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9949,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374189,
+        "closedAt": "2026-10-25T02:15:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/c3c8d85bcdbc259bab66ebe3af03720311063de58026375a5cb068a30cebf474"
+    },
+    {
+      "at": "2026-10-25T02:15:42.391Z",
+      "kind": "payment",
+      "label": "x402 payment #15 ($0.01 USDC, signer=session) for \"Analista Administrativo Paquetería\"",
+      "hash": "15a2a99e4471a65d5d65110157692c29270d923c439bd86f24c878cfc98bd025",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9287,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374191,
+        "closedAt": "2026-10-25T02:15:42.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/15a2a99e4471a65d5d65110157692c29270d923c439bd86f24c878cfc98bd025"
+    },
+    {
+      "at": "2026-10-25T02:15:52.456Z",
+      "kind": "payment",
+      "label": "x402 payment #16 ($0.01 USDC, signer=session) for \"Coordinador de importaciones y exportaciones\"",
+      "hash": "e06751a332ead07c7aa9304666894c7775a41b5fde5abe219daadd57f2985719",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10064,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374193,
+        "closedAt": "2026-10-25T02:15:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/e06751a332ead07c7aa9304666894c7775a41b5fde5abe219daadd57f2985719"
+    },
+    {
+      "at": "2026-10-25T02:16:02.543Z",
+      "kind": "payment",
+      "label": "x402 payment #17 ($0.01 USDC, signer=session) for \"Comprador Jr Malayerba\"",
+      "hash": "b04f3a162d8c12ac0d4aeaf6d9893cd5b875f8fd3bd75d260d9655414d6b9009",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10085,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374195,
+        "closedAt": "2026-10-25T02:16:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/b04f3a162d8c12ac0d4aeaf6d9893cd5b875f8fd3bd75d260d9655414d6b9009"
+    },
+    {
+      "at": "2026-10-25T02:16:12.549Z",
+      "kind": "payment",
+      "label": "x402 payment #18 ($0.01 USDC, signer=session) for \"Diseñador de Moda Caballeros\"",
+      "hash": "ed78e47226d3e553e7de3f79d4e144fd1cf3098560cdb49d359f9356eecc6e59",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10005,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374197,
+        "closedAt": "2026-10-25T02:16:12.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/ed78e47226d3e553e7de3f79d4e144fd1cf3098560cdb49d359f9356eecc6e59"
+    },
+    {
+      "at": "2026-10-25T02:16:17.745Z",
+      "kind": "payment",
+      "label": "x402 payment #19 ($0.01 USDC, signer=session) for \"Trainee de Moda\"",
+      "hash": "8bd9d1c2b152f34b0426bed864765c65018948b575641a1e8bc3bce604bedd6f",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 5194,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374198,
+        "closedAt": "2026-10-25T02:16:17.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/8bd9d1c2b152f34b0426bed864765c65018948b575641a1e8bc3bce604bedd6f"
+    },
+    {
+      "at": "2026-10-25T02:16:27.735Z",
+      "kind": "payment",
+      "label": "x402 payment #20 ($0.01 USDC, signer=session) for \"Emprendedores Comerciales\"",
+      "hash": "c67cb6ee90222be039063cfec73043d6608d6f7a711dd34e5ff7b255e8dd1260",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9986,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374200,
+        "closedAt": "2026-10-25T02:16:27.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/c67cb6ee90222be039063cfec73043d6608d6f7a711dd34e5ff7b255e8dd1260"
+    },
+    {
+      "at": "2026-10-25T02:16:37.775Z",
+      "kind": "payment",
+      "label": "x402 payment #21 ($0.01 USDC, signer=session) for \"Prácticas profesionales\"",
+      "hash": "7abe9e4fdeb9a3209f66049ff5a26f496867b2625d74ae21b29b5eca24282f71",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10038,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374202,
+        "closedAt": "2026-10-25T02:16:37.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/7abe9e4fdeb9a3209f66049ff5a26f496867b2625d74ae21b29b5eca24282f71"
+    },
+    {
+      "at": "2026-10-25T02:16:47.697Z",
+      "kind": "payment",
+      "label": "x402 payment #22 ($0.01 USDC, signer=session) for \"Beca Destino Impacto, FLII 2027\"",
+      "hash": "111ce544ca717505b0ab51957ca8138ac86d3de5b8d91213bdce3ebf5e077256",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9921,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374204,
+        "closedAt": "2026-10-25T02:16:47.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/111ce544ca717505b0ab51957ca8138ac86d3de5b8d91213bdce3ebf5e077256"
+    },
+    {
+      "at": "2026-10-25T02:16:57.430Z",
+      "kind": "payment",
+      "label": "x402 payment #23 ($0.01 USDC, signer=session) for \"Key Account Manager, Sector Privado y Gubernamental\"",
+      "hash": "064376d71c8ecf6d60f7100bf4937911510ac9b9e7894c8383f0678f93a62133",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9730,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374206,
+        "closedAt": "2026-10-25T02:16:57.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/064376d71c8ecf6d60f7100bf4937911510ac9b9e7894c8383f0678f93a62133"
+    },
+    {
+      "at": "2026-10-25T02:17:08.351Z",
+      "kind": "payment",
+      "label": "x402 payment #24 ($0.01 USDC, signer=session) for \"Government Affairs and Public Policy Specialist\"",
+      "hash": "d23307639eea6e180c5a2cd432519a67b62a6f4d55f18473e4ceba86d96164aa",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10920,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374208,
+        "closedAt": "2026-10-25T02:17:07.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/d23307639eea6e180c5a2cd432519a67b62a6f4d55f18473e4ceba86d96164aa"
+    },
+    {
+      "at": "2026-10-25T02:17:17.668Z",
+      "kind": "payment",
+      "label": "x402 payment #25 ($0.01 USDC, signer=session) for \"Tech Lead Cloud (Azure / .NET), Juntos+\"",
+      "hash": "152d1e78b4b468a52ad27452bafa537a2bf3a24bd2cb1e5407029209f490845b",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9315,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374210,
+        "closedAt": "2026-10-25T02:17:17.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/152d1e78b4b468a52ad27452bafa537a2bf3a24bd2cb1e5407029209f490845b"
+    },
+    {
+      "at": "2026-10-25T02:17:28.392Z",
+      "kind": "payment",
+      "label": "x402 payment #26 ($0.01 USDC, signer=session) for \"More Green Fund México 2026\"",
+      "hash": "e6841f9888014375b1bebd74ee2b995e6fd7c87cdd025e601830bd072fc6a6b2",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10723,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374212,
+        "closedAt": "2026-10-25T02:17:27.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/e6841f9888014375b1bebd74ee2b995e6fd7c87cdd025e601830bd072fc6a6b2"
+    },
+    {
+      "at": "2026-10-25T02:17:37.540Z",
+      "kind": "payment",
+      "label": "x402 payment #27 ($0.01 USDC, signer=session) for \"Community Manager & Setter\"",
+      "hash": "df98b23b3c4061099ef02daeee19933e16a6dbfc9950a18f2e353055142b9046",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9145,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374214,
+        "closedAt": "2026-10-25T02:17:37.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/df98b23b3c4061099ef02daeee19933e16a6dbfc9950a18f2e353055142b9046"
+    },
+    {
+      "at": "2026-10-25T02:17:47.647Z",
+      "kind": "payment",
+      "label": "x402 payment #28 ($0.01 USDC, signer=session) for \"Diseñador(a) Gráfico(a)\"",
+      "hash": "1b708da92e87cb4f0c2aacd4cc14452b2067490842337dfa741f2f429eb1d588",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10105,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374216,
+        "closedAt": "2026-10-25T02:17:47.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/1b708da92e87cb4f0c2aacd4cc14452b2067490842337dfa741f2f429eb1d588"
+    },
+    {
+      "at": "2026-10-25T02:17:52.689Z",
+      "kind": "payment",
+      "label": "x402 payment #29 ($0.01 USDC, signer=session) for \"Editor(a) de Video\"",
+      "hash": "a77598f4eade2c7a8e3244476969c6b768cbf275dde9395713e245c39f6c7677",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 5040,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374217,
+        "closedAt": "2026-10-25T02:17:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/a77598f4eade2c7a8e3244476969c6b768cbf275dde9395713e245c39f6c7677"
+    },
+    {
+      "at": "2026-10-25T02:18:02.895Z",
+      "kind": "payment",
+      "label": "x402 payment #30 ($0.01 USDC, signer=session) for \"Editor(a) de Video\"",
+      "hash": "89c94930666a37a4069a9990ae58aefadaf9551501a93e2401c4b7f5c6c92098",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10203,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374219,
+        "closedAt": "2026-10-25T02:18:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/89c94930666a37a4069a9990ae58aefadaf9551501a93e2401c4b7f5c6c92098"
+    },
+    {
+      "at": "2026-10-25T02:18:12.962Z",
+      "kind": "payment",
+      "label": "x402 payment #31 ($0.01 USDC, signer=session) for \"Diseñador(a) Gráfico(a)\"",
+      "hash": "5c97c243b30e95a56bada21643c52a021bec45fee8fbddc5007e15e4b1f9d102",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10064,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374221,
+        "closedAt": "2026-10-25T02:18:12.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/5c97c243b30e95a56bada21643c52a021bec45fee8fbddc5007e15e4b1f9d102"
+    },
+    {
+      "at": "2026-10-25T02:18:22.401Z",
+      "kind": "payment",
+      "label": "x402 payment #32 ($0.01 USDC, signer=session) for \"Community Manager & Setter\"",
+      "hash": "3580af211fdae2c99cd41bc3fc1fa96e7edb44f83978eb505aacd07190eecd33",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9436,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374223,
+        "closedAt": "2026-10-25T02:18:22.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/3580af211fdae2c99cd41bc3fc1fa96e7edb44f83978eb505aacd07190eecd33"
+    },
+    {
+      "at": "2026-10-25T02:18:32.732Z",
+      "kind": "payment",
+      "label": "x402 payment #33 ($0.01 USDC, signer=session) for \"Asistente Administrativo(a) Comercial\"",
+      "hash": "d337e9039b87002e6a2f157812a835ea8a6280761399dbf02a0061e1ee3cd8da",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10328,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374225,
+        "closedAt": "2026-10-25T02:18:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/d337e9039b87002e6a2f157812a835ea8a6280761399dbf02a0061e1ee3cd8da"
+    },
+    {
+      "at": "2026-10-25T02:18:43.136Z",
+      "kind": "payment",
+      "label": "x402 payment #34 ($0.01 USDC, signer=session) for \"Asesor(a) en Inversiones Inmobiliarias (Ventas)\"",
+      "hash": "1d3923baace1550df208550454ceddf14a711f132ee030866b845a5c6f0ba2e1",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10402,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374227,
+        "closedAt": "2026-10-25T02:18:42.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/1d3923baace1550df208550454ceddf14a711f132ee030866b845a5c6f0ba2e1"
+    },
+    {
+      "at": "2026-10-25T02:18:52.821Z",
+      "kind": "payment",
+      "label": "x402 payment #35 ($0.01 USDC, signer=session) for \"Community Manager & Setter\"",
+      "hash": "15500a526f8cd427da3d76f53b712945a3540e0913c1e4238b75ab009f3c28dc",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9683,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374229,
+        "closedAt": "2026-10-25T02:18:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/15500a526f8cd427da3d76f53b712945a3540e0913c1e4238b75ab009f3c28dc"
+    },
+    {
+      "at": "2026-10-25T02:19:02.393Z",
+      "kind": "payment",
+      "label": "x402 payment #36 ($0.01 USDC, signer=session) for \"Diseñador(a) Gráfico\"",
+      "hash": "3cea1b85153326bfb94f30e9c583011f612a7d3798ca9f6b4bd4bc1393a97ab6",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9569,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374231,
+        "closedAt": "2026-10-25T02:19:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/3cea1b85153326bfb94f30e9c583011f612a7d3798ca9f6b4bd4bc1393a97ab6"
+    },
+    {
+      "at": "2026-10-25T02:19:08.305Z",
+      "kind": "payment",
+      "label": "x402 payment #37 ($0.01 USDC, signer=session) for \"Editor(a) de Contenido\"",
+      "hash": "df0f873ac7903948af21ff639e92949ddf0b0fe8da1598b391acf3ad8512ef40",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 5909,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374232,
+        "closedAt": "2026-10-25T02:19:07.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/df0f873ac7903948af21ff639e92949ddf0b0fe8da1598b391acf3ad8512ef40"
+    },
+    {
+      "at": "2026-10-25T02:19:17.591Z",
+      "kind": "payment",
+      "label": "x402 payment #38 ($0.01 USDC, signer=session) for \"Asesor(a) en Inversiones Inmobiliarias (Ventas)\"",
+      "hash": "5ff6ec99ee167289aae3c2603fdef80d7fbdefdc2d58da65120e4a98cb564340",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9279,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374234,
+        "closedAt": "2026-10-25T02:19:17.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/5ff6ec99ee167289aae3c2603fdef80d7fbdefdc2d58da65120e4a98cb564340"
+    },
+    {
+      "at": "2026-10-25T02:19:27.470Z",
+      "kind": "payment",
+      "label": "x402 payment #39 ($0.01 USDC, signer=session) for \"Asistente Administrativo(a) Comercial\"",
+      "hash": "5b1e93bdf358b73fc26fbc0bc05719e9ce3e7c89f2c898f5fc6fe5f0293ce0b0",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9876,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374236,
+        "closedAt": "2026-10-25T02:19:27.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/5b1e93bdf358b73fc26fbc0bc05719e9ce3e7c89f2c898f5fc6fe5f0293ce0b0"
+    },
+    {
+      "at": "2026-10-25T02:19:37.516Z",
+      "kind": "payment",
+      "label": "x402 payment #40 ($0.01 USDC, signer=session) for \"Sales Controlling Intern\"",
+      "hash": "35fee6972d4bd05479df1190e8568321fefd317a2db1f03b3d7668139af96223",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10044,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374238,
+        "closedAt": "2026-10-25T02:19:37.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/35fee6972d4bd05479df1190e8568321fefd317a2db1f03b3d7668139af96223"
+    },
+    {
+      "at": "2026-10-25T02:19:48.385Z",
+      "kind": "payment",
+      "label": "x402 payment #41 ($0.01 USDC, signer=session) for \"Presales Engineering Leader\"",
+      "hash": "eb864a0fc2fc0c6095fbc58ca01733eefb2d5704d235a296c9cef465bb7d5928",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10869,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374240,
+        "closedAt": "2026-10-25T02:19:47.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/eb864a0fc2fc0c6095fbc58ca01733eefb2d5704d235a296c9cef465bb7d5928"
+    },
+    {
+      "at": "2026-10-25T02:19:57.930Z",
+      "kind": "payment",
+      "label": "x402 payment #42 ($0.01 USDC, signer=session) for \"Legal Intern\"",
+      "hash": "97bd930ab700e52658f3290981dce4559c6fc072648b833f4be781c7e95dda85",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9544,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374242,
+        "closedAt": "2026-10-25T02:19:57.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/97bd930ab700e52658f3290981dce4559c6fc072648b833f4be781c7e95dda85"
+    },
+    {
+      "at": "2026-10-25T02:20:07.473Z",
+      "kind": "payment",
+      "label": "x402 payment #43 ($0.01 USDC, signer=session) for \"Sea Global Management Associate Program (MAP), Garena Track\"",
+      "hash": "ea081cda25ecd333d78a494305d1cbc247721f63b78dc792568cb1f4b0f54c71",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9542,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374244,
+        "closedAt": "2026-10-25T02:20:07.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/ea081cda25ecd333d78a494305d1cbc247721f63b78dc792568cb1f4b0f54c71"
+    },
+    {
+      "at": "2026-10-25T02:20:17.450Z",
+      "kind": "payment",
+      "label": "x402 payment #44 ($0.01 USDC, signer=session) for \"Asistente Administrativo(a), Oficina de Enlace Comunitario (CLO)\"",
+      "hash": "789c7f15235a1044166771700c572419e9264b679be0b51ff6796c0854163e2a",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9976,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374246,
+        "closedAt": "2026-10-25T02:20:17.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/789c7f15235a1044166771700c572419e9264b679be0b51ff6796c0854163e2a"
+    },
+    {
+      "at": "2026-10-25T02:20:27.729Z",
+      "kind": "payment",
+      "label": "x402 payment #45 ($0.01 USDC, signer=session) for \"Competencia de Startups Enterprise en IA\"",
+      "hash": "2564c92b87662bb2722aff119abb79ac9ab7ab36c4fa7370220d0cae3756eacf",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10278,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374248,
+        "closedAt": "2026-10-25T02:20:27.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/2564c92b87662bb2722aff119abb79ac9ab7ab36c4fa7370220d0cae3756eacf"
+    },
+    {
+      "at": "2026-10-25T02:20:38.341Z",
+      "kind": "payment",
+      "label": "x402 payment #46 ($0.01 USDC, signer=session) for \"Preaceleradora de Economía de Cuidados\"",
+      "hash": "2e05e00502f139a02228af878a31eb65df763c5df0f8a611f7fe5f8d31c8d04a",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10610,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374250,
+        "closedAt": "2026-10-25T02:20:37.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/2e05e00502f139a02228af878a31eb65df763c5df0f8a611f7fe5f8d31c8d04a"
+    },
+    {
+      "at": "2026-10-25T02:20:48.310Z",
+      "kind": "payment",
+      "label": "x402 payment #47 ($0.01 USDC, signer=session) for \"Vacantes Engen Capital\"",
+      "hash": "524f0f37b96307407be001e159c821bae9fb436b94cec7e2a07de288c7d2e8a7",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9967,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374252,
+        "closedAt": "2026-10-25T02:20:47.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/524f0f37b96307407be001e159c821bae9fb436b94cec7e2a07de288c7d2e8a7"
+    },
+    {
+      "at": "2026-10-25T02:20:57.907Z",
+      "kind": "payment",
+      "label": "x402 payment #48 ($0.01 USDC, signer=session) for \"Practicante de Control de Calidad\"",
+      "hash": "d03606cd75c964a052b8bfa7ca5ce594c22d41df0070f61c950e655f47e55a4e",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9594,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374254,
+        "closedAt": "2026-10-25T02:20:57.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/d03606cd75c964a052b8bfa7ca5ce594c22d41df0070f61c950e655f47e55a4e"
+    },
+    {
+      "at": "2026-10-25T02:21:07.523Z",
+      "kind": "payment",
+      "label": "x402 payment #49 ($0.01 USDC, signer=session) for \"AWS Entrena Latinas (formación gratuita en cloud e IA)\"",
+      "hash": "ecdfbaf5818c92e1f40e93d68f71783578a5c8da847ff610a0a352965208a9a2",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9614,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374256,
+        "closedAt": "2026-10-25T02:21:07.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/ecdfbaf5818c92e1f40e93d68f71783578a5c8da847ff610a0a352965208a9a2"
+    },
+    {
+      "at": "2026-10-25T02:21:17.458Z",
+      "kind": "payment",
+      "label": "x402 payment #50 ($0.01 USDC, signer=session) for \"Abogado(a) Inmobiliario \"",
+      "hash": "5e047ada0a3b1e98f2a69914d512d6b9b5cd0cc84ba7244fe0486fba270b26d0",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9933,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374258,
+        "closedAt": "2026-10-25T02:21:17.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/5e047ada0a3b1e98f2a69914d512d6b9b5cd0cc84ba7244fe0486fba270b26d0"
+    },
+    {
+      "at": "2026-10-25T02:21:27.904Z",
+      "kind": "payment",
+      "label": "x402 payment #51 ($0.01 USDC, signer=session) for \" Business Development\"",
+      "hash": "28f3c3a02fb741b4adb39eef492c8bc91591fb3b61c9a70a5bfbb1bf5a2564fd",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10444,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374260,
+        "closedAt": "2026-10-25T02:21:27.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/28f3c3a02fb741b4adb39eef492c8bc91591fb3b61c9a70a5bfbb1bf5a2564fd"
+    },
+    {
+      "at": "2026-10-25T02:21:37.847Z",
+      "kind": "payment",
+      "label": "x402 payment #52 ($0.01 USDC, signer=session) for \"XII Macrorrueda de Negocios - Alianza del Pacífico\"",
+      "hash": "8096821994ba26b0a79bfcd434a608e8f415579cd8dcc4afc0ec8af7f31b7958",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9940,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374262,
+        "closedAt": "2026-10-25T02:21:37.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/8096821994ba26b0a79bfcd434a608e8f415579cd8dcc4afc0ec8af7f31b7958"
+    },
+    {
+      "at": "2026-10-25T02:21:47.271Z",
+      "kind": "payment",
+      "label": "x402 payment #53 ($0.01 USDC, signer=session) for \"Mujeres Líderes (programa de liderazgo)\"",
+      "hash": "d73a05790db15e996113e62381580aa419a9b6347f75817e2432304ac1342445",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9422,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374264,
+        "closedAt": "2026-10-25T02:21:47.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/d73a05790db15e996113e62381580aa419a9b6347f75817e2432304ac1342445"
+    },
+    {
+      "at": "2026-10-25T02:21:53.372Z",
+      "kind": "payment",
+      "label": "x402 payment #54 ($0.01 USDC, signer=session) for \"Especialista IBP (Temporal)\"",
+      "hash": "e6e4c5f70e4a10482a77c27999db077c8a491a4c3aa472f3c78cd9020a93d4f3",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 6098,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374265,
+        "closedAt": "2026-10-25T02:21:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/e6e4c5f70e4a10482a77c27999db077c8a491a4c3aa472f3c78cd9020a93d4f3"
+    },
+    {
+      "at": "2026-10-25T02:22:02.928Z",
+      "kind": "payment",
+      "label": "x402 payment #55 ($0.01 USDC, signer=session) for \"Internship Unilever México\"",
+      "hash": "ff3f6836b87a59aeec6bde6dd9216cd2997c022eae14e61285e4218495336b41",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9552,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374267,
+        "closedAt": "2026-10-25T02:22:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/ff3f6836b87a59aeec6bde6dd9216cd2997c022eae14e61285e4218495336b41"
+    },
+    {
+      "at": "2026-10-25T02:22:12.552Z",
+      "kind": "payment",
+      "label": "x402 payment #56 ($0.01 USDC, signer=session) for \"Mexico Tech Week 2026\"",
+      "hash": "3e03e0edd9fb98ce28e1f12c55712497e93f14e5718b279161517e45bee7d0b8",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9621,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374269,
+        "closedAt": "2026-10-25T02:22:12.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/3e03e0edd9fb98ce28e1f12c55712497e93f14e5718b279161517e45bee7d0b8"
+    },
+    {
+      "at": "2026-10-25T02:22:22.445Z",
+      "kind": "payment",
+      "label": "x402 payment #57 ($0.01 USDC, signer=session) for \"Mesero\"",
+      "hash": "34070c5280a61ab3b43114e4010dace67f0cb37db184cadeb7f91a56dff7ccb0",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9890,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374271,
+        "closedAt": "2026-10-25T02:22:22.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/34070c5280a61ab3b43114e4010dace67f0cb37db184cadeb7f91a56dff7ccb0"
+    },
+    {
+      "at": "2026-10-25T02:22:32.736Z",
+      "kind": "payment",
+      "label": "x402 payment #58 ($0.01 USDC, signer=session) for \"Voluntario Juguetón\"",
+      "hash": "dd59aecc6774c6fce8b5c989d4a24d2009735ad7855f0dce1b49ddb2d543990a",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10288,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374273,
+        "closedAt": "2026-10-25T02:22:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/dd59aecc6774c6fce8b5c989d4a24d2009735ad7855f0dce1b49ddb2d543990a"
+    },
+    {
+      "at": "2026-10-25T02:22:42.448Z",
+      "kind": "payment",
+      "label": "x402 payment #59 ($0.01 USDC, signer=session) for \"Floor Manager\"",
+      "hash": "9d21c1b5c35892d5d799a2fa909259c2efd9780a549f02e6b6eabf588808cd89",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9709,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374275,
+        "closedAt": "2026-10-25T02:22:42.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/9d21c1b5c35892d5d799a2fa909259c2efd9780a549f02e6b6eabf588808cd89"
+    },
+    {
+      "at": "2026-10-25T02:22:52.377Z",
+      "kind": "payment",
+      "label": "x402 payment #60 ($0.01 USDC, signer=session) for \"Ejecutivo de cuenta\"",
+      "hash": "b137f84e6fd1d8a516b875bac97ea8f7bd5f33f3ff6485fba9e08e722f2fb1ab",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9926,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374277,
+        "closedAt": "2026-10-25T02:22:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/b137f84e6fd1d8a516b875bac97ea8f7bd5f33f3ff6485fba9e08e722f2fb1ab"
+    },
+    {
+      "at": "2026-10-25T02:23:02.759Z",
+      "kind": "payment",
+      "label": "x402 payment #61 ($0.01 USDC, signer=session) for \"Gerente de Proyectos\"",
+      "hash": "06eb39ead0ca2d5a1e1564af7407c287012fad9bb59c5cc25ad66f720a3af2d8",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10380,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374279,
+        "closedAt": "2026-10-25T02:23:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/06eb39ead0ca2d5a1e1564af7407c287012fad9bb59c5cc25ad66f720a3af2d8"
+    },
+    {
+      "at": "2026-10-25T02:23:12.456Z",
+      "kind": "payment",
+      "label": "x402 payment #62 ($0.01 USDC, signer=session) for \"Ejecutivo de Ventas D2D\"",
+      "hash": "1f0f3bf92046c22cf570f276116a3d19766d72f9a0e4d67e1b48a5166f588b83",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9697,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374281,
+        "closedAt": "2026-10-25T02:23:12.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/1f0f3bf92046c22cf570f276116a3d19766d72f9a0e4d67e1b48a5166f588b83"
+    },
+    {
+      "at": "2026-10-25T02:23:22.670Z",
+      "kind": "payment",
+      "label": "x402 payment #63 ($0.01 USDC, signer=session) for \"Abogado/a Junior\"",
+      "hash": "e1dc7cdad2511dfd699d3a434f2ff929dc959d7c574362ad86409dfdc88fa862",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10212,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374283,
+        "closedAt": "2026-10-25T02:23:22.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/e1dc7cdad2511dfd699d3a434f2ff929dc959d7c574362ad86409dfdc88fa862"
+    },
+    {
+      "at": "2026-10-25T02:23:32.528Z",
+      "kind": "payment",
+      "label": "x402 payment #64 ($0.01 USDC, signer=session) for \"Becas de posgrado Fulbright García Robles\"",
+      "hash": "c34c44e27186f1faec77c3107e77abc3084970baca4b7c05d83d6b2dfac6d4c2",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9854,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374285,
+        "closedAt": "2026-10-25T02:23:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/c34c44e27186f1faec77c3107e77abc3084970baca4b7c05d83d6b2dfac6d4c2"
+    },
+    {
+      "at": "2026-10-25T02:23:37.551Z",
+      "kind": "payment",
+      "label": "x402 payment #65 ($0.01 USDC, signer=session) for \"Liderazgo Emocional y cóctel de networking para mujeres en tecnología\"",
+      "hash": "73c04b88dce4196462bd51a6b4d7c32204e68d9b14dbb51696f3cf9ae510d741",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 5020,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374286,
+        "closedAt": "2026-10-25T02:23:37.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/73c04b88dce4196462bd51a6b4d7c32204e68d9b14dbb51696f3cf9ae510d741"
+    },
+    {
+      "at": "2026-10-25T02:23:47.266Z",
+      "kind": "payment",
+      "label": "x402 payment #66 ($0.01 USDC, signer=session) for \"Devs House by Capital One, Mexico Tech Town\"",
+      "hash": "857e02c4db25b387812eb2f1865746743a542e9e4978bdb73f176d644a8c0356",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9712,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374288,
+        "closedAt": "2026-10-25T02:23:47.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/857e02c4db25b387812eb2f1865746743a542e9e4978bdb73f176d644a8c0356"
+    },
+    {
+      "at": "2026-10-25T02:23:52.585Z",
+      "kind": "payment",
+      "label": "x402 payment #67 ($0.01 USDC, signer=session) for \"ULIP 2027, Programa de Interns\"",
+      "hash": "29f63a1b7e615194ee342862246fab49a44e92a5553815b91aa856131688da9b",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 5315,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374289,
+        "closedAt": "2026-10-25T02:23:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/29f63a1b7e615194ee342862246fab49a44e92a5553815b91aa856131688da9b"
+    },
+    {
+      "at": "2026-10-25T02:24:02.378Z",
+      "kind": "payment",
+      "label": "x402 payment #68 ($0.01 USDC, signer=session) for \"Accounting Specialist\"",
+      "hash": "35047303c08a11dc3248276c43b1976d95ef23058d8b3a3c133d9ed7c5ca2af3",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9790,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374291,
+        "closedAt": "2026-10-25T02:24:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/35047303c08a11dc3248276c43b1976d95ef23058d8b3a3c133d9ed7c5ca2af3"
+    },
+    {
+      "at": "2026-10-25T02:24:07.353Z",
+      "kind": "payment",
+      "label": "x402 payment #69 ($0.01 USDC, signer=session) for \"Analista de Datos Mid\"",
+      "hash": "67bba499176c890d2c35e518afa2a0b64e4a6546b0aded012ae878419befd04e",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 4972,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374292,
+        "closedAt": "2026-10-25T02:24:07.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/67bba499176c890d2c35e518afa2a0b64e4a6546b0aded012ae878419befd04e"
+    },
+    {
+      "at": "2026-10-25T02:24:12.359Z",
+      "kind": "payment",
+      "label": "x402 payment #70 ($0.01 USDC, signer=session) for \"Internship Científico de Datos\"",
+      "hash": "e70bf9f23abb80ffd3e6627e52087b231bccce38496eef8e7f4e4eb72e1028f6",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 5003,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374293,
+        "closedAt": "2026-10-25T02:24:12.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/e70bf9f23abb80ffd3e6627e52087b231bccce38496eef8e7f4e4eb72e1028f6"
+    },
+    {
+      "at": "2026-10-25T02:24:23.013Z",
+      "kind": "payment",
+      "label": "x402 payment #71 ($0.01 USDC, signer=session) for \"Líder de Diseño de Empaques de Nuestras Marcas\"",
+      "hash": "4215be6e804bc3c3fbd3ad110de5868049e72f93ca6882539d3996a6f856b204",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10651,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374295,
+        "closedAt": "2026-10-25T02:24:22.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/4215be6e804bc3c3fbd3ad110de5868049e72f93ca6882539d3996a6f856b204"
+    },
+    {
+      "at": "2026-10-25T02:24:32.433Z",
+      "kind": "payment",
+      "label": "x402 payment #72 ($0.01 USDC, signer=session) for \"Analista Sr. Assortment y Proyectos Especiales\"",
+      "hash": "320a75e0e502f925a51b23876d0e92888262d33ef47c487d3504d7f31a52cee1",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9416,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374297,
+        "closedAt": "2026-10-25T02:24:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/320a75e0e502f925a51b23876d0e92888262d33ef47c487d3504d7f31a52cee1"
+    },
+    {
+      "at": "2026-10-25T02:24:42.571Z",
+      "kind": "payment",
+      "label": "x402 payment #73 ($0.01 USDC, signer=session) for \"Business Analyst (Comercial)\"",
+      "hash": "85a0de960436671bdc77b0062e3b92d285b17879a9c8d8ab053c84c17434334b",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10135,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374299,
+        "closedAt": "2026-10-25T02:24:42.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/85a0de960436671bdc77b0062e3b92d285b17879a9c8d8ab053c84c17434334b"
+    },
+    {
+      "at": "2026-10-25T02:24:47.689Z",
+      "kind": "payment",
+      "label": "x402 payment #74 ($0.01 USDC, signer=session) for \"Chilangatón 2026\"",
+      "hash": "f6cb8ccd9b44c66d63839edd55d4b9187d9522950d387a86af9b81878c5a2248",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 5114,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374300,
+        "closedAt": "2026-10-25T02:24:47.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/f6cb8ccd9b44c66d63839edd55d4b9187d9522950d387a86af9b81878c5a2248"
+    },
+    {
+      "at": "2026-10-25T02:24:58.340Z",
+      "kind": "payment",
+      "label": "x402 payment #75 ($0.01 USDC, signer=session) for \"Líder de Inteligencia de Negocios\"",
+      "hash": "a6565e088ba1c828fa94e350b6a8375652ddfc745ebd4041a90002107e148b13",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10649,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374302,
+        "closedAt": "2026-10-25T02:24:57.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/a6565e088ba1c828fa94e350b6a8375652ddfc745ebd4041a90002107e148b13"
+    },
+    {
+      "at": "2026-10-25T02:25:07.864Z",
+      "kind": "payment",
+      "label": "x402 payment #76 ($0.01 USDC, signer=session) for \"Analista Administrativo Paquetería\"",
+      "hash": "9fbb2fb913d1868fdbd4afd914370237d52cf0e1b621b54af2a0d891b2523cde",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9521,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374304,
+        "closedAt": "2026-10-25T02:25:07.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/9fbb2fb913d1868fdbd4afd914370237d52cf0e1b621b54af2a0d891b2523cde"
+    },
+    {
+      "at": "2026-10-25T02:25:17.797Z",
+      "kind": "payment",
+      "label": "x402 payment #77 ($0.01 USDC, signer=session) for \"Coordinador de importaciones y exportaciones\"",
+      "hash": "ff6cdae9a78549636765964ae2769a3e8b14e155c261feae5e9efc5884e18d23",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9931,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374306,
+        "closedAt": "2026-10-25T02:25:17.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/ff6cdae9a78549636765964ae2769a3e8b14e155c261feae5e9efc5884e18d23"
+    },
+    {
+      "at": "2026-10-25T02:25:27.832Z",
+      "kind": "payment",
+      "label": "x402 payment #78 ($0.01 USDC, signer=session) for \"Comprador Jr Malayerba\"",
+      "hash": "5a9ca161587ae26f6e9db8335bb29560f668b88fc51a00b7eebd1bab30bb277b",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10032,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374308,
+        "closedAt": "2026-10-25T02:25:27.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/5a9ca161587ae26f6e9db8335bb29560f668b88fc51a00b7eebd1bab30bb277b"
+    },
+    {
+      "at": "2026-10-25T02:25:37.765Z",
+      "kind": "payment",
+      "label": "x402 payment #79 ($0.01 USDC, signer=session) for \"Diseñador de Moda Caballeros\"",
+      "hash": "b367bbcd17ff6ebcc311dd863c7b298c272fc2e9dc2a425f1bd69bc63d14f7c4",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9930,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374310,
+        "closedAt": "2026-10-25T02:25:37.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/b367bbcd17ff6ebcc311dd863c7b298c272fc2e9dc2a425f1bd69bc63d14f7c4"
+    },
+    {
+      "at": "2026-10-25T02:25:47.494Z",
+      "kind": "payment",
+      "label": "x402 payment #80 ($0.01 USDC, signer=session) for \"Trainee de Moda\"",
+      "hash": "6bf3f8cf6d067691268293b4a92635e97d881c3d023e9ab30d950250ce19548b",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9723,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374312,
+        "closedAt": "2026-10-25T02:25:47.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/6bf3f8cf6d067691268293b4a92635e97d881c3d023e9ab30d950250ce19548b"
+    },
+    {
+      "at": "2026-10-25T02:25:52.485Z",
+      "kind": "payment",
+      "label": "x402 payment #81 ($0.01 USDC, signer=session) for \"Emprendedores Comerciales\"",
+      "hash": "b2df98eb33a398f110d1f4277de78ba776a8f52716639caf0761581be7655fa0",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 4988,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374313,
+        "closedAt": "2026-10-25T02:25:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/b2df98eb33a398f110d1f4277de78ba776a8f52716639caf0761581be7655fa0"
+    },
+    {
+      "at": "2026-10-25T02:26:02.755Z",
+      "kind": "payment",
+      "label": "x402 payment #82 ($0.01 USDC, signer=session) for \"Prácticas profesionales\"",
+      "hash": "20468cd5a6eb00f67474a812cb2b734b2ae03b189ac178b5a4b376e8e7ad7e7f",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10266,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374315,
+        "closedAt": "2026-10-25T02:26:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/20468cd5a6eb00f67474a812cb2b734b2ae03b189ac178b5a4b376e8e7ad7e7f"
+    },
+    {
+      "at": "2026-10-25T02:26:07.649Z",
+      "kind": "payment",
+      "label": "x402 payment #83 ($0.01 USDC, signer=session) for \"Beca Destino Impacto, FLII 2027\"",
+      "hash": "688eafc47e8a9622314cb25320914a1d62e913327d4a929d5c639b5b06f16706",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 4891,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374316,
+        "closedAt": "2026-10-25T02:26:07.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/688eafc47e8a9622314cb25320914a1d62e913327d4a929d5c639b5b06f16706"
+    },
+    {
+      "at": "2026-10-25T02:26:13.504Z",
+      "kind": "payment",
+      "label": "x402 payment #84 ($0.01 USDC, signer=session) for \"Key Account Manager, Sector Privado y Gubernamental\"",
+      "hash": "8243c833aaa4ed08b3cec315d5214c6350c95220cb5e93f7cc8d5487927cded2",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 5852,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374317,
+        "closedAt": "2026-10-25T02:26:12.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/8243c833aaa4ed08b3cec315d5214c6350c95220cb5e93f7cc8d5487927cded2"
+    },
+    {
+      "at": "2026-10-25T02:26:23.356Z",
+      "kind": "payment",
+      "label": "x402 payment #85 ($0.01 USDC, signer=session) for \"Government Affairs and Public Policy Specialist\"",
+      "hash": "f4e2d317841308e6dbbe9a5995001f967de45557de1517a46719f1154bf2b9ee",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9846,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374319,
+        "closedAt": "2026-10-25T02:26:22.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/f4e2d317841308e6dbbe9a5995001f967de45557de1517a46719f1154bf2b9ee"
+    },
+    {
+      "at": "2026-10-25T02:26:32.877Z",
+      "kind": "payment",
+      "label": "x402 payment #86 ($0.01 USDC, signer=session) for \"Tech Lead Cloud (Azure / .NET), Juntos+\"",
+      "hash": "5811ca691e7dea3c331055427976a94e593ab61397b4e497acad726067cf4969",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9517,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374321,
+        "closedAt": "2026-10-25T02:26:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/5811ca691e7dea3c331055427976a94e593ab61397b4e497acad726067cf4969"
+    },
+    {
+      "at": "2026-10-25T02:26:43.337Z",
+      "kind": "payment",
+      "label": "x402 payment #87 ($0.01 USDC, signer=session) for \"More Green Fund México 2026\"",
+      "hash": "ad2ce4a7a18dbb8816dab07fdc05dcaa3797903def894b3e74c43dd08f8c9fea",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10456,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374323,
+        "closedAt": "2026-10-25T02:26:42.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/ad2ce4a7a18dbb8816dab07fdc05dcaa3797903def894b3e74c43dd08f8c9fea"
+    },
+    {
+      "at": "2026-10-25T02:26:52.879Z",
+      "kind": "payment",
+      "label": "x402 payment #88 ($0.01 USDC, signer=session) for \"Community Manager & Setter\"",
+      "hash": "7dd36705c75861776a72cfd077bee15d80d9815243ad947f3cbd00b8258d5bd8",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9538,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374325,
+        "closedAt": "2026-10-25T02:26:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/7dd36705c75861776a72cfd077bee15d80d9815243ad947f3cbd00b8258d5bd8"
+    },
+    {
+      "at": "2026-10-25T02:27:02.630Z",
+      "kind": "payment",
+      "label": "x402 payment #89 ($0.01 USDC, signer=session) for \"Diseñador(a) Gráfico(a)\"",
+      "hash": "da053a9e9e75b8437a2a30b9c5cc6edc5c60c3d13898447d7971cb4d642f6a22",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9747,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374327,
+        "closedAt": "2026-10-25T02:27:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/da053a9e9e75b8437a2a30b9c5cc6edc5c60c3d13898447d7971cb4d642f6a22"
+    },
+    {
+      "at": "2026-10-25T02:27:13.287Z",
+      "kind": "payment",
+      "label": "x402 payment #90 ($0.01 USDC, signer=session) for \"Editor(a) de Video\"",
+      "hash": "791eab04eacb49ccfac078716ceeafa765a201ca83ccc5995fa9a1d8fc4a3e26",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10654,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374329,
+        "closedAt": "2026-10-25T02:27:12.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/791eab04eacb49ccfac078716ceeafa765a201ca83ccc5995fa9a1d8fc4a3e26"
+    },
+    {
+      "at": "2026-10-25T02:27:23.001Z",
+      "kind": "payment",
+      "label": "x402 payment #91 ($0.01 USDC, signer=session) for \"Editor(a) de Video\"",
+      "hash": "7e91d59701f67e4af1c8f8eb6e145955c9bfeb03315d2a3b00180e88dfc29467",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9710,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374331,
+        "closedAt": "2026-10-25T02:27:22.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/7e91d59701f67e4af1c8f8eb6e145955c9bfeb03315d2a3b00180e88dfc29467"
+    },
+    {
+      "at": "2026-10-25T02:27:32.341Z",
+      "kind": "payment",
+      "label": "x402 payment #92 ($0.01 USDC, signer=session) for \"Diseñador(a) Gráfico(a)\"",
+      "hash": "4bbde953d1f7a2e10a08ab6f5f8ed854a039f02bf05b2641c4b830985a957924",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9336,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374333,
+        "closedAt": "2026-10-25T02:27:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/4bbde953d1f7a2e10a08ab6f5f8ed854a039f02bf05b2641c4b830985a957924"
+    },
+    {
+      "at": "2026-10-25T02:27:43.290Z",
+      "kind": "payment",
+      "label": "x402 payment #93 ($0.01 USDC, signer=session) for \"Community Manager & Setter\"",
+      "hash": "bcc14ee8fbe52e83ba3633402c831752fce925994df664af16ec7779bd379917",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10944,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374335,
+        "closedAt": "2026-10-25T02:27:42.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/bcc14ee8fbe52e83ba3633402c831752fce925994df664af16ec7779bd379917"
+    },
+    {
+      "at": "2026-10-25T02:27:52.834Z",
+      "kind": "payment",
+      "label": "x402 payment #94 ($0.01 USDC, signer=session) for \"Asistente Administrativo(a) Comercial\"",
+      "hash": "09c3ee7a76f089ec8422810d9b5ec3f18b62df0e0e9810bb9331ced4bc8eaafb",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9541,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374337,
+        "closedAt": "2026-10-25T02:27:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/09c3ee7a76f089ec8422810d9b5ec3f18b62df0e0e9810bb9331ced4bc8eaafb"
+    },
+    {
+      "at": "2026-10-25T02:28:02.427Z",
+      "kind": "payment",
+      "label": "x402 payment #95 ($0.01 USDC, signer=session) for \"Asesor(a) en Inversiones Inmobiliarias (Ventas)\"",
+      "hash": "a6782cc5a0692116c7af16deac999acf6af342c06959ae11c81ae32f456265ee",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9589,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374339,
+        "closedAt": "2026-10-25T02:28:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/a6782cc5a0692116c7af16deac999acf6af342c06959ae11c81ae32f456265ee"
+    },
+    {
+      "at": "2026-10-25T02:28:13.164Z",
+      "kind": "payment",
+      "label": "x402 payment #96 ($0.01 USDC, signer=session) for \"Community Manager & Setter\"",
+      "hash": "5db0f2fa62bfb1a2eeac903dba6572b7ab6424c17d09cbbad176431e25d61d40",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10732,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374341,
+        "closedAt": "2026-10-25T02:28:12.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/5db0f2fa62bfb1a2eeac903dba6572b7ab6424c17d09cbbad176431e25d61d40"
+    },
+    {
+      "at": "2026-10-25T02:28:22.908Z",
+      "kind": "payment",
+      "label": "x402 payment #97 ($0.01 USDC, signer=session) for \"Diseñador(a) Gráfico\"",
+      "hash": "bc7b07c1a0011aa91042da18fc3c830795234c3b1e2fa45fd15d2311c2da8ac8",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9740,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374343,
+        "closedAt": "2026-10-25T02:28:22.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/bc7b07c1a0011aa91042da18fc3c830795234c3b1e2fa45fd15d2311c2da8ac8"
+    },
+    {
+      "at": "2026-10-25T02:28:32.787Z",
+      "kind": "payment",
+      "label": "x402 payment #98 ($0.01 USDC, signer=session) for \"Editor(a) de Contenido\"",
+      "hash": "fa92e26b5c18eb601a1ea3ed35dd5d5ab87caa3a761463da384dd02b7270ffa8",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9877,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374345,
+        "closedAt": "2026-10-25T02:28:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/fa92e26b5c18eb601a1ea3ed35dd5d5ab87caa3a761463da384dd02b7270ffa8"
+    },
+    {
+      "at": "2026-10-25T02:28:43.272Z",
+      "kind": "payment",
+      "label": "x402 payment #99 ($0.01 USDC, signer=session) for \"Asesor(a) en Inversiones Inmobiliarias (Ventas)\"",
+      "hash": "2a9b441001641c3129be771e34598ff6693627ee701db4f17fcd6928a9478608",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10481,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374347,
+        "closedAt": "2026-10-25T02:28:42.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/2a9b441001641c3129be771e34598ff6693627ee701db4f17fcd6928a9478608"
+    },
+    {
+      "at": "2026-10-25T02:28:52.943Z",
+      "kind": "payment",
+      "label": "x402 payment #100 ($0.01 USDC, signer=session) for \"Asistente Administrativo(a) Comercial\"",
+      "hash": "fb2d7de97a633a8099f50f13dfaf2db349de06d2d5e3c9e40d445cd403590419",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9668,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374349,
+        "closedAt": "2026-10-25T02:28:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/fb2d7de97a633a8099f50f13dfaf2db349de06d2d5e3c9e40d445cd403590419"
+    },
+    {
+      "at": "2026-10-25T02:29:02.670Z",
+      "kind": "payment",
+      "label": "x402 payment #101 ($0.01 USDC, signer=session) for \"Sales Controlling Intern\"",
+      "hash": "90667d0d996448b8df467114e930023c5efef54e500c734db7c8df4694fed8f5",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9725,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374351,
+        "closedAt": "2026-10-25T02:29:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/90667d0d996448b8df467114e930023c5efef54e500c734db7c8df4694fed8f5"
+    },
+    {
+      "at": "2026-10-25T02:29:12.638Z",
+      "kind": "payment",
+      "label": "x402 payment #102 ($0.01 USDC, signer=session) for \"Presales Engineering Leader\"",
+      "hash": "c82be5ccf554098ee3dd0ea63dd5015bf2a603c707973b34615a463baa78d68b",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9965,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374353,
+        "closedAt": "2026-10-25T02:29:12.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/c82be5ccf554098ee3dd0ea63dd5015bf2a603c707973b34615a463baa78d68b"
+    },
+    {
+      "at": "2026-10-25T02:29:22.424Z",
+      "kind": "payment",
+      "label": "x402 payment #103 ($0.01 USDC, signer=session) for \"Legal Intern\"",
+      "hash": "19ccef74083396fcb688d06bd0224cd05576aab491a52a2c813075688fabb132",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9783,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374355,
+        "closedAt": "2026-10-25T02:29:22.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/19ccef74083396fcb688d06bd0224cd05576aab491a52a2c813075688fabb132"
+    },
+    {
+      "at": "2026-10-25T02:29:32.560Z",
+      "kind": "payment",
+      "label": "x402 payment #104 ($0.01 USDC, signer=session) for \"Sea Global Management Associate Program (MAP), Garena Track\"",
+      "hash": "1251892b694e556d91e590ea7b4d21a3804b29747fdfc47607f416fa4bb696c2",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10132,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374357,
+        "closedAt": "2026-10-25T02:29:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/1251892b694e556d91e590ea7b4d21a3804b29747fdfc47607f416fa4bb696c2"
+    },
+    {
+      "at": "2026-10-25T02:29:43.116Z",
+      "kind": "payment",
+      "label": "x402 payment #105 ($0.01 USDC, signer=session) for \"Asistente Administrativo(a), Oficina de Enlace Comunitario (CLO)\"",
+      "hash": "f86e52688fe83e0a9cf5e66989ac7318e958ecf21a0f936c4345a07dc9cb89bb",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10549,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374359,
+        "closedAt": "2026-10-25T02:29:42.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/f86e52688fe83e0a9cf5e66989ac7318e958ecf21a0f936c4345a07dc9cb89bb"
+    },
+    {
+      "at": "2026-10-25T02:29:52.494Z",
+      "kind": "payment",
+      "label": "x402 payment #106 ($0.01 USDC, signer=session) for \"Competencia de Startups Enterprise en IA\"",
+      "hash": "7c7d0456adc88be6dafda5b736473086dbb0163315e2d5cf0602801818bdb161",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9376,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374361,
+        "closedAt": "2026-10-25T02:29:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/7c7d0456adc88be6dafda5b736473086dbb0163315e2d5cf0602801818bdb161"
+    },
+    {
+      "at": "2026-10-25T02:30:02.775Z",
+      "kind": "payment",
+      "label": "x402 payment #107 ($0.01 USDC, signer=session) for \"Preaceleradora de Economía de Cuidados\"",
+      "hash": "c35b00e0f20c9e2ecdc221202d57c6ddec538c8392756a1bf6799e5fa59d223d",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10278,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374363,
+        "closedAt": "2026-10-25T02:30:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/c35b00e0f20c9e2ecdc221202d57c6ddec538c8392756a1bf6799e5fa59d223d"
+    },
+    {
+      "at": "2026-10-25T02:30:12.997Z",
+      "kind": "payment",
+      "label": "x402 payment #108 ($0.01 USDC, signer=session) for \"Vacantes Engen Capital\"",
+      "hash": "d32736554c57d95a1b0bf30ccf0db9c5e9775643321e90c64853f3e3c88afa63",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10219,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374365,
+        "closedAt": "2026-10-25T02:30:12.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/d32736554c57d95a1b0bf30ccf0db9c5e9775643321e90c64853f3e3c88afa63"
+    },
+    {
+      "at": "2026-10-25T02:30:22.925Z",
+      "kind": "payment",
+      "label": "x402 payment #109 ($0.01 USDC, signer=session) for \"Practicante de Control de Calidad\"",
+      "hash": "49940876452d8acf39a1c5621c7fa72625a8b44156b91d5fe8b081ad999a842c",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9926,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374367,
+        "closedAt": "2026-10-25T02:30:22.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/49940876452d8acf39a1c5621c7fa72625a8b44156b91d5fe8b081ad999a842c"
+    },
+    {
+      "at": "2026-10-25T02:30:33.194Z",
+      "kind": "payment",
+      "label": "x402 payment #110 ($0.01 USDC, signer=session) for \"AWS Entrena Latinas (formación gratuita en cloud e IA)\"",
+      "hash": "60ff8d5cea1ecb7136417c685887df8f659db56cb46ac314048c3a538285f805",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10264,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374369,
+        "closedAt": "2026-10-25T02:30:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/60ff8d5cea1ecb7136417c685887df8f659db56cb46ac314048c3a538285f805"
+    },
+    {
+      "at": "2026-10-25T02:30:42.718Z",
+      "kind": "payment",
+      "label": "x402 payment #111 ($0.01 USDC, signer=session) for \"Abogado(a) Inmobiliario \"",
+      "hash": "bb8a2a3589b69d24fba094711b0501456488bf6acc2762d20ad05d93ce85a7c3",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9521,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374371,
+        "closedAt": "2026-10-25T02:30:42.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/bb8a2a3589b69d24fba094711b0501456488bf6acc2762d20ad05d93ce85a7c3"
+    },
+    {
+      "at": "2026-10-25T02:30:52.638Z",
+      "kind": "payment",
+      "label": "x402 payment #112 ($0.01 USDC, signer=session) for \" Business Development\"",
+      "hash": "5678b16922d32ede4f8e8750f419a0e1c3889e48b51795f089552229e89bfb0a",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9913,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374373,
+        "closedAt": "2026-10-25T02:30:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/5678b16922d32ede4f8e8750f419a0e1c3889e48b51795f089552229e89bfb0a"
+    },
+    {
+      "at": "2026-10-25T02:31:02.993Z",
+      "kind": "payment",
+      "label": "x402 payment #113 ($0.01 USDC, signer=session) for \"XII Macrorrueda de Negocios - Alianza del Pacífico\"",
+      "hash": "12500470c2cbe0017054db0f1b2bc9b8a351ad9f46e3404262367e3928dc32a2",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10351,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374375,
+        "closedAt": "2026-10-25T02:31:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/12500470c2cbe0017054db0f1b2bc9b8a351ad9f46e3404262367e3928dc32a2"
+    },
+    {
+      "at": "2026-10-25T02:31:12.618Z",
+      "kind": "payment",
+      "label": "x402 payment #114 ($0.01 USDC, signer=session) for \"Mujeres Líderes (programa de liderazgo)\"",
+      "hash": "a022c13ad2707dbbaebb06e1da9ea93dbb313f2f5743e263f434b235b2e57cbe",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9623,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374377,
+        "closedAt": "2026-10-25T02:31:12.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/a022c13ad2707dbbaebb06e1da9ea93dbb313f2f5743e263f434b235b2e57cbe"
+    },
+    {
+      "at": "2026-10-25T02:31:22.808Z",
+      "kind": "payment",
+      "label": "x402 payment #115 ($0.01 USDC, signer=session) for \"Especialista IBP (Temporal)\"",
+      "hash": "00c71f133a3afabc49ec32eb0c3a9d63525978e575da7f619998b7c46e2f9351",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10188,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374379,
+        "closedAt": "2026-10-25T02:31:22.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/00c71f133a3afabc49ec32eb0c3a9d63525978e575da7f619998b7c46e2f9351"
+    },
+    {
+      "at": "2026-10-25T02:31:32.564Z",
+      "kind": "payment",
+      "label": "x402 payment #116 ($0.01 USDC, signer=session) for \"Internship Unilever México\"",
+      "hash": "50e777a55f506641558faafaec160437dfab122fa46279355f5433b1d7dfefe3",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9753,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374381,
+        "closedAt": "2026-10-25T02:31:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/50e777a55f506641558faafaec160437dfab122fa46279355f5433b1d7dfefe3"
+    },
+    {
+      "at": "2026-10-25T02:31:42.522Z",
+      "kind": "payment",
+      "label": "x402 payment #117 ($0.01 USDC, signer=session) for \"Mexico Tech Week 2026\"",
+      "hash": "d57f8721ac569cd3f7b867f17468cad4c70e431dc769e7b81cb24e32c276099b",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9954,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374383,
+        "closedAt": "2026-10-25T02:31:42.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/d57f8721ac569cd3f7b867f17468cad4c70e431dc769e7b81cb24e32c276099b"
+    },
+    {
+      "at": "2026-10-25T02:31:53.037Z",
+      "kind": "payment",
+      "label": "x402 payment #118 ($0.01 USDC, signer=session) for \"Mesero\"",
+      "hash": "bf8f051caf9bba36a8e5a31f3f23e0b46a6f0bdb6fcaee489bc51e3b808a5d3a",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10510,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374385,
+        "closedAt": "2026-10-25T02:31:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/bf8f051caf9bba36a8e5a31f3f23e0b46a6f0bdb6fcaee489bc51e3b808a5d3a"
+    },
+    {
+      "at": "2026-10-25T02:32:03.271Z",
+      "kind": "payment",
+      "label": "x402 payment #119 ($0.01 USDC, signer=session) for \"Voluntario Juguetón\"",
+      "hash": "c285b98bb48f86e309a5cf62c7cb3e2f433484384872609dc375b5339b454e44",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10230,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374387,
+        "closedAt": "2026-10-25T02:32:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/c285b98bb48f86e309a5cf62c7cb3e2f433484384872609dc375b5339b454e44"
+    },
+    {
+      "at": "2026-10-25T02:32:13.038Z",
+      "kind": "payment",
+      "label": "x402 payment #120 ($0.01 USDC, signer=session) for \"Floor Manager\"",
+      "hash": "da632e73eef2bb763ed88381ace3585ee14bf0f34503040101eb51bee10b6a97",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9763,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374389,
+        "closedAt": "2026-10-25T02:32:12.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/da632e73eef2bb763ed88381ace3585ee14bf0f34503040101eb51bee10b6a97"
+    },
+    {
+      "at": "2026-10-25T02:32:23.268Z",
+      "kind": "payment",
+      "label": "x402 payment #121 ($0.01 USDC, signer=session) for \"Ejecutivo de cuenta\"",
+      "hash": "78bceec022ac6d3ef7754f91c4c7f9b4c8d97f2ae3835f9cd7bb7023d0e0d394",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10226,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374391,
+        "closedAt": "2026-10-25T02:32:22.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/78bceec022ac6d3ef7754f91c4c7f9b4c8d97f2ae3835f9cd7bb7023d0e0d394"
+    },
+    {
+      "at": "2026-10-25T02:32:33.344Z",
+      "kind": "payment",
+      "label": "x402 payment #122 ($0.01 USDC, signer=session) for \"Gerente de Proyectos\"",
+      "hash": "71d1384e405b663d2be4ef4016654536f295a63e80a08e304d9a63651ce027cf",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10073,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374393,
+        "closedAt": "2026-10-25T02:32:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/71d1384e405b663d2be4ef4016654536f295a63e80a08e304d9a63651ce027cf"
+    },
+    {
+      "at": "2026-10-25T02:32:42.665Z",
+      "kind": "payment",
+      "label": "x402 payment #123 ($0.01 USDC, signer=session) for \"Ejecutivo de Ventas D2D\"",
+      "hash": "c4c725fbbed3f21ad7149d3f650226bee38fd75ab96198c8bb3699c120bb139d",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9319,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374395,
+        "closedAt": "2026-10-25T02:32:42.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/c4c725fbbed3f21ad7149d3f650226bee38fd75ab96198c8bb3699c120bb139d"
+    },
+    {
+      "at": "2026-10-25T02:32:52.673Z",
+      "kind": "payment",
+      "label": "x402 payment #124 ($0.01 USDC, signer=session) for \"Abogado/a Junior\"",
+      "hash": "b67197d8b58603efad6d3b721bc3188e19a2bdd447696613a7a436366e5ed9cc",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10004,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374397,
+        "closedAt": "2026-10-25T02:32:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/b67197d8b58603efad6d3b721bc3188e19a2bdd447696613a7a436366e5ed9cc"
+    },
+    {
+      "at": "2026-10-25T02:33:02.356Z",
+      "kind": "payment",
+      "label": "x402 payment #125 ($0.01 USDC, signer=session) for \"Becas de posgrado Fulbright García Robles\"",
+      "hash": "c41faad4043a24b34a11c6f374c7ba9dfac8b947f96d0b045fe99d1882ded0b6",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9678,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374399,
+        "closedAt": "2026-10-25T02:33:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/c41faad4043a24b34a11c6f374c7ba9dfac8b947f96d0b045fe99d1882ded0b6"
+    },
+    {
+      "at": "2026-10-25T02:33:07.924Z",
+      "kind": "payment",
+      "label": "x402 payment #126 ($0.01 USDC, signer=session) for \"Liderazgo Emocional y cóctel de networking para mujeres en tecnología\"",
+      "hash": "8e611583d6e4b12381949d0d5fc76adcd9d66baf380c2e6c7d55a5d6e0250db3",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 5565,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374400,
+        "closedAt": "2026-10-25T02:33:07.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/8e611583d6e4b12381949d0d5fc76adcd9d66baf380c2e6c7d55a5d6e0250db3"
+    },
+    {
+      "at": "2026-10-25T02:33:18.473Z",
+      "kind": "payment",
+      "label": "x402 payment #127 ($0.01 USDC, signer=session) for \"Devs House by Capital One, Mexico Tech Town\"",
+      "hash": "aeed2b2b84ac2f87d959c44686637e6e4ac0630fc40e96ad0b14fd13055c1919",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10544,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374402,
+        "closedAt": "2026-10-25T02:33:17.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/aeed2b2b84ac2f87d959c44686637e6e4ac0630fc40e96ad0b14fd13055c1919"
+    },
+    {
+      "at": "2026-10-25T02:33:27.554Z",
+      "kind": "payment",
+      "label": "x402 payment #128 ($0.01 USDC, signer=session) for \"ULIP 2027, Programa de Interns\"",
+      "hash": "a70a071886f6c575b33b8d82d2ac50ee2fb9e1d7e1875886fb596b4dbe688e2c",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9076,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374404,
+        "closedAt": "2026-10-25T02:33:27.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/a70a071886f6c575b33b8d82d2ac50ee2fb9e1d7e1875886fb596b4dbe688e2c"
+    },
+    {
+      "at": "2026-10-25T02:33:37.417Z",
+      "kind": "payment",
+      "label": "x402 payment #129 ($0.01 USDC, signer=session) for \"Accounting Specialist\"",
+      "hash": "a8062c04806135ab3eade0217f782d5a6203741ea8b9c95932034d8be1fa481c",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9858,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374406,
+        "closedAt": "2026-10-25T02:33:37.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/a8062c04806135ab3eade0217f782d5a6203741ea8b9c95932034d8be1fa481c"
+    },
+    {
+      "at": "2026-10-25T02:33:48.169Z",
+      "kind": "payment",
+      "label": "x402 payment #130 ($0.01 USDC, signer=session) for \"Analista de Datos Mid\"",
+      "hash": "387a9e0aa49b190c171cb043837bfce783f6e8bbc12e2957d62490185e75fb17",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10749,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374408,
+        "closedAt": "2026-10-25T02:33:47.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/387a9e0aa49b190c171cb043837bfce783f6e8bbc12e2957d62490185e75fb17"
+    },
+    {
+      "at": "2026-10-25T02:33:57.795Z",
+      "kind": "payment",
+      "label": "x402 payment #131 ($0.01 USDC, signer=session) for \"Internship Científico de Datos\"",
+      "hash": "4d157cb3f042e216d57b68bdb9ff2c9ec22e178424ebe7f69feaf5d1f6ea3091",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9611,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374410,
+        "closedAt": "2026-10-25T02:33:57.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/4d157cb3f042e216d57b68bdb9ff2c9ec22e178424ebe7f69feaf5d1f6ea3091"
+    },
+    {
+      "at": "2026-10-25T02:34:07.830Z",
+      "kind": "payment",
+      "label": "x402 payment #132 ($0.01 USDC, signer=session) for \"Líder de Diseño de Empaques de Nuestras Marcas\"",
+      "hash": "952810307f22056a17de658751c4245c278ab5f65b0fb16dfebe90fd8e2f79ec",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10029,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374412,
+        "closedAt": "2026-10-25T02:34:07.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/952810307f22056a17de658751c4245c278ab5f65b0fb16dfebe90fd8e2f79ec"
+    },
+    {
+      "at": "2026-10-25T02:34:17.302Z",
+      "kind": "payment",
+      "label": "x402 payment #133 ($0.01 USDC, signer=session) for \"Analista Sr. Assortment y Proyectos Especiales\"",
+      "hash": "726f505ab135fec664b44084d0464e0302b73930f054f913c3932fb27570cf98",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9467,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374414,
+        "closedAt": "2026-10-25T02:34:17.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/726f505ab135fec664b44084d0464e0302b73930f054f913c3932fb27570cf98"
+    },
+    {
+      "at": "2026-10-25T02:34:22.606Z",
+      "kind": "payment",
+      "label": "x402 payment #134 ($0.01 USDC, signer=session) for \"Business Analyst (Comercial)\"",
+      "hash": "1b7442b3826ab6362cdcb903436758b43187e1d3b93a81c0abd15c14452b57b8",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 5299,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374415,
+        "closedAt": "2026-10-25T02:34:22.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/1b7442b3826ab6362cdcb903436758b43187e1d3b93a81c0abd15c14452b57b8"
+    },
+    {
+      "at": "2026-10-25T02:34:32.930Z",
+      "kind": "payment",
+      "label": "x402 payment #135 ($0.01 USDC, signer=session) for \"Chilangatón 2026\"",
+      "hash": "8ca1f2d151bf7f8b3bce33d8faa59255ec95759c515558811cb918037dda8871",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10320,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374417,
+        "closedAt": "2026-10-25T02:34:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/8ca1f2d151bf7f8b3bce33d8faa59255ec95759c515558811cb918037dda8871"
+    },
+    {
+      "at": "2026-10-25T02:34:42.457Z",
+      "kind": "payment",
+      "label": "x402 payment #136 ($0.01 USDC, signer=session) for \"Líder de Inteligencia de Negocios\"",
+      "hash": "76d173768ce91715d9a9d345aa40d376f5d48d5bfb8b3eb529cac01cadcb7f3e",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9522,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374419,
+        "closedAt": "2026-10-25T02:34:42.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/76d173768ce91715d9a9d345aa40d376f5d48d5bfb8b3eb529cac01cadcb7f3e"
+    },
+    {
+      "at": "2026-10-25T02:34:52.682Z",
+      "kind": "payment",
+      "label": "x402 payment #137 ($0.01 USDC, signer=session) for \"Analista Administrativo Paquetería\"",
+      "hash": "3065090e854acdb3b473b6db239f3b7fd643156a96ff2d82ff3ec5bc69bc5a2b",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10221,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374421,
+        "closedAt": "2026-10-25T02:34:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/3065090e854acdb3b473b6db239f3b7fd643156a96ff2d82ff3ec5bc69bc5a2b"
+    },
+    {
+      "at": "2026-10-25T02:35:02.840Z",
+      "kind": "payment",
+      "label": "x402 payment #138 ($0.01 USDC, signer=session) for \"Coordinador de importaciones y exportaciones\"",
+      "hash": "8d3343d55ac6fd0b871c305b6d3d6d1d34ebdcb218b9d34de448af1688cd63c7",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10157,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374423,
+        "closedAt": "2026-10-25T02:35:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/8d3343d55ac6fd0b871c305b6d3d6d1d34ebdcb218b9d34de448af1688cd63c7"
+    },
+    {
+      "at": "2026-10-25T02:35:12.577Z",
+      "kind": "payment",
+      "label": "x402 payment #139 ($0.01 USDC, signer=session) for \"Comprador Jr Malayerba\"",
+      "hash": "e675dec2bc475386b973c1aaf5cb600dd8412931070a6c2270679508682fcdee",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9733,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374425,
+        "closedAt": "2026-10-25T02:35:12.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/e675dec2bc475386b973c1aaf5cb600dd8412931070a6c2270679508682fcdee"
+    },
+    {
+      "at": "2026-10-25T02:35:22.772Z",
+      "kind": "payment",
+      "label": "x402 payment #140 ($0.01 USDC, signer=session) for \"Diseñador de Moda Caballeros\"",
+      "hash": "951bb0ce24848b784bae2324f9ad8bf35e5697b4171fb9de4f72b1ff99df5ad2",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10169,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374427,
+        "closedAt": "2026-10-25T02:35:22.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/951bb0ce24848b784bae2324f9ad8bf35e5697b4171fb9de4f72b1ff99df5ad2"
+    },
+    {
+      "at": "2026-10-25T02:35:32.449Z",
+      "kind": "payment",
+      "label": "x402 payment #141 ($0.01 USDC, signer=session) for \"Trainee de Moda\"",
+      "hash": "c2ca2192c6109eafdd0dddc49470e1abb21df07e8e106d1659f846b843e97145",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9675,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374429,
+        "closedAt": "2026-10-25T02:35:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/c2ca2192c6109eafdd0dddc49470e1abb21df07e8e106d1659f846b843e97145"
+    },
+    {
+      "at": "2026-10-25T02:35:42.688Z",
+      "kind": "payment",
+      "label": "x402 payment #142 ($0.01 USDC, signer=session) for \"Emprendedores Comerciales\"",
+      "hash": "20850af7d803e2e16e827c6cb1b946505eef0d01f6689b34a924a6fa80f3f9bc",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10223,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374431,
+        "closedAt": "2026-10-25T02:35:42.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/20850af7d803e2e16e827c6cb1b946505eef0d01f6689b34a924a6fa80f3f9bc"
+    },
+    {
+      "at": "2026-10-25T02:35:52.894Z",
+      "kind": "payment",
+      "label": "x402 payment #143 ($0.01 USDC, signer=session) for \"Prácticas profesionales\"",
+      "hash": "2e392bb68100373fb361d45579ae3e68a422e241b81b0b156c0dd9ec6725dd16",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10201,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374433,
+        "closedAt": "2026-10-25T02:35:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/2e392bb68100373fb361d45579ae3e68a422e241b81b0b156c0dd9ec6725dd16"
+    },
+    {
+      "at": "2026-10-25T02:36:03.035Z",
+      "kind": "payment",
+      "label": "x402 payment #144 ($0.01 USDC, signer=session) for \"Beca Destino Impacto, FLII 2027\"",
+      "hash": "165f4ec5bdc7e9c8fde4c369c4049505d050c0f08baf356197c48a553f9a7334",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10136,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374435,
+        "closedAt": "2026-10-25T02:36:02.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/165f4ec5bdc7e9c8fde4c369c4049505d050c0f08baf356197c48a553f9a7334"
+    },
+    {
+      "at": "2026-10-25T02:36:12.590Z",
+      "kind": "payment",
+      "label": "x402 payment #145 ($0.01 USDC, signer=session) for \"Key Account Manager, Sector Privado y Gubernamental\"",
+      "hash": "a85fbe84a282fae37e11acbbbc4002e48c46495368f92e529b263cf0377c55fc",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9553,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374437,
+        "closedAt": "2026-10-25T02:36:12.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/a85fbe84a282fae37e11acbbbc4002e48c46495368f92e529b263cf0377c55fc"
+    },
+    {
+      "at": "2026-10-25T02:36:17.656Z",
+      "kind": "payment",
+      "label": "x402 payment #146 ($0.01 USDC, signer=session) for \"Government Affairs and Public Policy Specialist\"",
+      "hash": "52158c5c0c566134f22347e85e5d71f88771157167b2d6a7594b9fd690c11d77",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 5063,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374438,
+        "closedAt": "2026-10-25T02:36:17.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/52158c5c0c566134f22347e85e5d71f88771157167b2d6a7594b9fd690c11d77"
+    },
+    {
+      "at": "2026-10-25T02:36:23.312Z",
+      "kind": "payment",
+      "label": "x402 payment #147 ($0.01 USDC, signer=session) for \"Tech Lead Cloud (Azure / .NET), Juntos+\"",
+      "hash": "8696c56b8ebfe1fa6af34634a6e78a684da58f26ffaf6b3ba40ff8f10c36fc0d",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 5554,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374439,
+        "closedAt": "2026-10-25T02:36:22.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/8696c56b8ebfe1fa6af34634a6e78a684da58f26ffaf6b3ba40ff8f10c36fc0d"
+    },
+    {
+      "at": "2026-10-25T02:36:32.932Z",
+      "kind": "payment",
+      "label": "x402 payment #148 ($0.01 USDC, signer=session) for \"More Green Fund México 2026\"",
+      "hash": "c1989a6384949b405dfc2614b5b496f4f5528b935c49637db81faa01e125135f",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9600,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374441,
+        "closedAt": "2026-10-25T02:36:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/c1989a6384949b405dfc2614b5b496f4f5528b935c49637db81faa01e125135f"
+    },
+    {
+      "at": "2026-10-25T02:36:42.579Z",
+      "kind": "payment",
+      "label": "x402 payment #149 ($0.01 USDC, signer=session) for \"Community Manager & Setter\"",
+      "hash": "190ed5a0f9aef372ec3a938a1751f3a038c7918c5526f5086a0637a1ae5ddf18",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9645,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374443,
+        "closedAt": "2026-10-25T02:36:42.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/190ed5a0f9aef372ec3a938a1751f3a038c7918c5526f5086a0637a1ae5ddf18"
+    },
+    {
+      "at": "2026-10-25T02:36:53.311Z",
+      "kind": "payment",
+      "label": "x402 payment #150 ($0.01 USDC, signer=session) for \"Diseñador(a) Gráfico(a)\"",
+      "hash": "50f9248194a6b0a16b38161608f0eff55022ef88aa5f54a0f02a16890e407581",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10728,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374445,
+        "closedAt": "2026-10-25T02:36:52.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/50f9248194a6b0a16b38161608f0eff55022ef88aa5f54a0f02a16890e407581"
+    },
+    {
+      "at": "2026-10-25T02:37:18.195Z",
+      "kind": "payment",
+      "label": "x402 payment (demo video, $0.01 USDC, signer=session) for \"ventas en CDMX\"",
+      "hash": "24ffc270b79d6a0073dc70714cf28733a485ba8c864f438c12f5784087148abf",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 7399,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374450,
+        "closedAt": "2026-10-25T02:37:17.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/24ffc270b79d6a0073dc70714cf28733a485ba8c864f438c12f5784087148abf"
+    },
+    {
+      "at": "2026-10-25T02:37:32.506Z",
+      "kind": "payment",
+      "label": "x402 payment (demo video, $0.01 USDC, signer=session) for \"abogado junior\"",
+      "hash": "d6937f6f9d08f6d0115f1fc5613ba88bafff9ec7e883bcc305c1f81473a96410",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 9405,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374453,
+        "closedAt": "2026-10-25T02:37:32.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/d6937f6f9d08f6d0115f1fc5613ba88bafff9ec7e883bcc305c1f81473a96410"
+    },
+    {
+      "at": "2026-10-25T02:37:48.338Z",
+      "kind": "payment",
+      "label": "x402 payment (demo video, $0.01 USDC, signer=session) for \"analista de datos\"",
+      "hash": "600e5565d5192f40b55de98f0207a18c0d3063db5a2a08af0ee297c5e28c2e56",
+      "status": "SUCCESS",
+      "resource": "/api/agente",
+      "ms": 10924,
+      "onChain": {
+        "status": "SUCCESS",
+        "ledger": 5374456,
+        "closedAt": "2026-10-25T02:37:47.000Z"
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/600e5565d5192f40b55de98f0207a18c0d3063db5a2a08af0ee297c5e28c2e56"
+    },
+    {
+      "at": "2026-10-25T02:38:02.375Z",
+      "kind": "rejection",
+      "label": "REJECTED on-chain (demo video): $0.06 payment over the $0.05 per-request cap",
+      "hash": "9e3dcf3edb33b96700f2029463ee80d9f90311792661471bc826a7a42dd0cb05",
+      "status": "FAILED",
+      "expectedCode": 10007,
+      "onChainCode": 10007,
+      "onChain": {
+        "status": "FAILED",
+        "ledger": 5374459,
+        "closedAt": "2026-10-25T02:38:02.000Z",
+        "contractErrorCode": 10007
+      },
+      "link": "https://stellar.expert/explorer/testnet/tx/9e3dcf3edb33b96700f2029463ee80d9f90311792661471bc826a7a42dd0cb05"
+    }
+  ]
+}

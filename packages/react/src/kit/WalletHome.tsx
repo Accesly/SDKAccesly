@@ -72,10 +72,17 @@ export function WalletHome(props: WalletHomeProps): JSX.Element {
       </section>
 
       {open === 'send' &&
-        renderModal(<SendFlow onCancel={() => setOpen(null)} onSuccess={() => setOpen(null)} />, () => setOpen(null))}
-      {open === 'receive' && renderModal(<ReceiveFlow onClose={() => setOpen(null)} />, () => setOpen(null))}
+        renderModal(
+          <SendFlow onCancel={() => setOpen(null)} onSuccess={() => setOpen(null)} />,
+          () => setOpen(null),
+        )}
+      {open === 'receive' &&
+        renderModal(<ReceiveFlow onClose={() => setOpen(null)} />, () => setOpen(null))}
       {open === 'addFunds' &&
-        renderModal(<AddFundsFlow onCancel={() => setOpen(null)} onSuccess={() => setOpen(null)} />, () => setOpen(null))}
+        renderModal(
+          <AddFundsFlow onCancel={() => setOpen(null)} onSuccess={() => setOpen(null)} />,
+          () => setOpen(null),
+        )}
     </div>
   );
 }
@@ -110,9 +117,7 @@ function UpgradeBanner({ targetVersion, strategy }: { targetVersion: string; str
   return (
     <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 px-4 py-3 text-xs flex items-center justify-between gap-2">
       <div>
-        <p className="font-medium text-amber-900 dark:text-amber-200">
-          Actualización disponible
-        </p>
+        <p className="font-medium text-amber-900 dark:text-amber-200">Actualización disponible</p>
         <p className="text-amber-700 dark:text-amber-300/70">
           Nueva versión <span className="font-mono">{targetVersion}</span>{' '}
           {strategy === 'force' ? '(requerida)' : '(opcional)'}.

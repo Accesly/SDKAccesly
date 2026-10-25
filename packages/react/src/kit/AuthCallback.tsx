@@ -77,14 +77,18 @@ export function AuthCallback(props: AuthCallbackProps): JSX.Element {
     return (
       <div className={props.className ?? 'w-full max-w-sm mx-auto p-6 text-center space-y-3'}>
         <div className="text-3xl">⚠️</div>
-        <p className="text-sm text-red-600">{error ?? props.errorText ?? 'Error de autenticación'}</p>
+        <p className="text-sm text-red-600">
+          {error ?? props.errorText ?? 'Error de autenticación'}
+        </p>
       </div>
     );
   }
   return (
     <div className={props.className ?? 'w-full max-w-sm mx-auto p-6 text-center space-y-3'}>
       <div className="text-3xl animate-pulse">⏳</div>
-      <p className="text-sm text-neutral-600">{props.loadingText ?? 'Completando inicio de sesión…'}</p>
+      <p className="text-sm text-neutral-600">
+        {props.loadingText ?? 'Completando inicio de sesión…'}
+      </p>
     </div>
   );
 }

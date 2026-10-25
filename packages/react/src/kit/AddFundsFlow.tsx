@@ -71,8 +71,8 @@ export function AddFundsFlow(props: AddFundsFlowProps): JSX.Element {
     props.defaultMethod && enabledMethods.includes(props.defaultMethod)
       ? props.defaultMethod
       : enabledMethods.length === 1
-      ? enabledMethods[0]!
-      : null;
+        ? enabledMethods[0]!
+        : null;
 
   const [method, setMethod] = useState<FiatMethod | null>(initialMethod);
   const [step, setStep] = useState<Step>(
@@ -81,7 +81,11 @@ export function AddFundsFlow(props: AddFundsFlowProps): JSX.Element {
   const [kycStatus, setKycStatus] = useState<string | null>(null);
   const [kycUrl, setKycUrl] = useState<string | null>(null);
   const [amountMxn, setAmountMxn] = useState('');
-  const [quote, setQuote] = useState<{ amountUsdc?: string; fxRate?: string; quoteId?: string } | null>(null);
+  const [quote, setQuote] = useState<{
+    amountUsdc?: string;
+    fxRate?: string;
+    quoteId?: string;
+  } | null>(null);
   const [order, setOrder] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -169,7 +173,10 @@ export function AddFundsFlow(props: AddFundsFlowProps): JSX.Element {
               <span className="text-2xl">{METHOD_ICON[m]}</span>
               <div className="flex-1">
                 <div className="font-medium">{METHOD_LABEL[m]}</div>
-                <div className="text-xs text-neutral-500" dangerouslySetInnerHTML={{ __html: METHOD_BLURB[m] }} />
+                <div
+                  className="text-xs text-neutral-500"
+                  dangerouslySetInnerHTML={{ __html: METHOD_BLURB[m] }}
+                />
               </div>
               <span className="text-neutral-300">→</span>
             </button>
@@ -191,8 +198,9 @@ export function AddFundsFlow(props: AddFundsFlowProps): JSX.Element {
           <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 text-sm">
             <p className="font-medium">Verificación de identidad</p>
             <p className="text-neutral-500 mt-1">
-              Esta app pide KYC nivel <span className="font-mono">{kycPolicy.minLevel ?? 'KYC2'}</span>{' '}
-              antes de permitir onramp.
+              Esta app pide KYC nivel{' '}
+              <span className="font-mono">{kycPolicy.minLevel ?? 'KYC2'}</span> antes de permitir
+              onramp.
             </p>
             <p className="text-xs text-neutral-400 mt-2">
               Status actual: <span className="font-mono">{kycStatus ?? 'desconocido'}</span>
@@ -283,12 +291,12 @@ export function AddFundsFlow(props: AddFundsFlowProps): JSX.Element {
               {method === 'card'
                 ? 'Sigue el checkout'
                 : method === 'oxxo'
-                ? 'Paga en OXXO'
-                : 'Transfiere por SPEI'}
+                  ? 'Paga en OXXO'
+                  : 'Transfiere por SPEI'}
             </p>
             <div className="text-xs text-neutral-500 space-y-1">
               {Object.entries(order)
-                .filter(([k, v]) => typeof v !== 'object' && v !== null && v !== undefined)
+                .filter(([, v]) => typeof v !== 'object' && v !== null && v !== undefined)
                 .map(([k, v]) => (
                   <Row key={k} label={k} value={String(v)} mono />
                 ))}
@@ -325,7 +333,17 @@ export function AddFundsFlow(props: AddFundsFlowProps): JSX.Element {
   );
 }
 
-function Row({ label, value, bold, mono }: { label: string; value: string; bold?: boolean; mono?: boolean }) {
+function Row({
+  label,
+  value,
+  bold,
+  mono,
+}: {
+  label: string;
+  value: string;
+  bold?: boolean;
+  mono?: boolean;
+}) {
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-neutral-500 text-xs uppercase tracking-wider">{label}</span>

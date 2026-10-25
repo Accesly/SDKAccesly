@@ -46,15 +46,11 @@ export function BalanceCard(props: BalanceCardProps): JSX.Element {
         <span className="text-xs uppercase tracking-wider opacity-80">
           {branding.displayName ?? 'Wallet'}
         </span>
-        <span className="text-xs opacity-70 font-mono">
-          {auth.username ?? '—'}
-        </span>
+        <span className="text-xs opacity-70 font-mono">{auth.username ?? '—'}</span>
       </header>
 
       <div className="space-y-1">
-        <div className="text-xs uppercase tracking-wider opacity-70">
-          Saldo {primary}
-        </div>
+        <div className="text-xs uppercase tracking-wider opacity-70">Saldo {primary}</div>
         <div className="text-4xl font-bold tabular-nums">
           {isLoading ? '—' : formatAmount(primaryValue)}
           <span className="text-xl ml-2 opacity-80">{primary}</span>
@@ -64,9 +60,7 @@ export function BalanceCard(props: BalanceCardProps): JSX.Element {
       <footer className="mt-5 flex items-center justify-between text-xs opacity-80">
         <span>
           {secondaryAsset}:{' '}
-          <span className="font-mono">
-            {isLoading ? '—' : formatAmount(secondaryValue)}
-          </span>
+          <span className="font-mono">{isLoading ? '—' : formatAmount(secondaryValue)}</span>
         </span>
         {props.fiatLabel && <span>{props.fiatLabel}</span>}
       </footer>

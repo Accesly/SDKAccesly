@@ -23,7 +23,10 @@ function makeAuthClient(over: Partial<AuthClient> = {}): AuthClient {
   };
 }
 
-function withProvider(node: React.ReactNode, opts: { authClient?: AuthClient; tokens?: AuthTokens } = {}) {
+function withProvider(
+  node: React.ReactNode,
+  opts: { authClient?: AuthClient; tokens?: AuthTokens } = {},
+) {
   const storage = new InMemorySessionStorage();
   if (opts.tokens) storage.save(opts.tokens);
   return render(
@@ -50,7 +53,10 @@ beforeEach(() => {
   // Block /app-config fetches so useAppConfig + useBranding don't pollute test logs.
   // Hooks fall back to safe defaults when the request rejects.
   globalThis.fetch = vi.fn().mockResolvedValue(
-    new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response(JSON.stringify({}), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }),
   ) as unknown as typeof fetch;
 });
 
@@ -143,10 +149,7 @@ describe('@accesly/react/kit ReceiveFlow', () => {
   it('renders a custom renderQr when passed', async () => {
     const renderQr = vi.fn((text: string) => <div data-testid="qr">qr-for-{text}</div>);
     withProvider(
-      <ReceiveFlow
-        walletAddress="GBV2EXAMPLEXBQU34567890ABCDEFGHIJKL"
-        renderQr={renderQr}
-      />,
+      <ReceiveFlow walletAddress="GBV2EXAMPLEXBQU34567890ABCDEFGHIJKL" renderQr={renderQr} />,
     );
     await waitFor(() => {
       expect(screen.getByTestId('qr').textContent).toContain('GBV2EXAMPLE');

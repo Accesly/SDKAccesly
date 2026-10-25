@@ -62,9 +62,7 @@ export function parseQrPayment(raw: string): ParsedQrPayment | null {
 
     const amountRaw = params.get('amount');
     const amount =
-      amountRaw && /^\d+(\.\d+)?$/.test(amountRaw) && Number(amountRaw) > 0
-        ? amountRaw
-        : null;
+      amountRaw && /^\d+(\.\d+)?$/.test(amountRaw) && Number(amountRaw) > 0 ? amountRaw : null;
 
     // asset_code + asset_issuer: si no vienen, es XLM. Si vienen, tienen que
     // ser USDC (Circle) — los demás no los soportamos hoy, devolvemos null en

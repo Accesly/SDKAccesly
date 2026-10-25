@@ -104,10 +104,7 @@ function setState(store: BalanceStore, patch: Partial<BalanceState>) {
   for (const fn of store.listeners) fn(store.state);
 }
 
-async function fetchBalance(
-  walletAddress: string,
-  ctx: AcceslyContextValue,
-): Promise<void> {
+async function fetchBalance(walletAddress: string, ctx: AcceslyContextValue): Promise<void> {
   const s = getBalanceStore(walletAddress);
   if (s.inFlight) return s.inFlight;
   s.inFlight = (async () => {

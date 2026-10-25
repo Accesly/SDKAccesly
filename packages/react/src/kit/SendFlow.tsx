@@ -203,12 +203,8 @@ export function SendFlow(props: SendFlowProps): JSX.Element {
       <div className={props.className ?? 'w-full max-w-sm text-center space-y-4'}>
         <div className="text-5xl">✓</div>
         <h2 className="text-lg font-semibold">Enviado</h2>
-        <p className="text-sm text-neutral-500">
-          Tu transacción está confirmada en la red.
-        </p>
-        {txHash && (
-          <div className="font-mono text-[10px] text-neutral-500 break-all">{txHash}</div>
-        )}
+        <p className="text-sm text-neutral-500">Tu transacción está confirmada en la red.</p>
+        {txHash && <div className="font-mono text-[10px] text-neutral-500 break-all">{txHash}</div>}
         <div className="flex gap-2 justify-center">
           {explorerUrl && (
             <a
@@ -253,7 +249,7 @@ export function SendFlow(props: SendFlowProps): JSX.Element {
   }
 
   const displayAmount = amount === '' ? '0' : amount;
-  const assetBalance = asset === 'USDC' ? balance.usdc ?? '0' : balance.xlm ?? '0';
+  const assetBalance = asset === 'USDC' ? (balance.usdc ?? '0') : (balance.xlm ?? '0');
 
   // Inline styles — el kit debe funcionar sin depender de que el integrador
   // tenga Tailwind con el kit en su content path. Todos los colores usan
@@ -409,9 +405,7 @@ export function SendFlow(props: SendFlowProps): JSX.Element {
             {displayAmount}
           </span>
         </div>
-        {qrLocked && (
-          <div style={{ ...labelStyle, fontSize: 10 }}>Fijado por el QR</div>
-        )}
+        {qrLocked && <div style={{ ...labelStyle, fontSize: 10 }}>Fijado por el QR</div>}
       </div>
 
       {/* Teclado numérico */}
@@ -514,16 +508,24 @@ export function SendFlow(props: SendFlowProps): JSX.Element {
         </button>
       </div>
 
-      {qrOpen && (
-        <QrScanModal onResult={handleQrResult} onClose={() => setQrOpen(false)} />
-      )}
+      {qrOpen && <QrScanModal onResult={handleQrResult} onClose={() => setQrOpen(false)} />}
     </form>
   );
 }
 
 function BackspaceIcon(): JSX.Element {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <path d="M22 4H8L2 12l6 8h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" />
       <line x1="18" y1="9" x2="12" y2="15" />
       <line x1="12" y1="9" x2="18" y2="15" />

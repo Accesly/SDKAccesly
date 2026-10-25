@@ -36,10 +36,7 @@ export function MovementsList(props: MovementsListProps): JSX.Element {
   // Llamamos ambos hooks siempre para mantener orden estable de hooks de
   // React. El que no se usa corre con polling minimal — pasamos 0 a history
   // para desactivar poll, y activity ya hace SSE así que su overhead es mínimo.
-  const history = useWalletHistory(
-    undefined,
-    source === 'history' ? {} : { pollIntervalMs: 0 },
-  );
+  const history = useWalletHistory(undefined, source === 'history' ? {} : { pollIntervalMs: 0 });
   const activity = useWalletActivity(null, { limit });
 
   const events = useMemo<readonly WalletActivityItem[]>(() => {
@@ -71,9 +68,7 @@ export function MovementsList(props: MovementsListProps): JSX.Element {
   }
   if (error) {
     return (
-      <div className="text-sm text-red-500 px-3 py-2 rounded-lg bg-red-50">
-        {error.message}
-      </div>
+      <div className="text-sm text-red-500 px-3 py-2 rounded-lg bg-red-50">{error.message}</div>
     );
   }
   if (events.length === 0) {

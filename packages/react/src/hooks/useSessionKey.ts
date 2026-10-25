@@ -143,8 +143,9 @@ export function useSessionKey(): UseSessionKeyResult {
       setError(err);
       throw err;
     }
-    const walletDefaults = (appConfig as { walletDefaults?: { sessionKeyEnabled?: boolean } } | null)
-      ?.walletDefaults;
+    const walletDefaults = (
+      appConfig as { walletDefaults?: { sessionKeyEnabled?: boolean } } | null
+    )?.walletDefaults;
     if (!walletDefaults?.sessionKeyEnabled) {
       const err = new Error(
         'useSessionKey: session keys are not enabled for this app. ' +
