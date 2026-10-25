@@ -14,6 +14,7 @@ export {
   AcceslyExactStellarScheme,
   STELLAR_PUBNET_CAIP2,
   STELLAR_TESTNET_CAIP2,
+  USDC_BY_NETWORK,
   X402PaymentError,
   X402PolicyRejectedError,
   X402_POLICY_ERRORS,

@@ -51,6 +51,12 @@ const DEFAULT_RPC_URLS: Record<string, string> = {
   [STELLAR_TESTNET_CAIP2]: 'https://soroban-testnet.stellar.org',
 };
 
+/** USDC (SAC de Circle) por red; los mismos que usa `@x402/stellar`. */
+export const USDC_BY_NETWORK: Readonly<Record<string, string>> = {
+  [STELLAR_TESTNET_CAIP2]: 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA',
+  [STELLAR_PUBNET_CAIP2]: 'CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75',
+};
+
 /** Segundos aproximados por ledger, para convertir `maxTimeoutSeconds`. */
 const LEDGER_SECONDS = 5;
 
@@ -150,6 +156,13 @@ export function parseContractErrorCode(message: string): number | undefined {
  */
 export class AcceslyExactStellarScheme implements SchemeNetworkClient {
   readonly scheme = 'exact';
+
+  /**
+   * USDC es el asset default en Stellar. Lo usa `x402Client` para sus spend
+   * controls (topes en USD del lado cliente).
+   */
+  readonly findDefaultAsset = (asset: string, network: string) =>
+    USDC_BY_NETWORK[network] === asset ? { asset, decimals: 7, symbol: 'USDC' } : undefined;
 
   constructor(
     private readonly signer: AcceslyX402Signer,

@@ -1,0 +1,4 @@
+# Llaves de prueba y fragmentos: nunca al repo.
+.secrets/
+# Estado local de la corrida (direcciones, hashes). Se publica vía 06-report.
+.state/
