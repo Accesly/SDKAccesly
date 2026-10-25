@@ -35,8 +35,10 @@ testnet only. Written 25 Oct 2026.
 - Verification (from `@x402/stellar`) requires a single `transfer` of the requested asset to the
   requested `payTo` for the requested amount, a successful simulation (where `__check_auth` and the
   policy run), and no contract events other than that `transfer`.
-- The fee ceiling is configurable (`FACILITATOR_MAX_FEE_STROOPS`). On testnet a settlement costs
-  about 7 XLM because of storage rent; mainnet fees are much lower.
+- The fee ceiling is configurable (`FACILITATOR_MAX_FEE_STROOPS`). On testnet the first payment
+  through a rule cost 2.6 to 6 XLM (it creates the policy's storage entry and restores archived
+  shared entries); every later payment cost about 0.002 XLM. The default ceiling of `@x402/stellar`
+  (0.5 XLM) rejects that first payment, so the ceiling was raised.
 - The resource server only settles after the agent answers with a status below 400, so a failed
   query is not charged (`withX402Payment` cancels the verified payment).
 

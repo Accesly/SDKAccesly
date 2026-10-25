@@ -7,7 +7,8 @@
  *   VAULT_SECRET         HMAC de tokens OTP (≥ 32 chars)
  *   FACILITATOR_SECRET   S... de la cuenta facilitadora (solo XLM)
  *   MERCHANT_PUBLIC      G... que cobra el agente de referencia
- *   RESEND_API_KEY       proveedor de email para el OTP
+ *   GMAIL_USER, GMAIL_APP_PASSWORD  envío del OTP por Gmail (SMTP)
+ *   RESEND_API_KEY       envío del OTP por Resend (si no hay Gmail)
  *   OTP_FROM             remitente (p. ej. "Accesly <no-reply@accesly.xyz>")
  *   DEV_OTP_ECHO=1       devuelve el OTP en la respuesta (prohibido con NODE_ENV=production)
  *   FACILITATOR_MAX_FEE_STROOPS  techo de fee por liquidación (200000000 = 20 XLM)
@@ -40,6 +41,7 @@ app.use(
     secret: env.VAULT_SECRET,
     resendApiKey: env.RESEND_API_KEY,
     otpFrom: env.OTP_FROM ?? 'Accesly <no-reply@accesly.xyz>',
+    gmail: { user: env.GMAIL_USER, appPassword: env.GMAIL_APP_PASSWORD },
     devEcho,
   }),
 );

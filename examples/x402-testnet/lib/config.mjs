@@ -42,8 +42,11 @@ export const cfg = {
 
 export const usd = (dollars) => BigInt(Math.round(dollars * 1e7));
 
+// RUN_DIR separa corridas (otra wallet, otro log) que comparten el código.
+const RUN_ROOT = process.env.RUN_DIR ?? ROOT;
+
 function file(kind, name) {
-  const dir = join(ROOT, kind);
+  const dir = join(RUN_ROOT, kind);
   mkdirSync(dir, { recursive: true });
   return join(dir, `${name}.json`);
 }

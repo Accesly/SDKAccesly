@@ -24,8 +24,9 @@ export function facilitatorRouter({ dataDir, secret, network, rpcUrl, maxFeeStro
     network,
     new ExactStellarScheme([signer], {
       rpcConfig: { url: rpcUrl },
-      // __check_auth del Smart Account + política escriben storage; en testnet
-      // eso cuesta ~7 XLM por pago (renta alta). Techo configurable.
+      // El primer pago por regla crea el storage de la política y puede
+      // restaurar entradas archivadas: en testnet costó de 2.6 a 6 XLM. Los
+      // siguientes cuestan ~0.002 XLM. El techo default (0.5 XLM) no alcanza.
       maxTransactionFeeStroops: maxFeeStroops,
     }),
   );

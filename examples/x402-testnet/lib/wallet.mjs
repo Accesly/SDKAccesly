@@ -8,7 +8,7 @@
 
 import { createInterface } from 'node:readline/promises';
 import { reconstructKey } from '@accesly/core/mpc';
-import { cfg, loadJson } from './config.mjs';
+import { cfg, loadJson, saveJson } from './config.mjs';
 
 const b64 = (u8) => Buffer.from(u8).toString('base64');
 const unb64 = (s) => new Uint8Array(Buffer.from(s, 'base64'));
@@ -36,20 +36,32 @@ async function post(path, body, token) {
   return data;
 }
 
+/** Pide el OTP (el servicio lo manda al email). */
+export const requestOtp = (email) => post('/vault/otp/request', { email });
+
+/** Verifica el código y guarda el token de liberación (10 min) en `.secrets`. */
+export async function verifyOtp(email, code) {
+  const { token } = await post('/vault/otp/verify', { email, code });
+  saveJson('.secrets', 'otp-token', { email, token, exp: Date.now() + 9 * 60 * 1000 });
+  return token;
+}
+
 /**
- * OTP por email: pide el código y lo verifica. Con DEV_OTP_ECHO en el
- * servicio, el código viene en la respuesta; si no, se pide por consola.
+ * OTP por email. Reusa un token vigente de `scripts/otp.mjs`; si no hay, pide
+ * el código y lo toma de OTP_CODE, de la respuesta (DEV_OTP_ECHO) o de la
+ * consola.
  */
 export async function otpLogin(email) {
-  const sent = await post('/vault/otp/request', { email });
+  const cached = loadJson('.secrets', 'otp-token', null);
+  if (cached && cached.email === email && cached.exp > Date.now()) return cached.token;
+  const sent = await requestOtp(email);
   let code = sent.devCode ?? process.env.OTP_CODE;
   if (!code) {
     const rl = createInterface({ input: process.stdin, output: process.stdout });
     code = (await rl.question(`OTP sent to ${email}. Code: `)).trim();
     rl.close();
   }
-  const { token } = await post('/vault/otp/verify', { email, code });
-  return token;
+  return verifyOtp(email, code);
 }
 
 export const storeF2 = (token, smartAccount, f2Envelope) =>

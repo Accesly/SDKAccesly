@@ -11,6 +11,7 @@
  *   POST /vault/fragments     { smartAccount, f2 }    (Bearer token) guarda F2
  *   POST /vault/fragments/release                     (Bearer token) → { f2 }
  *
+ * Envío del OTP: Gmail (SMTP con contraseña de aplicación) o Resend.
  * En AWS esto lo hacían Cognito + KMS + DynamoDB. Aquí: HMAC + archivo JSON.
  */
 
@@ -18,12 +19,13 @@ import { createHash, createHmac, randomInt, timingSafeEqual } from 'node:crypto'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import express from 'express';
+import nodemailer from 'nodemailer';
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const TOKEN_TTL_MS = 10 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
 
-export function vaultRouter({ dataDir, secret, resendApiKey, otpFrom, devEcho }) {
+export function vaultRouter({ dataDir, secret, resendApiKey, otpFrom, gmail, devEcho }) {
   if (!secret || secret.length < 32) throw new Error('VAULT_SECRET must be at least 32 chars');
   const storePath = join(dataDir, 'vault.json');
   const load = () => (existsSync(storePath) ? JSON.parse(readFileSync(storePath, 'utf8')) : {});
@@ -49,7 +51,25 @@ export function vaultRouter({ dataDir, secret, resendApiKey, otpFrom, devEcho })
     return claims.exp > Date.now() ? claims : null;
   }
 
+  const smtp =
+    gmail?.user && gmail?.appPassword
+      ? nodemailer.createTransport({
+          host: 'smtp.gmail.com',
+          port: 587,
+          requireTLS: true,
+          auth: { user: gmail.user, pass: gmail.appPassword },
+        })
+      : null;
+  const subject = (code) => `Your Accesly code: ${code}`;
+  const text = (code) =>
+    `Your Accesly verification code is ${code}. It expires in 10 minutes.\n\nIf you did not request it, ignore this email.`;
+
   async function sendOtp(email, code) {
+    if (smtp) {
+      // Gmail exige que el remitente sea la propia cuenta.
+      await smtp.sendMail({ from: `Accesly <${gmail.user}>`, to: email, subject: subject(code), text: text(code) });
+      return;
+    }
     if (resendApiKey) {
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -57,8 +77,8 @@ export function vaultRouter({ dataDir, secret, resendApiKey, otpFrom, devEcho })
         body: JSON.stringify({
           from: otpFrom,
           to: [email],
-          subject: `Your Accesly code: ${code}`,
-          text: `Your Accesly verification code is ${code}. It expires in 10 minutes.\n\nIf you did not request it, ignore this email.`,
+          subject: subject(code),
+          text: text(code),
         }),
       });
       if (!res.ok) throw new Error(`email provider ${res.status}`);
