@@ -1,0 +1,42 @@
+# Accesly x402 en Stellar testnet: servicio (bóveda F2 + facilitador) y el agente
+# de Opportuni. Ninguno publica puertos: salen al mundo solo por el Caddy que ya
+# corre en el servidor, a través de la red "borde" (mismo patrón que Threshold).
+#
+# Las imágenes se compilan fuera del servidor y se cargan con `docker load`.
+name: accesly-x402
+
+services:
+  servicio:
+    image: accesly-x402-servicio:${TAG:-latest}
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - datos:/data
+    mem_limit: 256m
+    networks:
+      borde:
+        aliases: [accesly-x402-servicio]
+
+  agente:
+    image: accesly-x402-agente:${TAG:-latest}
+    restart: unless-stopped
+    environment:
+      X402_NETWORK: stellar:testnet
+      X402_PRICE: $$0.01
+      X402_PAY_TO: ${MERCHANT_PUBLIC}
+      # Por la red interna, sin salir a internet ni pasar por Caddy.
+      X402_FACILITATOR_URL: http://accesly-x402-servicio:4021/facilitator
+      OPPORTUNI_VACANTES_URL: https://opportuni.xyz/api/vacantes
+    depends_on: [servicio]
+    mem_limit: 384m
+    networks:
+      borde:
+        aliases: [accesly-x402-agente]
+
+volumes:
+  datos:
+
+networks:
+  # La única red compartida: a ella se conecta el Caddy del servidor.
+  borde:
+    name: accesly-x402-borde

@@ -10,7 +10,6 @@
  *   RESEND_API_KEY       proveedor de email para el OTP
  *   OTP_FROM             remitente (p. ej. "Accesly <no-reply@accesly.xyz>")
  *   DEV_OTP_ECHO=1       devuelve el OTP en la respuesta (prohibido con NODE_ENV=production)
- *   PUBLIC_URL           URL pública de este servicio (para el facilitador del agente)
  *   FACILITATOR_MAX_FEE_STROOPS  techo de fee por liquidación (200000000 = 20 XLM)
  */
 
@@ -26,7 +25,6 @@ const PORT = Number(env.PORT ?? 4021);
 const DATA_DIR = env.DATA_DIR ?? new URL('../.state/server', import.meta.url).pathname;
 const NETWORK = 'stellar:testnet';
 const RPC_URL = env.RPC_URL ?? 'https://soroban-testnet.stellar.org';
-const PUBLIC_URL = env.PUBLIC_URL ?? `http://localhost:${PORT}`;
 const devEcho = env.DEV_OTP_ECHO === '1';
 if (devEcho && env.NODE_ENV === 'production') throw new Error('DEV_OTP_ECHO is not allowed in production');
 mkdirSync(DATA_DIR, { recursive: true });
@@ -59,7 +57,8 @@ app.use('/facilitator', facilitator.router);
 // Opportuni vive en su repo y usa el mismo priceEndpoint con @x402/next.
 if (env.MERCHANT_PUBLIC) {
   const resourceServer = await createAcceslyResourceServer({
-    facilitatorUrl: `${PUBLIC_URL}/facilitator`,
+    // El facilitador vive en este mismo proceso: no hace falta salir a internet.
+    facilitatorUrl: `http://127.0.0.1:${PORT}/facilitator`,
     networks: [NETWORK],
   });
   app.use(
