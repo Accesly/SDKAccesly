@@ -177,4 +177,4 @@ Ruta 9 pilot, vehicle U-42, Temixco (Morelos), 23 to 30 August 2026, closed-loop
 - https://stellar.expert/explorer/public/tx/6abfc85f860f4145a479c8561ff950280994508fd79d1c4eac51b95d22e09469
 - Token and accounts: https://stellar.expert/explorer/public/asset/MXNT-GAL45E3RPF2PY63JBQPPEFZLUNZY6X7B6CKL5IW7SERYH6YI2J5IZHE6
 
-The research and regulatory analysis behind the closed-loop design (Spanish, August 2026) is in [`arquitectura-transportes-morelos.md`](./arquitectura-transportes-morelos.md). This sprint keeps that account model and replaces the closed-loop token with USDC and the hardware validator with the PWA.
+The research and regulatory analysis behind the closed-loop design (August 2026) is in [`fare-collection-research-morelos.md`](./fare-collection-research-morelos.md). This sprint keeps that account model and replaces the closed-loop token with USDC and the hardware validator with the PWA.

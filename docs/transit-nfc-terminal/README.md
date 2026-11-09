@@ -3,8 +3,7 @@
 Documentation for Accesly's 30-day sprint: collecting public transport fares in Mexico with an NFC terminal on the driver's phone, settled in USDC on Stellar mainnet directly to the unit owner.
 
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md): system overview, fare flows (NFC card and QR), offline behaviour, account and key model, trust model. With diagrams.
-- [`Accesly-Instawards-SOW-NFC-fare-terminal-Nov-2026.pdf`](./Accesly-Instawards-SOW-NFC-fare-terminal-Nov-2026.pdf): Statement of Work for the sprint (terminal PWA, USDC settlement facilitator and owner dashboard, field pilot on one combi of the Texcoco to La Paz route).
-- [`arquitectura-transportes-morelos.md`](./arquitectura-transportes-morelos.md): research, regulatory analysis and design of the fare collection system (Spanish, August 2026), the basis of the Ruta 9 pilot.
+- [`fare-collection-research-morelos.md`](./fare-collection-research-morelos.md): research, regulatory analysis and design of the fare collection system (August 2026), the basis of the Ruta 9 pilot.
 
 ## Evidence from the Ruta 9 pilot (30 August 2026, Stellar mainnet)
 
